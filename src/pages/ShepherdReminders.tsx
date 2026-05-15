@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import type { Soul } from '../types/database.types';
 import { formatDate } from '../utils/dateUtils';
 import { AlertTriangle, ChevronDown, ChevronUp, MessageCircle, Users, Clock } from 'lucide-react';
@@ -38,14 +37,14 @@ export default function ShepherdReminders() {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
         // afin d'inclure les bergers multi-casquettes (businessProfiles)
-        const shepherdsQuery = query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        );
-        const shepherdsSnapshot = await getDocs(shepherdsQuery);
-        const shepherds = shepherdsSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as any))
-          .filter(u => isShepherdUser(u));
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('status', 'active');
+
+        if (usersError) throw usersError;
+
+        const shepherds = (usersData ?? []).filter(u => isShepherdUser(u));
 
         const remindersData: ShepherdReminder[] = [];
         let totalSouls = 0;
@@ -55,33 +54,29 @@ export default function ShepherdReminders() {
 
         // Charger les données en parallèle pour chaque berger
         await Promise.all(shepherds.map(async (shepherd) => {
-          // Créer un index composé pour optimiser les requêtes
-          // shepherdId, status, createdAt DESC
-          const soulsQuery = query(
-            collection(db, 'souls'),
-            where('shepherdId', '==', shepherd.id),
-            where('status', '==', 'active')
-          );
-          const soulsSnapshot = await getDocs(soulsQuery);
-          const souls = soulsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Soul[];
+          const { data: soulsData, error: soulsError } = await supabase
+            .from('souls')
+            .select('*')
+            .eq('shepherdId', shepherd.id)
+            .eq('status', 'active');
 
+          if (soulsError) throw soulsError;
+
+          const souls = (soulsData ?? []) as Soul[];
           totalSouls += souls.length;
 
           if (souls.length === 0) return;
 
-          // Créer un index composé pour optimiser les requêtes
-          // shepherdId, date DESC
-          const interactionsQuery = query(
-            collection(db, 'interactions'),
-            where('shepherdId', '==', shepherd.id)
-          );
-          const interactionsSnapshot = await getDocs(interactionsQuery);
-          const interactions = interactionsSnapshot.docs.map(doc => ({
-            ...doc.data(),
-            date: doc.data().date.toDate()
+          const { data: interactionsData, error: interactionsError } = await supabase
+            .from('interactions')
+            .select('*')
+            .eq('shepherdId', shepherd.id);
+
+          if (interactionsError) throw interactionsError;
+
+          const interactions = (interactionsData ?? []).map(row => ({
+            ...row,
+            date: row.date ? new Date(row.date) : new Date()
           }));
 
           // Calculer les jours sans interaction pour chaque âme
@@ -90,11 +85,11 @@ export default function ShepherdReminders() {
             const lastInteraction = soulInteractions.length > 0
               ? new Date(Math.max(...soulInteractions.map(i => i.date.getTime())))
               : null;
-            
+
             const daysWithoutInteraction = lastInteraction
               ? Math.floor((new Date().getTime() - lastInteraction.getTime()) / (1000 * 60 * 60 * 24))
               : Infinity;
-            
+
             if (lastInteraction) {
               totalDays += daysWithoutInteraction;
               totalSoulsWithInteractions++;
@@ -116,9 +111,9 @@ export default function ShepherdReminders() {
             remindersData.push({
               shepherd: {
                 id: shepherd.id,
-                fullName: (shepherd as any).fullName || shepherd.id,
-                phone: (shepherd as any).phone,
-                email: (shepherd as any).email
+                fullName: shepherd.fullName || shepherd.id,
+                phone: shepherd.phone,
+                email: shepherd.email
               },
               souls: soulsNeedingAttention.sort((a, b) => b.daysWithoutInteraction - a.daysWithoutInteraction)
             });
@@ -130,8 +125,8 @@ export default function ShepherdReminders() {
           totalShepherds: shepherds.length,
           totalSouls,
           needingAttention: totalNeedingAttention,
-          averageDays: totalSoulsWithInteractions > 0 
-            ? Math.round(totalDays / totalSoulsWithInteractions) 
+          averageDays: totalSoulsWithInteractions > 0
+            ? Math.round(totalDays / totalSoulsWithInteractions)
             : 0
         });
 
