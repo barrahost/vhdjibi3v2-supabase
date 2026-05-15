@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { deleteDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Soul } from '../types/database.types';
 import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck } from 'lucide-react';
 import ImportSoulsModal from '../components/souls/ImportSoulsModal';
@@ -71,7 +69,7 @@ export default function SoulManagement() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(initialFilters.statusFilter);
   const [unassignedFamilyOnly, setUnassignedFamilyOnly] = useState(false);
 
-  // Multi-sélection
+  // Multi-selection
   const [selectedSoulIds, setSelectedSoulIds] = useState<string[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showPickEvangelizedModal, setShowPickEvangelizedModal] = useState(false);
@@ -120,7 +118,7 @@ export default function SoulManagement() {
     }
   };
 
-  // Application des filtres venant de l'URL (one-shot au montage)
+  // Apply URL filters (one-shot on mount)
   useEffect(() => {
     const filter = searchParams.get('filter');
     if (!filter) return;
@@ -144,7 +142,7 @@ export default function SoulManagement() {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
       const newSearch = url.searchParams.toString();
-      const newUrl = url.pathname + (newSearch ? `?${newSearch}` : '') + url.hash;
+      const newUrl = url.pathname + (newSearch ? '?' + newSearch : '') + url.hash;
       window.history.replaceState(window.history.state, '', newUrl);
     } catch {
       // ignore
@@ -159,22 +157,28 @@ export default function SoulManagement() {
   const canAssign = hasPermission(PERMISSIONS.MANAGE_SOULS);
 
   const loadShepherdNames = useCallback(async (souls: Soul[]) => {
-    const shepherdIds = new Set(souls.map(soul => soul.shepherdId).filter(Boolean));
-    const names: Record<string, string> = {};
-    for (const shepherdId of shepherdIds) {
-      if (!shepherdId) continue;
-      try {
-        const userDoc = await getDoc(doc(db, 'users', shepherdId));
-        if (userDoc.exists()) {
-          names[shepherdId] = userDoc.data().fullName;
-        } else {
-          names[shepherdId] = 'Berger non trouvé';
-        }
-      } catch (error) {
-        console.error('Error loading shepherd name:', error);
-        names[shepherdId] = 'Erreur de chargement';
-      }
+    const shepherdIds = [...new Set(souls.map(soul => soul.shepherdId).filter(Boolean))] as string[];
+    if (shepherdIds.length === 0) {
+      setShepherdNames({});
+      return;
     }
+    const names: Record<string, string> = {};
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, fullName')
+        .in('id', shepherdIds);
+      if (!error && data) {
+        data.forEach((u: { id: string; fullName: string }) => {
+          names[u.id] = u.fullName || 'Berger non trouve';
+        });
+      }
+    } catch (error) {
+      console.error('Error loading shepherd names:', error);
+    }
+    shepherdIds.forEach(id => {
+      if (!names[id]) names[id] = 'Berger non trouve';
+    });
     setShepherdNames(names);
   }, []);
 
@@ -182,7 +186,7 @@ export default function SoulManagement() {
     loadShepherdNames(souls);
   }, [souls, loadShepherdNames]);
 
-  // Gestion de la sélection
+  // Selection handlers
   const toggleSoulSelection = (soulId: string) => {
     setSelectedSoulIds(prev =>
       prev.includes(soulId) ? prev.filter(id => id !== soulId) : [...prev, soulId]
@@ -212,7 +216,7 @@ export default function SoulManagement() {
             className="w-4 h-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C] cursor-pointer"
             checked={allPageSelected}
             onChange={() => toggleSelectAllOnPage(paginatedSouls)}
-            title="Tout sélectionner sur cette page"
+            title="Tout selectionner sur cette page"
           />
         ),
         render: (_: any, soul: Soul) => (
@@ -248,13 +252,13 @@ export default function SoulManagement() {
       },
       {
         key: 'fullName',
-        title: 'Nom et Prénoms',
+        title: 'Nom et Prenoms',
         render: (value: string, soul: Soul) => (
           <div>
             <span className="font-medium text-gray-900">{value}</span>
             {soul.isUndecided && (
               <span className="inline-flex items-center px-2 py-0.5 ml-2 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                Indécis(e)
+                Indecis(e)
               </span>
             )}
             {soul.nickname && (
@@ -265,7 +269,7 @@ export default function SoulManagement() {
       },
       {
         key: 'phone',
-        title: 'Téléphone',
+        title: 'Telephone',
         render: (value: string) => <span className="text-gray-600">{value}</span>
       },
       {
@@ -275,7 +279,7 @@ export default function SoulManagement() {
       },
       {
         key: 'firstVisitDate',
-        title: 'Date de première visite',
+        title: 'Date de premiere visite',
         render: (value: Date) => <span className="text-gray-600">{formatDate(value)}</span>
       },
       {
@@ -316,11 +320,11 @@ export default function SoulManagement() {
         render: (_: any, soul: Soul) => (
           soul.shepherdId ? (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">
-              Assigné(e)
+              Assigne(e)
             </span>
           ) : (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              Non assigné(e)
+              Non assigne(e)
             </span>
           )
         )
@@ -329,10 +333,11 @@ export default function SoulManagement() {
   };
 
   const handleDelete = async (soulId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette âme ?')) {
+    if (window.confirm('Etes-vous sur de vouloir supprimer cette ame ?')) {
       try {
-        await deleteDoc(doc(db, 'souls', soulId));
-        toast.success('Âme supprimée avec succès');
+        const { error } = await supabase.from('souls').delete().eq('id', soulId);
+        if (error) throw error;
+        toast.success('Ame supprimee avec succes');
       } catch (error) {
         console.error('Error deleting soul:', error);
         toast.error('Erreur lors de la suppression');
@@ -340,71 +345,54 @@ export default function SoulManagement() {
     }
   };
 
-  useEffect(() => {
-    let baseQuery;
+  const fetchSouls = useCallback(async () => {
+    setLoading(true);
+    try {
+      let q = supabase.from('souls').select('*').order('createdAt', { ascending: false });
 
-    if (selectedShepherdId === 'unassigned') {
-      baseQuery = query(
-        collection(db, 'souls'),
-        where('shepherdId', '==', null),
-        orderBy('createdAt', 'desc')
-      );
-    } else if (selectedShepherdId) {
-      baseQuery = query(
-        collection(db, 'souls'),
-        where('shepherdId', '==', selectedShepherdId),
-        orderBy('createdAt', 'desc')
-      );
-    } else {
-      baseQuery = query(collection(db, 'souls'), orderBy('createdAt', 'desc'));
-    }
-
-    if (statusFilter !== 'all') {
       if (selectedShepherdId === 'unassigned') {
-        baseQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', statusFilter),
-          where('shepherdId', '==', null),
-          orderBy('createdAt', 'desc')
-        );
+        q = q.is('shepherdId', null);
       } else if (selectedShepherdId) {
-        baseQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', statusFilter),
-          where('shepherdId', '==', selectedShepherdId),
-          orderBy('createdAt', 'desc')
-        );
-      } else {
-        baseQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', statusFilter),
-          orderBy('createdAt', 'desc')
-        );
+        q = q.eq('shepherdId', selectedShepherdId);
       }
-    }
 
-    const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
-      const soulsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        firstVisitDate: doc.data().firstVisitDate?.toDate()
-      } as Soul));
+      if (statusFilter !== 'all') {
+        q = q.eq('status', statusFilter);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const soulsData: Soul[] = (data || []).map((row: any) => ({
+        ...row,
+        firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
+      }));
       setSouls(soulsData);
-      setLoading(false);
-    }, (error) => {
+    } catch (error) {
       console.error('Error loading souls:', error);
-      toast.error('Erreur lors du chargement des âmes');
+      toast.error('Erreur lors du chargement des ames');
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, [selectedShepherdId, statusFilter]);
+
+  useEffect(() => {
+    fetchSouls();
+
+    const channel = supabase
+      .channel('souls-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'souls' }, () => {
+        fetchSouls();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchSouls]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, dateRange]);
 
-  // Réinitialiser la sélection quand on change de page ou de filtres
   useEffect(() => {
     setSelectedSoulIds([]);
   }, [currentPage, searchTerm, selectedShepherdId, statusFilter]);
@@ -449,7 +437,7 @@ export default function SoulManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500">Chargement des âmes...</div>
+        <div className="text-gray-500">Chargement des ames...</div>
       </div>
     );
   }
@@ -457,7 +445,7 @@ export default function SoulManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Gestion des Âmes</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Gestion des Ames</h1>
         <div className="flex items-center space-x-3">
           {hasPermission(PERMISSIONS.EXPORT_DATA) && (
             <button
@@ -483,7 +471,7 @@ export default function SoulManagement() {
               className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
             >
               <UserCheck className="w-4 h-4 mr-2" />
-              Recevoir une âme évangélisée
+              Recevoir une ame evangelisee
             </button>
           )}
           <button
@@ -491,14 +479,14 @@ export default function SoulManagement() {
             className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
           >
             <Plus className="w-4 h-4 mr-2" />
-            {showForm ? 'Masquer le formulaire' : 'Ajouter une âme'}
+            {showForm ? 'Masquer le formulaire' : 'Ajouter une ame'}
           </button>
         </div>
       </div>
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold text-[#00665C] mb-4">Ajouter une âme</h2>
+          <h2 className="text-xl font-semibold text-[#00665C] mb-4">Ajouter une ame</h2>
           <SoulForm />
         </div>
       )}
@@ -510,7 +498,7 @@ export default function SoulManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de première visite (début)
+                Date de premiere visite (debut)
               </label>
               <input
                 type="date"
@@ -521,7 +509,7 @@ export default function SoulManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de première visite (fin)
+                Date de premiere visite (fin)
               </label>
               <input
                 type="date"
@@ -541,7 +529,7 @@ export default function SoulManagement() {
             >
               <option value="active">Actives uniquement</option>
               <option value="inactive">Inactives uniquement</option>
-              <option value="all">Toutes les âmes</option>
+              <option value="all">Toutes les ames</option>
             </select>
           </div>
 
@@ -549,7 +537,7 @@ export default function SoulManagement() {
 
           {unassignedFamilyOnly && (
             <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm text-amber-900">
-              <span>Filtre actif : âmes sans famille de service</span>
+              <span>Filtre actif : ames sans famille de service</span>
               <button
                 onClick={() => setUnassignedFamilyOnly(false)}
                 className="text-amber-900 hover:underline font-medium"
@@ -564,7 +552,7 @@ export default function SoulManagement() {
               onClick={() => setDateRange({ startDate: '', endDate: '' })}
               className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
             >
-              Réinitialiser les dates
+              Reinitialiser les dates
             </button>
           </div>
 
@@ -574,7 +562,7 @@ export default function SoulManagement() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher une âme par nom, téléphone ou lieu d'habitation..."
+                  placeholder="Rechercher une ame par nom, telephone ou lieu d'habitation..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
@@ -584,38 +572,37 @@ export default function SoulManagement() {
                 <button
                   onClick={resetAllFilters}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] rounded-lg hover:bg-[#00665C] hover:text-white transition-colors whitespace-nowrap"
-                  title="Réinitialiser tous les filtres"
+                  title="Reinitialiser tous les filtres"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Réinitialiser les filtres
+                  Reinitialiser les filtres
                 </button>
               )}
             </div>
             <p className="mt-1 text-sm text-gray-500">
-              {filteredSouls.length} résultat{filteredSouls.length !== 1 ? 's' : ''} trouvé{filteredSouls.length !== 1 ? 's' : ''}
+              {filteredSouls.length} resultat{filteredSouls.length !== 1 ? 's' : ''} trouve{filteredSouls.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
 
-        {/* Barre d'actions contextuelle (sélection multiple) */}
         {canAssign && selectedSoulIds.length > 0 && (
           <div className="flex items-center justify-between bg-[#00665C]/5 border border-[#00665C]/30 rounded-lg px-4 py-3">
             <span className="text-sm font-medium text-[#00665C]">
-              {selectedSoulIds.length} âme{selectedSoulIds.length > 1 ? 's' : ''} sélectionnée{selectedSoulIds.length > 1 ? 's' : ''}
+              {selectedSoulIds.length} ame{selectedSoulIds.length > 1 ? 's' : ''} selectionnee{selectedSoulIds.length > 1 ? 's' : ''}
             </span>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSelectedSoulIds([])}
                 className="text-sm text-gray-500 hover:text-gray-700"
               >
-                Désélectionner tout
+                Deselectionner tout
               </button>
               <button
                 onClick={() => setShowAssignModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md transition-colors"
               >
                 <UserCheck className="w-4 h-4" />
-                Assigner à un berger
+                Assigner a un berger
               </button>
             </div>
           </div>
