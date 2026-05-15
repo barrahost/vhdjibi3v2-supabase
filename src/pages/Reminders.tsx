@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Soul, Interaction } from '../types/database.types';
 import { Calendar } from '../components/reminders/Calendar';
@@ -22,42 +21,40 @@ export default function Reminders() {
     const loadData = async () => {
       try {
         // Récupérer l'ID de l'utilisateur (berger ou multi-casquettes incluant berger)
-        const shepherdsQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        );
-        const shepherdDoc = await getDocs(shepherdsQuery);
-        const matched = shepherdDoc.docs.find(d => isShepherdUser(d.data() as any));
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('uid', user.uid)
+          .eq('status', 'active');
+
+        if (usersError) throw usersError;
+
+        const matched = usersData?.find((u: any) => isShepherdUser(u));
 
         if (matched) {
           const shepherdId = matched.id;
-          
+
           // Récupérer les âmes assignées
-          const soulsQuery = query(
-            collection(db, 'souls'),
-            where('shepherdId', '==', shepherdId),
-            where('status', '==', 'active')
-          );
-          const soulsSnapshot = await getDocs(soulsQuery);
-          const soulsData = soulsSnapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data() 
-          } as Soul));
-          setSouls(soulsData);
+          const { data: soulsData, error: soulsError } = await supabase
+            .from('souls')
+            .select('*')
+            .eq('shepherdId', shepherdId)
+            .eq('status', 'active');
+
+          if (soulsError) throw soulsError;
+          setSouls((soulsData ?? []) as Soul[]);
 
           // Récupérer les interactions
-          const interactionsQuery = query(
-            collection(db, 'interactions'),
-            where('shepherdId', '==', shepherdId)
-          );
-          const interactionsSnapshot = await getDocs(interactionsQuery);
-          const interactionsData = interactionsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            date: doc.data().date.toDate()
-          } as Interaction));
-          setInteractions(interactionsData);
+          const { data: interactionsData, error: interactionsError } = await supabase
+            .from('interactions')
+            .select('*')
+            .eq('shepherdId', shepherdId);
+
+          if (interactionsError) throw interactionsError;
+          setInteractions((interactionsData ?? []).map(row => ({
+            ...row,
+            date: row.date ? new Date(row.date) : new Date()
+          } as Interaction)));
         }
       } catch (error) {
         console.error('Error loading data:', error);
