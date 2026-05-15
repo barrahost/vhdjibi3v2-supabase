@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Soul } from '../types/database.types';
 import { Search, AlertTriangle, MessageCircle } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
@@ -76,29 +75,49 @@ export default function UndecidedSouls() {
     }
   ];
 
-  useEffect(() => {
-    const q = query(
-      collection(db, 'souls'),
-      where('isUndecided', '==', true),
-      where('status', '==', 'active'),
-      orderBy('createdAt', 'desc')
-    );
+  const fetchSouls = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('souls')
+        .select('*')
+        .eq('isUndecided', true)
+        .eq('status', 'active')
+        .order('createdAt', { ascending: false });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const soulsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        firstVisitDate: doc.data().firstVisitDate?.toDate()
+      if (error) {
+        console.error('Error loading undecided souls:', error);
+        toast.error('Erreur lors du chargement des âmes indécises');
+        return;
+      }
+
+      const soulsData = (data ?? []).map((row) => ({
+        ...row,
+        id: row.id,
+        firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
       } as Soul));
+
       setSouls(soulsData);
-      setLoading(false);
-    }, (error) => {
+    } catch (error) {
       console.error('Error loading undecided souls:', error);
       toast.error('Erreur lors du chargement des âmes indécises');
+    } finally {
       setLoading(false);
-    });
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchSouls();
+
+    const channel = supabase
+      .channel('undecided-souls-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'souls' }, () => {
+        fetchSouls();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Filtrer les âmes
@@ -178,7 +197,7 @@ export default function UndecidedSouls() {
           onClose={() => setEditingSoul(null)}
         />
       )}
-      
+
       {messagingSoul && (
         <UndecidedSoulMessageModal
           soul={messagingSoul}
