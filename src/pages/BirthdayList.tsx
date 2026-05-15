@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Search, Calendar, Gift, Users, Bell, Trash2, Plus } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { Modal } from '../components/ui/Modal';
@@ -89,7 +88,12 @@ export default function BirthdayList() {
 
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet anniversaire ?')) {
       try {
-        await deleteDoc(doc(db, 'birthdays', birthdayId));
+        const { error } = await supabase
+          .from('birthdays')
+          .delete()
+          .eq('id', birthdayId);
+
+        if (error) throw error;
         toast.success('Anniversaire supprimé avec succès');
       } catch (error) {
         console.error('Error deleting birthday:', error);
@@ -152,54 +156,69 @@ export default function BirthdayList() {
     }] : [])
   ];
 
-  useEffect(() => {
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    const nextMonth = (currentMonth + 1) % 12;
-    
-    let baseQuery = query(
-      collection(db, 'birthdays'),
-      orderBy('birthDate', 'asc')
-    );
+  const fetchBirthdays = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('birthdays')
+        .select('*')
+        .order('birthDate', { ascending: true });
 
-    const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
-      const birthdaysData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
+      if (error) {
+        console.error('Error loading birthdays:', error);
+        toast.error('Erreur lors du chargement des anniversaires');
+        setLoading(false);
+        return;
+      }
+
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const nextMonth = (currentMonth + 1) % 12;
+
+      const birthdaysData = (data ?? []).map(row => ({ id: row.id, ...row }));
+
       // Filtrer selon le mois
       const filteredData = birthdaysData.filter((birthday: any) => {
         const month = parseInt(birthday.birthDate?.split('-')[0] || '1') - 1;
-        if (filter === 'current') {
-          return month === currentMonth;
-        } else if (filter === 'next') {
-          return month === nextMonth;
-        }
+        if (filter === 'current') return month === currentMonth;
+        if (filter === 'next') return month === nextMonth;
         return true;
       });
 
       // Trier par jours restants
       filteredData.sort((a: any, b: any) => getDaysUntilBirthday(a.birthDate) - getDaysUntilBirthday(b.birthDate));
-      
+
       setBirthdays(filteredData);
       setLoading(false);
-    }, (error) => {
+    } catch (error) {
       console.error('Error loading birthdays:', error);
       toast.error('Erreur lors du chargement des anniversaires');
       setLoading(false);
-    });
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchBirthdays();
+
+    const channel = supabase
+      .channel('birthday-list-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'birthdays' }, () => {
+        fetchBirthdays();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [filter]);
 
   const handleStatusChange = async (birthdayId: string, status: 'approved' | 'rejected') => {
     try {
-      const birthdayRef = doc(db, 'birthdays', birthdayId);
-      await updateDoc(birthdayRef, {
-        status,
-        updatedAt: new Date()
-      });
+      const { error } = await supabase
+        .from('birthdays')
+        .update({ status, updatedAt: new Date().toISOString() })
+        .eq('id', birthdayId);
+
+      if (error) throw error;
       toast.success(`Anniversaire ${status === 'approved' ? 'approuvé' : 'rejeté'} avec succès`);
     } catch (error) {
       console.error('Error updating birthday status:', error);
