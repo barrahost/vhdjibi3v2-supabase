@@ -103,9 +103,9 @@ export default function EvangelizedSoulManagement() {
     if (!userId) return;
     setLoading(true);
     try {
-      let q = supabase.from('evangelized_souls').select('*').order('createdAt', { ascending: false });
+      let q = supabase.from('evangelized_souls').select('*').order('created_at', { ascending: false });
       if (!isAdmin && !isADN) {
-        q = q.eq('evangelistId', userId);
+        q = q.eq('evangelist_id', userId);
       } else {
         if (statusFilter !== 'all') q = q.eq('status', statusFilter);
       }
@@ -113,10 +113,32 @@ export default function EvangelizedSoulManagement() {
       if (error) throw error;
       const sorted = (data || []).map((v: any) => ({
         ...v,
-        evangelizationDate: v.evangelizationDate ? new Date(v.evangelizationDate) : null,
-        createdAt: v.createdAt ? new Date(v.createdAt) : null,
-        updatedAt: v.updatedAt ? new Date(v.updatedAt) : null,
-      })) as EvangelizedSoul[];
+        id: v.id,
+        fullName: v.fullName || v.full_name || '',
+        phone: v.phone || '',
+        location: v.location || '',
+        gender: v.gender || 'male',
+        soulId: v.soulId || v.soul_id,
+        evangelistId: v.evangelistId || v.evangelist_id,
+        shepherdId: v.shepherdId || v.shepherd_id,
+        status: v.status || 'active',
+        photoURL: v.photoURL || v.photo_url,
+        evangelizationDate: v.evangelizationDate
+          ? new Date(v.evangelizationDate)
+          : v.evangelization_date
+          ? new Date(v.evangelization_date)
+          : null,
+        createdAt: v.createdAt
+          ? new Date(v.createdAt)
+          : v.created_at
+          ? new Date(v.created_at)
+          : null,
+        updatedAt: v.updatedAt
+          ? new Date(v.updatedAt)
+          : v.updated_at
+          ? new Date(v.updated_at)
+          : null,
+      } as EvangelizedSoul));
       setSouls(sorted);
       loadEvangelistNames(sorted);
     } catch (err) {
@@ -146,14 +168,14 @@ export default function EvangelizedSoulManagement() {
     try {
       const { data } = await supabase
         .from('interactions')
-        .select('soulId, date')
-        .in('soulId', soulIds)
+        .select('soul_id, date')
+        .in('soul_id', soulIds)
         .order('date', { ascending: false });
       const map = new Map<string, Date>();
       (data || []).forEach((row: any) => {
         const dt = new Date(row.date);
-        if (!map.has(row.soulId) || map.get(row.soulId)!.getTime() < dt.getTime()) {
-          map.set(row.soulId, dt);
+        if (!map.has(row.soul_id) || map.get(row.soul_id)!.getTime() < dt.getTime()) {
+          map.set(row.soul_id, dt);
         }
       });
       setLastContactMap(map);
@@ -487,7 +509,7 @@ export default function EvangelizedSoulManagement() {
           {filtered.length} resultat{filtered.length !== 1 ? 's' : ''} trouve{filtered.length !== 1 ? 's' : ''}
           {canAssignEvangelist && souls.filter(s => !s.evangelistId).length > 0 && (
             <span className="ml-2 inline-flex items-center gap-1 text-gray-400">
-              · <UserX className="w-3 h-3" /> {souls.filter(s => !s.evangelistId).length} non attribue(s)
+              Â· <UserX className="w-3 h-3" /> {souls.filter(s => !s.evangelistId).length} non attribue(s)
             </span>
           )}
         </p>
