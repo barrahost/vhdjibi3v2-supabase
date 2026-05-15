@@ -127,9 +127,9 @@ export default function UndecidedSouls() {
 
   // Filtrer les âmes
   const filteredSouls = souls.filter(soul =>
-    soul.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    soul.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    soul.location.toLowerCase().includes(searchTerm.toLowerCase())
+    (soul.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (soul.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (soul.location || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Pagination
