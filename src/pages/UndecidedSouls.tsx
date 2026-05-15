@@ -89,16 +89,30 @@ export default function UndecidedSouls() {
       }
 
       const soulsData = (data ?? [])
-        .map((row) => ({
+        .map((row: any) => ({
           ...row,
           id: row.id,
-          firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
+          fullName: row.fullName || row.full_name || '',
+          phone: row.phone || '',
+          location: row.location || '',
+          gender: row.gender || 'male',
+          isUndecided: row.isUndecided ?? row.is_undecided ?? false,
+          shepherdId: row.shepherdId || row.shepherd_id,
+          evangelistId: row.evangelistId || row.evangelist_id,
+          status: row.status || 'active',
+          photoURL: row.photoURL || row.photo_url,
+          firstVisitDate: row.firstVisitDate
+            ? new Date(row.firstVisitDate)
+            : row.first_visit_date
+            ? new Date(row.first_visit_date)
+            : undefined,
+          createdAt: row.createdAt || row.created_at,
         } as Soul))
-        .filter(s => s.isUndecided === true || (s as any).is_undecided === true)
-        .sort((a, b) => {
-          const aDate = (a as any).createdAt || (a as any).created_at || 0;
-          const bDate = (b as any).createdAt || (b as any).created_at || 0;
-          return new Date(bDate as any).getTime() - new Date(aDate as any).getTime();
+        .filter(s => s.isUndecided === true)
+        .sort((a: any, b: any) => {
+          const aDate = a.createdAt || 0;
+          const bDate = b.createdAt || 0;
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
         });
 
       setSouls(soulsData);
