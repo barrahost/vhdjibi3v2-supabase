@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Soul } from '../types/database.types';
 import { Search, Filter, ChevronDown, ChevronUp, TrendingUp, Heart, Droplets, BookOpen, Users2, Briefcase } from 'lucide-react';
 import { ProgressionTimeline } from '../components/souls/progression/ProgressionTimeline';
@@ -46,55 +45,69 @@ export default function SpiritualProgression() {
     };
   }, [souls]);
 
-  useEffect(() => {
+  const fetchSouls = async () => {
     try {
-      // Construire la requête de base
-      let baseQuery = query(
-        collection(db, 'souls'),
-        where('status', '==', 'active')
-      );
+      let queryBuilder = supabase
+        .from('souls')
+        .select('*')
+        .eq('status', 'active');
 
-      // Ajouter le filtre par berger si sélectionné
       if (selectedShepherdId) {
-        baseQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', 'active'),
-          where('shepherdId', '==', selectedShepherdId)
-        );
+        queryBuilder = queryBuilder.eq('shepherdId', selectedShepherdId);
       }
 
-      const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
-        const soulsData = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            firstVisitDate: doc.data().firstVisitDate?.toDate(),
-            createdAt: doc.data().createdAt?.toDate(),
-            updatedAt: doc.data().updatedAt?.toDate()
-          } as Soul))
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const { data, error } = await queryBuilder;
 
-        setSouls(soulsData);
-        setLoading(false);
-      }, (error) => {
+      if (error) {
         console.error('Error loading souls:', error);
         toast.error('Erreur lors du chargement des âmes');
-        setLoading(false);
-      });
+        return;
+      }
 
-      return () => unsubscribe();
+      const soulsData = (data ?? [])
+        .map((row) => ({
+          ...row,
+          id: row.id,
+          firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
+          createdAt: row.createdAt ? new Date(row.createdAt) : undefined,
+          updatedAt: row.updatedAt ? new Date(row.updatedAt) : undefined,
+        } as Soul))
+        .sort((a, b) => {
+          const aTime = a.createdAt ? a.createdAt.getTime() : 0;
+          const bTime = b.createdAt ? b.createdAt.getTime() : 0;
+          return bTime - aTime;
+        });
+
+      setSouls(soulsData);
     } catch (error) {
       console.error('Error setting up souls listener:', error);
       toast.error('Erreur lors de l\'initialisation');
+    } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSouls();
+
+    const channel = supabase
+      .channel('spiritual-progression-souls-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'souls' }, () => {
+        fetchSouls();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedShepherdId]);
 
   // Filtrer les âmes par recherche
   const filteredSouls = souls.filter(soul =>
     soul.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   // Pagination
   const totalPages = Math.ceil(filteredSouls.length / ITEMS_PER_PAGE);
   const paginatedSouls = filteredSouls.slice(
@@ -169,7 +182,7 @@ export default function SpiritualProgression() {
           icon={BookOpen}
           trend={`${stats.academyPercent.toFixed(1)}%`}
           trendLabel="des âmes"
-          iconClassName="text-amber-600" 
+          iconClassName="text-amber-600"
           details={[
             { label: 'Inscrits', value: stats.academy },
             { label: 'Non inscrits', value: stats.totalSouls - stats.academy }
@@ -205,12 +218,12 @@ export default function SpiritualProgression() {
       {showFilters && (
         <div className="bg-white p-4 rounded-lg border space-y-4">
           <h3 className="text-base font-medium text-gray-900">Filtres</h3>
-          
+
           <ShepherdFilter
             value={selectedShepherdId}
             onChange={setSelectedShepherdId}
           />
-          
+
           <div className="relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -258,8 +271,8 @@ export default function SpiritualProgression() {
 
               {/* Contenu de l'accordéon */}
               <div className={`transition-all duration-500 ease-in-out ${
-                expandedSoulId === soul.id 
-                  ? 'max-h-[1000px] opacity-100' 
+                expandedSoulId === soul.id
+                  ? 'max-h-[1000px] opacity-100'
                   : 'max-h-0 opacity-0'
               }`}>
                 <div className="px-6 pb-6">
