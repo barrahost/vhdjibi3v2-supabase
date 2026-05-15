@@ -1,6 +1,4 @@
-import { User } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { ROLES, ROLE_PERMISSIONS } from '../../constants/roles';
 import type { Role, Permission } from '../../types/permission.types';
 
@@ -9,28 +7,26 @@ export class RoleService {
     if (!userId) return null;
 
     try {
-      // Check in users collection first (includes regular admins now)
-      const userQuery = query(
-        collection(db, 'users'),
-        where('uid', '==', userId)
-      );
-      const userSnapshot = await getDocs(userQuery);
-      
-      if (!userSnapshot.empty) {
-        const userData = userSnapshot.docs[0].data();
-        return userData.role as Role;
+      // Check users table first
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('uid', userId)
+        .limit(1);
+
+      if (userData && userData.length > 0) {
+        return userData[0].role as Role;
       }
 
-      // If not found in users, check in admins (only super_admin should be here)
-      const adminQuery = query(
-        collection(db, 'admins'),
-        where('uid', '==', userId),
-        where('role', '==', 'super_admin')
-      );
-      const adminSnapshot = await getDocs(adminQuery);
-      
-      if (!adminSnapshot.empty) {
-        const adminData = adminSnapshot.docs[0].data();
+      // Check admins table (super_admin only)
+      const { data: adminData } = await supabase
+        .from('admins')
+        .select('role')
+        .eq('uid', userId)
+        .eq('role', 'super_admin')
+        .limit(1);
+
+      if (adminData && adminData.length > 0) {
         return ROLES.SUPER_ADMIN;
       }
 
@@ -47,7 +43,6 @@ export class RoleService {
     try {
       const role = await this.getUserRole(userId);
       if (!role) return [];
-
       return Array.from(ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS] || []) as Permission[];
     } catch (error) {
       console.error('Error getting user permissions:', error);
