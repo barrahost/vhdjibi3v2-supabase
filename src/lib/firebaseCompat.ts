@@ -377,11 +377,11 @@ class WriteBatchImpl {
   update(ref: _DocumentRef, data: any)          { this._ops.push({ type: 'update', ref, data }); return this; }
   delete(ref: _DocumentRef)                     { this._ops.push({ type: 'delete', ref }); return this; }
   async commit() {
-    for (const op of this._ops) {
+    await Promise.all(this._ops.map(async (op) => {
       if (op.type === 'set')    await setDoc(op.ref, op.data, op.opts);
       if (op.type === 'update') await updateDoc(op.ref, op.data);
       if (op.type === 'delete') await deleteDoc(op.ref);
-    }
+    }))
   }
 }
 export function writeBatch(_db: any): WriteBatchImpl { return new WriteBatchImpl(); }
