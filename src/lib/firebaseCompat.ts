@@ -42,10 +42,19 @@ function camelToSnake(s: string): string {
 function snakeToCamel(s: string): string {
   return s.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
 }
+// Detect Postgres/ISO timestamp strings from Supabase and auto-convert to Timestamp
+function isDateString(v: any): v is string {
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v);
+}
 function rowToCamel(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(rowToCamel);
-  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [snakeToCamel(k), v]));
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [
+      snakeToCamel(k),
+      isDateString(v) ? Timestamp.fromDate(new Date(v)) : v
+    ])
+  );
 }
 function dataToSnake(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
