@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, MessageCircle, Phone, Users, ChevronDown } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
@@ -25,7 +24,7 @@ export default function InteractionsManagement() {
   const [interactions, setInteractions] = useState<any[]>([]);
   const [souls, setSouls] = useState<Record<string, any>>({});
   const [actors, setActors] = useState<Record<string, Actor>>({});
-  const [actorList, setActorList] = useState<Actor[]>([]); // Pour le filtre admin
+  const [actorList, setActorList] = useState<Actor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,8 +37,7 @@ export default function InteractionsManagement() {
   const isAdminView = hasPermission(PERMISSIONS.MANAGE_USERS);
   const isEvangelistView = activeRole === 'evangelist';
 
-  // Libellé dynamique de la colonne intervenant
-  const actorColumnLabel = isEvangelistView ? 'Évangéliste' : isAdminView ? 'Intervenant(e)' : 'Berger(e)';
+  const actorColumnLabel = isEvangelistView ? 'Evangeliste' : isAdminView ? 'Intervenant(e)' : 'Berger(e)';
 
   const columns = [
     {
@@ -70,7 +68,7 @@ export default function InteractionsManagement() {
     },
     {
       key: 'soulId',
-      title: 'Âme',
+      title: 'Ame',
       render: (value: string) => {
         const soul = souls[value];
         return soul ? (
@@ -78,7 +76,7 @@ export default function InteractionsManagement() {
             {soul.fullName}
           </span>
         ) : (
-          <span className="text-sm text-gray-400 italic">Âme inconnue</span>
+          <span className="text-sm text-gray-400 italic">Ame inconnue</span>
         );
       }
     },
@@ -107,28 +105,23 @@ export default function InteractionsManagement() {
     }
   ];
 
-  // Charger la liste des intervenants pour le filtre admin (bergers + évangélistes)
+  // Load actor list for admin filter (shepherds + evangelists)
   useEffect(() => {
     if (!isAdminView) return;
     const load = async () => {
       try {
-        const snap = await getDocs(query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        ));
-        const list: Actor[] = snap.docs
-          .map(d => {
-            const data = d.data() as any;
-            const isShepherd = isShepherdUser(data);
-            const isEvangelist = isEvangelistUser(data);
-            if (!isShepherd && !isEvangelist) return null;
-            return {
-              id: d.id,
-              fullName: data.fullName,
-              role: isEvangelist ? 'evangelist' : (data.role || 'shepherd'),
-            } as Actor;
-          })
-          .filter(Boolean) as Actor[];
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, fullName, role')
+          .eq('status', 'active');
+        if (error) throw error;
+        const list: Actor[] = (data || [])
+          .filter((d: any) => isShepherdUser(d) || isEvangelistUser(d))
+          .map((d: any) => ({
+            id: d.id,
+            fullName: d.fullName,
+            role: isEvangelistUser(d) ? 'evangelist' : (d.role || 'shepherd'),
+          }));
         list.sort((a, b) => a.fullName.localeCompare(b.fullName));
         setActorList(list);
       } catch (err) {
@@ -138,112 +131,103 @@ export default function InteractionsManagement() {
     load();
   }, [isAdminView]);
 
-  useEffect(() => {
+  const fetchInteractions = useCallback(async () => {
     if (!user) return;
-    let unsubscribeFn: (() => void) | null = null;
+    setLoading(true);
+    try {
+      let currentUserId: string | null = null;
 
-    const loadData = async () => {
-      try {
-        let currentUserId: string | null = null;
-
-        if (!isAdminView) {
-          // Berger ou évangéliste : filtrer par son propre ID
-          const userQuery = query(
-            collection(db, 'users'),
-            where('uid', '==', user.uid),
-            where('status', '==', 'active')
-          );
-          const userDocs = await getDocs(userQuery);
-          const matched = userDocs.docs.find(d => {
-            const data = d.data() as any;
-            return isShepherdUser(data) || isEvangelistUser(data);
-          });
-          if (matched) {
-            currentUserId = matched.id;
-          } else {
-            // Fallback : utiliser l'ID du user AuthContext
-            currentUserId = (user as any).id || (user as any).uid;
-          }
-        }
-
-        // Construire la requête
-        let interactionsQuery;
-        if (currentUserId) {
-          interactionsQuery = query(
-            collection(db, 'interactions'),
-            where('shepherdId', '==', currentUserId),
-            orderBy('date', 'desc')
-          );
-        } else if (selectedActorId) {
-          interactionsQuery = query(
-            collection(db, 'interactions'),
-            where('shepherdId', '==', selectedActorId),
-            orderBy('date', 'desc')
-          );
+      if (!isAdminView) {
+        // Shepherd or evangelist: find their document ID by uid
+        const { data: userDocs } = await supabase
+          .from('users')
+          .select('*')
+          .eq('uid', user.uid)
+          .eq('status', 'active');
+        const matched = (userDocs || []).find((d: any) => isShepherdUser(d) || isEvangelistUser(d));
+        if (matched) {
+          currentUserId = matched.id;
         } else {
-          interactionsQuery = query(
-            collection(db, 'interactions'),
-            orderBy('date', 'desc')
-          );
+          currentUserId = (user as any).id || (user as any).uid;
         }
-
-        unsubscribeFn = onSnapshot(interactionsQuery, async (snapshot) => {
-          const interactionsData = snapshot.docs.map(d => ({
-            id: d.id,
-            date: d.data().date.toDate(),
-            type: d.data().type,
-            notes: d.data().notes,
-            soulId: d.data().soulId,
-            shepherdId: d.data().shepherdId,
-            sourceCollection: d.data().sourceCollection || 'souls',
-          }));
-
-          const uniqueSoulIds = [...new Set(interactionsData.map(i => i.soulId))].filter(Boolean);
-          const uniqueActorIds = [...new Set(interactionsData.map(i => i.shepherdId))].filter(Boolean);
-
-          // Charger les âmes (souls + evangelized_souls)
-          const [soulDocs, evangelizedDocs] = await Promise.all([
-            Promise.all(uniqueSoulIds.map(id => getDoc(doc(db, 'souls', id)))),
-            Promise.all(uniqueSoulIds.map(id => getDoc(doc(db, 'evangelized_souls', id)))),
-          ]);
-
-          const soulsData: Record<string, any> = {};
-          soulDocs.forEach(d => {
-            if (d.exists()) soulsData[d.id] = { id: d.id, fullName: d.data().fullName, collection: 'souls' };
-          });
-          evangelizedDocs.forEach(d => {
-            if (d.exists() && !soulsData[d.id]) {
-              soulsData[d.id] = { id: d.id, fullName: d.data().fullName, collection: 'evangelized_souls' };
-            }
-          });
-
-          // Charger les intervenants (users uniquement — bergers et évangélistes y sont)
-          const actorDocs = await Promise.all(uniqueActorIds.map(id => getDoc(doc(db, 'users', id))));
-          const actorsData: Record<string, Actor> = {};
-          actorDocs.forEach(d => {
-            if (d.exists()) {
-              const data = d.data() as any;
-              actorsData[d.id] = { id: d.id, fullName: data.fullName, role: data.role };
-            }
-          });
-
-          setSouls(soulsData);
-          setActors(actorsData);
-          setInteractions(interactionsData);
-          setLoading(false);
-        });
-      } catch (error) {
-        console.error('Error loading interactions:', error);
-        toast.error('Erreur lors du chargement des interactions');
-        setLoading(false);
       }
-    };
 
-    loadData();
-    return () => { if (unsubscribeFn) unsubscribeFn(); };
+      let q = supabase.from('interactions').select('*').order('date', { ascending: false });
+
+      if (currentUserId) {
+        q = q.eq('shepherdId', currentUserId);
+      } else if (selectedActorId) {
+        q = q.eq('shepherdId', selectedActorId);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const interactionsData = (data || []).map((row: any) => ({
+        id: row.id,
+        date: row.date ? new Date(row.date) : new Date(),
+        type: row.type,
+        notes: row.notes,
+        soulId: row.soulId,
+        shepherdId: row.shepherdId,
+        sourceCollection: row.sourceCollection || 'souls',
+      }));
+
+      const uniqueSoulIds = [...new Set(interactionsData.map(i => i.soulId))].filter(Boolean) as string[];
+      const uniqueActorIds = [...new Set(interactionsData.map(i => i.shepherdId))].filter(Boolean) as string[];
+
+      // Batch load souls from both tables in parallel
+      const soulsData: Record<string, any> = {};
+      if (uniqueSoulIds.length > 0) {
+        const [soulsResult, evangelizedResult] = await Promise.all([
+          supabase.from('souls').select('id, fullName').in('id', uniqueSoulIds),
+          supabase.from('evangelized_souls').select('id, fullName').in('id', uniqueSoulIds),
+        ]);
+        (soulsResult.data || []).forEach((s: any) => {
+          soulsData[s.id] = { id: s.id, fullName: s.fullName, collection: 'souls' };
+        });
+        (evangelizedResult.data || []).forEach((s: any) => {
+          if (!soulsData[s.id]) soulsData[s.id] = { id: s.id, fullName: s.fullName, collection: 'evangelized_souls' };
+        });
+      }
+
+      // Batch load actors
+      const actorsData: Record<string, Actor> = {};
+      if (uniqueActorIds.length > 0) {
+        const { data: actorDocs } = await supabase
+          .from('users')
+          .select('id, fullName, role')
+          .in('id', uniqueActorIds);
+        (actorDocs || []).forEach((d: any) => {
+          actorsData[d.id] = { id: d.id, fullName: d.fullName, role: d.role };
+        });
+      }
+
+      setSouls(soulsData);
+      setActors(actorsData);
+      setInteractions(interactionsData);
+    } catch (error) {
+      console.error('Error loading interactions:', error);
+      toast.error('Erreur lors du chargement des interactions');
+    } finally {
+      setLoading(false);
+    }
   }, [user, selectedActorId, isAdminView]);
 
-  // Filtrage — ne pas exclure les interactions dont l'intervenant est inconnu
+  useEffect(() => {
+    fetchInteractions();
+
+    const channel = supabase
+      .channel('interactions-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'interactions' }, () => {
+        fetchInteractions();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchInteractions]);
+
+  // Filter — don't exclude interactions with unknown actor
   const filteredInteractions = interactions.filter(interaction => {
     const soul = souls[interaction.soulId];
     const actor = actors[interaction.shepherdId];
@@ -256,7 +240,7 @@ export default function InteractionsManagement() {
     );
   });
 
-  // Tri
+  // Sort
   const sortedInteractions = [...filteredInteractions].sort((a, b) => {
     const { field, direction } = sortConfig;
     const mod = direction === 'asc' ? 1 : -1;
@@ -298,7 +282,6 @@ export default function InteractionsManagement() {
         <div className="bg-white p-4 rounded-lg border space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Filtres</h3>
 
-          {/* Filtre intervenant (admin uniquement) — bergers + évangélistes */}
           {isAdminView && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -321,7 +304,7 @@ export default function InteractionsManagement() {
                     </optgroup>
                   )}
                   {actorList.filter(a => isEvangelistUser(a as any)).length > 0 && (
-                    <optgroup label="Évangélistes">
+                    <optgroup label="Evangelistes">
                       {actorList
                         .filter(a => isEvangelistUser(a as any))
                         .map(a => (
@@ -337,22 +320,21 @@ export default function InteractionsManagement() {
             </div>
           )}
 
-          {/* Recherche textuelle */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
               placeholder={
                 isEvangelistView
-                  ? 'Rechercher par âme évangélisée ou notes...'
-                  : 'Rechercher par âme, intervenant ou notes...'
+                  ? 'Rechercher par ame evangelisee ou notes...'
+                  : 'Rechercher par ame, intervenant ou notes...'
               }
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
             />
             <p className="mt-1 text-sm text-gray-500">
-              {filteredInteractions.length} résultat{filteredInteractions.length !== 1 ? 's' : ''} trouvé{filteredInteractions.length !== 1 ? 's' : ''}
+              {filteredInteractions.length} resultat{filteredInteractions.length !== 1 ? 's' : ''} trouve{filteredInteractions.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
