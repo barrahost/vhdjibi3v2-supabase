@@ -1,0 +1,47 @@
+/*
+  # Storage Configuration Update
+  
+  1. Changes
+    - Configures public_storage as the main storage bucket
+    - Creates backward compatibility buckets
+    - Sets appropriate file size limits
+  
+  2. Security
+    - Disables RLS for simpler access
+*/
+
+-- Create or update the public_storage bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES (
+  'public_storage',
+  'Public Storage',
+  true,
+  209715200 -- 200MB limit
+)
+ON CONFLICT (id) DO UPDATE
+SET 
+  public = true,
+  file_size_limit = 209715200;
+
+-- Disable RLS on storage.objects for simpler access
+ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
+
+-- Create storage-photo bucket if it doesn't exist (for backward compatibility)
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES (
+  'storage-photo',
+  'Storage Photo (Deprecated)',
+  true,
+  5242880 -- 5MB limit
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Create audio-teachings bucket if it doesn't exist (for backward compatibility)
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES (
+  'audio-teachings',
+  'Audio Teachings (Deprecated)',
+  true,
+  104857600 -- 100MB limit
+)
+ON CONFLICT (id) DO NOTHING;

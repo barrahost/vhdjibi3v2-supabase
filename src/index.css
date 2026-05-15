@@ -1,0 +1,399 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom screen size for extra small devices */
+@layer base {
+  /* Variables CSS pour les couleurs shadcn/ui */
+  :root {
+    --background: 0 0% 100%; /* white */
+    --foreground: 222.2 84% 4.9%; /* black */
+    --card: 0 0% 100%; /* white */
+    --card-foreground: 222.2 84% 4.9%; /* black */
+    --popover: 0 0% 100%; /* white */
+    --popover-foreground: 222.2 84% 4.9%; /* black */
+    --primary: 222.2 47.4% 11.2%; /* dark blue/black */
+    --primary-foreground: 210 20% 98%; /* light gray */
+    --secondary: 210 40% 96.1%; /* light gray */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* dark blue/black */
+    --muted: 210 40% 96.1%; /* light gray */
+    --muted-foreground: 215.4 16.3% 46.9%; /* gray */
+    --accent: 210 40% 96.1%; /* light gray */
+    --accent-foreground: 222.2 47.4% 11.2%; /* dark blue/black */
+    --destructive: 0 84.2% 60.2%; /* red */
+    --destructive-foreground: 210 20% 98%; /* light gray */
+    --border: 214.3 31.8% 91.4%; /* very light gray */
+    --input: 214.3 31.8% 91.4%; /* very light gray */
+    --ring: 222.2 84% 4.9%; /* black */
+    --radius: 0.5rem;
+
+    /* Variables pour la sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 20% 98%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 84% 4.9%;
+  }
+
+  /* Thème sombre */
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 20% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 20% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    /* Variables pour la sidebar en thème sombre */
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 210 20% 98%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
+  }
+
+  @variants responsive {
+    .xs\:block {
+      display: block;
+    }
+    .xs\:hidden {
+      display: none;
+    }
+  }
+}
+
+html {
+  font-family: 'Montserrat', sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00665C;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #004d45;
+}
+
+/* Animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+/* Improved audio player animations */
+@keyframes gentle-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes wave-flow {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-wave-flow {
+  animation: wave-flow 3s ease-in-out infinite;
+}
+
+@keyframes equalize {
+  0% {
+    height: 60%;
+  }
+  50% {
+    height: 40%;
+  }
+  100% {
+    height: 60%;
+  }
+}
+
+.audio-bar {
+  animation: equalize 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--index) * 0.05s);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out forwards;
+}
+
+/* Custom range input styling */
+input[type="range"]:not(.volume-slider) {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+input[type="range"]:not(.volume-slider)::-webkit-slider-runnable-track {
+  background: #e5e7eb;
+  height: 4px;
+  border-radius: 2px;
+}
+
+input[type="range"]:not(.volume-slider)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  background-color: #00665C;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+}
+
+input[type="range"]:not(.volume-slider):focus {
+  outline: none;
+}
+
+input[type="range"]:not(.volume-slider):focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px rgba(0, 102, 92, 0.2);
+}
+
+/* Enhanced volume slider styling */
+input[type="range"].volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+input[type="range"].volume-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #00665C 0%, #00665C var(--volume-percent, 100%), #e5e7eb var(--volume-percent, 100%), #e5e7eb 100%);
+  height: 8px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+input[type="range"].volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00665C 0%, #F2B636 100%);
+  cursor: pointer;
+  margin-top: -6px;
+  box-shadow: 0 4px 8px rgba(0, 102, 92, 0.3);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 6px 12px rgba(0, 102, 92, 0.4);
+}
+
+input[type="range"].volume-slider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+
+/* Loading skeleton animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Audio visualization styles */
+.audio-visualizer {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.audio-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background-color: rgba(0, 102, 92, 0.1);
+  pointer-events: none;
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Audio player specific hover effects */
+.audio-control-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.audio-control-hover:hover {
+  transform: translateY(-1px) scale(1.05);
+  filter: drop-shadow(0 4px 8px rgba(0, 102, 92, 0.25));
+}
+
+.audio-control-hover:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-shadow duration-200;
+}
+
+.card:hover {
+  @apply shadow-md;
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+}
+
+.btn-primary {
+  @apply bg-[#00665C] text-white hover:bg-[#00665C]/90;
+}
+
+.btn-secondary {
+  @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+/* Form styles */
+.form-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C];
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.form-helper {
+  @apply mt-1 text-sm text-gray-500;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-[#00665C]/10 text-[#00665C];
+}
+
+.badge-secondary {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-amber-100 text-amber-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+/* Hide scrollbar for mobile chip rows while keeping scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

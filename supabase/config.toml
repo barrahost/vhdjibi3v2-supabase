@@ -1,0 +1,7 @@
+project_id = "vddrkncqeiwbcamzxjsl"
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.check-sms-balance]
+verify_jwt = false
