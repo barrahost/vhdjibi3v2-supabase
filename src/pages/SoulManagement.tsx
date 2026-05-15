@@ -348,12 +348,12 @@ export default function SoulManagement() {
   const fetchSouls = useCallback(async () => {
     setLoading(true);
     try {
-      let q = supabase.from('souls').select('*').order('createdAt', { ascending: false });
+      let q = supabase.from('souls').select('*').order('created_at', { ascending: false });
 
       if (selectedShepherdId === 'unassigned') {
-        q = q.is('shepherdId', null);
+        q = q.is('shepherd_id', null);
       } else if (selectedShepherdId) {
-        q = q.eq('shepherdId', selectedShepherdId);
+        q = q.eq('shepherd_id', selectedShepherdId);
       }
 
       if (statusFilter !== 'all') {
@@ -365,8 +365,23 @@ export default function SoulManagement() {
 
       const soulsData: Soul[] = (data || []).map((row: any) => ({
         ...row,
-        firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
-      }));
+        id: row.id,
+        fullName: row.fullName || row.full_name || '',
+        phone: row.phone || '',
+        location: row.location || '',
+        gender: row.gender || 'male',
+        isUndecided: row.isUndecided ?? row.is_undecided ?? false,
+        shepherdId: row.shepherdId || row.shepherd_id,
+        evangelistId: row.evangelistId || row.evangelist_id,
+        status: row.status || 'active',
+        photoURL: row.photoURL || row.photo_url,
+        firstVisitDate: row.firstVisitDate
+          ? new Date(row.firstVisitDate)
+          : row.first_visit_date
+          ? new Date(row.first_visit_date)
+          : undefined,
+        createdAt: row.createdAt || row.created_at,
+      } as Soul));
       setSouls(soulsData);
     } catch (error) {
       console.error('Error loading souls:', error);
