@@ -80,9 +80,7 @@ export default function UndecidedSouls() {
       const { data, error } = await supabase
         .from('souls')
         .select('*')
-        .eq('isUndecided', true)
-        .eq('status', 'active')
-        .order('createdAt', { ascending: false });
+        .eq('status', 'active');
 
       if (error) {
         console.error('Error loading undecided souls:', error);
@@ -90,11 +88,18 @@ export default function UndecidedSouls() {
         return;
       }
 
-      const soulsData = (data ?? []).map((row) => ({
-        ...row,
-        id: row.id,
-        firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
-      } as Soul));
+      const soulsData = (data ?? [])
+        .map((row) => ({
+          ...row,
+          id: row.id,
+          firstVisitDate: row.firstVisitDate ? new Date(row.firstVisitDate) : undefined,
+        } as Soul))
+        .filter(s => s.isUndecided === true || (s as any).is_undecided === true)
+        .sort((a, b) => {
+          const aDate = (a as any).createdAt || (a as any).created_at || 0;
+          const bDate = (b as any).createdAt || (b as any).created_at || 0;
+          return new Date(bDate as any).getTime() - new Date(aDate as any).getTime();
+        });
 
       setSouls(soulsData);
     } catch (error) {
