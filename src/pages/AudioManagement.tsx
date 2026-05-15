@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, getDocs, deleteDoc } from 'firebase/firestore';
-import { db, writeBatch } from '../lib/firebase';
+import { useState, useEffect, useCallback } from 'react';
+
+import { supabase } from '../lib/supabase';
 import { StorageService } from '../services/storage.service';
 import { Plus, Search, Trash2, Pencil, Play, Pause, Calendar, Loader2 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
@@ -77,37 +77,47 @@ export default function AudioManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    let q = query(
-      collection(db, 'teachings'),
-      where('status', '==', 'active'),
-      orderBy('date', 'desc')
-    );
+  const fetchTeachings = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('teachings')
+        .select('*')
+        .eq('status', 'active')
+        .order('date', { ascending: false });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const teachingsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        thumbnail_url: doc.data().thumbnailUrl, // Map the old property to the new expected name
-        date: doc.data().date?.toDate(),
-        createdAt: doc.data().createdAt?.toDate()
+      if (error) throw error;
+
+      const teachingsData = ((data || []) as any[]).map(row => ({
+        ...row,
+        thumbnail_url: row.thumbnailUrl || row.thumbnail_url,
+        date: row.date ? new Date(row.date) : undefined,
+        createdAt: row.createdAt ? new Date(row.createdAt) : undefined
       })) as Teaching[];
-      
+
       setTeachings(teachingsData);
-      
+
       // Extract unique speakers from teachings
       const uniqueSpeakers = [...new Set(teachingsData.map(t => t.speaker))];
       setSpeakers(uniqueSpeakers);
-      
-      setLoading(false);
-    }, (error) => {
+
+    } catch (error) {
       console.error('Error loading teachings:', error);
       toast.error('Erreur lors du chargement des enseignements');
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTeachings();
+
+    const channel = supabase
+      .channel('teachings-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachings' }, fetchTeachings)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchTeachings]);
 
   // Filter teachings based on filters
   useEffect(() => {
@@ -220,7 +230,8 @@ export default function AudioManagement() {
           updates.thumbnail_url = thumbnail_url; // Add the new property name for component display
         }
 
-        await updateDoc(doc(db, 'teachings', editingTeaching.id), updates);
+        const { error: updateError } = await supabase.from('teachings').update(updates).eq('id', editingTeaching.id);
+        if (updateError) throw updateError;
         toast.success('Enseignement modifié avec succès');
         setShowForm(false);
         return;
@@ -325,7 +336,7 @@ export default function AudioManagement() {
       }
       
       // Save to Firestore with correct duration
-      await addDoc(collection(db, 'teachings'), {
+      const { error: insertError } = await supabase.from('teachings').insert({
         title: formData.title.trim(),
         description: formData.description.trim(),
         speaker: formData.speaker.trim(),
@@ -336,13 +347,14 @@ export default function AudioManagement() {
         duration,
         fileUrl,
         thumbnailUrl: thumbnailUrl || null,
-        thumbnail_url: thumbnailUrl || null, // Add both property names
+        thumbnail_url: thumbnailUrl || null,
         plays: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: 'system',
         status: 'active'
       });
+      if (insertError) throw insertError;
       
       toast.success('Enseignement ajouté avec succès');
       setShowForm(false);
@@ -380,7 +392,8 @@ export default function AudioManagement() {
       }
 
       // Delete from Firestore
-      await deleteDoc(doc(db, 'teachings', teaching.id));
+      const { error: deleteError } = await supabase.from('teachings').delete().eq('id', teaching.id);
+      if (deleteError) throw deleteError;
 
       toast.success('Enseignement supprimé avec succès');
     } catch (error) {
@@ -437,24 +450,17 @@ export default function AudioManagement() {
     }
 
     try {
-      const batch = writeBatch(db);
-      let count = 0;
+      const count = selectedTeachings.size;
 
       // Show loading toast
       const loadingToast = toast.loading(`Mise à jour de ${selectedTeachings.size} audios...`);
 
-      // Update each selected teaching in the batch
-      selectedTeachings.forEach(id => {
-        const teachingRef = doc(db, 'teachings', id);
-        batch.update(teachingRef, { 
-          category: bulkActionCategory,
-          updatedAt: new Date()
-        });
-        count++;
-      });
-
-      // Commit the batch
-      await batch.commit();
+      // Update all selected teachings at once
+      const { error: bulkError } = await supabase
+        .from('teachings')
+        .update({ category: bulkActionCategory, updatedAt: new Date() })
+        .in('id', [...selectedTeachings]);
+      if (bulkError) throw bulkError;
 
       // Dismiss loading toast and show success toast
       toast.dismiss(loadingToast);
