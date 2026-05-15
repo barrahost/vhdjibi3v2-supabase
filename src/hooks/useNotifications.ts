@@ -53,7 +53,7 @@ export function useNotifications(userId: string | undefined) {
         const currentIds: string[] = [];
 
         for (const soul of souls) {
-          const soulInteractions = interactions.filter(i => i.soul_id === soul.id);
+          const soulInteractions = interactions.filter((i: any) => i.soul_id === soul.id);
           const lastInteraction = soulInteractions.length > 0
             ? new Date(soulInteractions[0].date)
             : null;

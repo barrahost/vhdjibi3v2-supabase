@@ -19,7 +19,7 @@ export function useDepartments() {
         if (err) throw err;
 
         setDepartments(
-          (data || []).map(row => ({
+          (data || []).map((row: any) => ({
             id: row.id,
             name: row.name,
             description: row.description,

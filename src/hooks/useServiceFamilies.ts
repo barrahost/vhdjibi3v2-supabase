@@ -36,7 +36,7 @@ export function useServiceFamilies(onlyActive: boolean = true) {
         if (err) throw err;
 
         setFamilies(
-          (data || []).map(row => ({
+          (data || []).map((row: any) => ({
             id: row.id,
             name: row.name,
             description: row.description,

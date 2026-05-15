@@ -240,10 +240,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       type Candidate = { data: any; collectionName: 'users' | 'admins' };
       const candidateMap = new Map<string, Candidate>();
 
-      (usersRes.data || []).forEach(row => {
+      (usersRes.data || []).forEach((row: any) => {
         candidateMap.set(`users:${row.id}`, { data: mapUserRow(row), collectionName: 'users' });
       });
-      (adminsRes.data || []).forEach(row => {
+      (adminsRes.data || []).forEach((row: any) => {
         candidateMap.set(`admins:${row.id}`, { data: mapAdminRow(row), collectionName: 'admins' });
       });
 

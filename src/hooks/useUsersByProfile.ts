@@ -32,7 +32,7 @@ export function useUsersByProfile(profileTypes: BusinessProfileType[]) {
 
         if (err) throw err;
 
-        const all: SimpleUser[] = (data || []).map(row => ({
+        const all: SimpleUser[] = (data || []).map((row: any) => ({
           id: row.id,
           uid: row.uid,
           fullName: row.full_name,

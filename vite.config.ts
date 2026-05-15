@@ -11,47 +11,24 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      // Redirect all firebase imports to Supabase-backed shims
+      'firebase/firestore': path.resolve(__dirname, 'src/lib/firebaseCompat.ts'),
+      'firebase/auth':      path.resolve(__dirname, 'src/lib/firebaseAuthCompat.ts'),
+      // Redirect firebase/app and firebase/storage to empty stubs
+      'firebase/app':       path.resolve(__dirname, 'src/lib/firebaseStub.ts'),
+      'firebase/storage':   path.resolve(__dirname, 'src/lib/firebaseStub.ts'),
+      'firebase/functions': path.resolve(__dirname, 'src/lib/firebaseStub.ts'),
     },
   },
   optimizeDeps: {
-    exclude: ['lucide-react']
+    exclude: ['lucide-react'],
   },
   build: {
     sourcemap: true,
-    outDir: 'dist'
+    outDir: 'dist',
   },
   server: {
     port: 8080,
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-    },
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
-    },
-    proxy: {
-      '/_firebase': {
-        target: 'http://127.0.0.1:8080',
-        changeOrigin: true,
-        secure: false,
-        ws: true,
-        rewrite: (path) => path.replace(/^\/_firebase/, '')
-      },
-      '/__/auth': {
-        target: 'http://127.0.0.1:9099',
-        changeOrigin: true,
-        secure: false,
-        ws: true
-      },
-      '/_storage': {
-        target: 'http://127.0.0.1:9199',
-        changeOrigin: true,
-        secure: false,
-        ws: true
-      }
-    }
-  }
+    cors: { origin: '*' },
+  },
 }));

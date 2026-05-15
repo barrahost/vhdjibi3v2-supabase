@@ -37,41 +37,41 @@ export function useAdminNotifications(): AdminNotificationsResult {
           .select('id, full_name, shepherd_id, is_undecided, service_family_id, status');
 
         if (soulsErr) throw soulsErr;
-        const activeSouls = (allSouls || []).filter(s => s.status === 'active');
+        const activeSouls = (allSouls || []).filter((s: any) => s.status === 'active');
 
         // 2. Âmes sans berger
         const soulsWithoutShepherd = activeSouls.filter(
-          s => !s.shepherd_id || s.shepherd_id === ''
+          (s: any) => !s.shepherd_id || s.shepherd_id === ''
         );
         if (soulsWithoutShepherd.length > 0) {
           newAlerts.push({
             type: 'no_shepherd',
             count: soulsWithoutShepherd.length,
-            souls: soulsWithoutShepherd.slice(0, 5).map(s => ({ id: s.id, name: s.full_name })),
+            souls: soulsWithoutShepherd.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
             navigateTo: '/gestion-des-ames',
           });
         }
 
         // 3. Âmes indécises
-        const undecidedSouls = activeSouls.filter(s => s.is_undecided === true);
+        const undecidedSouls = activeSouls.filter((s: any) => s.is_undecided === true);
         if (undecidedSouls.length > 0) {
           newAlerts.push({
             type: 'undecided',
             count: undecidedSouls.length,
-            souls: undecidedSouls.slice(0, 5).map(s => ({ id: s.id, name: s.full_name })),
+            souls: undecidedSouls.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
             navigateTo: '/gestion-des-ames',
           });
         }
 
         // 4. Âmes sans famille de service
         const soulsWithoutFamily = activeSouls.filter(
-          s => !s.service_family_id || s.service_family_id === ''
+          (s: any) => !s.service_family_id || s.service_family_id === ''
         );
         if (soulsWithoutFamily.length > 0) {
           newAlerts.push({
             type: 'no_family',
             count: soulsWithoutFamily.length,
-            souls: soulsWithoutFamily.slice(0, 5).map(s => ({ id: s.id, name: s.full_name })),
+            souls: soulsWithoutFamily.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
             navigateTo: '/gestion-des-ames',
           });
         }
@@ -83,12 +83,12 @@ export function useAdminNotifications(): AdminNotificationsResult {
           .neq('status', 'imported');
 
         if (evangErr) throw evangErr;
-        const pendingEvangelized = (evangelizedData || []).filter(s => !s.imported_to_soul_id);
+        const pendingEvangelized = (evangelizedData || []).filter((s: any) => !s.imported_to_soul_id);
         if (pendingEvangelized.length > 0) {
           newAlerts.push({
             type: 'pending_evangelized',
             count: pendingEvangelized.length,
-            souls: pendingEvangelized.slice(0, 5).map(s => ({ id: s.id, name: s.full_name })),
+            souls: pendingEvangelized.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
             navigateTo: '/ames-evangelisees',
           });
         }
@@ -100,7 +100,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
 
         if (!bdErr && birthdaysData) {
           const today = new Date();
-          const upcomingBirthdays = birthdaysData.filter(b => {
+          const upcomingBirthdays = birthdaysData.filter((b: any) => {
             if (!b.birth_date) return false;
             try {
               const bDate = new Date(b.birth_date);
@@ -118,7 +118,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
             newAlerts.push({
               type: 'upcoming_birthday',
               count: upcomingBirthdays.length,
-              souls: upcomingBirthdays.slice(0, 5).map(b => {
+              souls: upcomingBirthdays.slice(0, 5).map((b: any) => {
                 const bDate = new Date(b.birth_date);
                 const thisYear = new Date(today.getFullYear(), bDate.getMonth(), bDate.getDate());
                 const diff = Math.floor(
