@@ -1,13 +1,11 @@
-import { Timestamp } from 'firebase/firestore';
-
 export interface Department {
   id: string;
   name: string;
   description: string;
   leader: string;
   order: number;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
   status: 'active' | 'inactive';
 }
 
@@ -17,7 +15,7 @@ export interface ServiceFamily {
   description: string;
   leader: string;
   order: number;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
   status: 'active' | 'inactive';
 }

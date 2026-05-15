@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import type { BusinessProfileType } from '../types/businessProfile.types';
 
 export interface SimpleUser {
@@ -15,7 +14,7 @@ export interface SimpleUser {
 
 /**
  * Récupère les utilisateurs ayant un certain profil métier
- * (soit dans `businessProfiles`, soit via le champ legacy `role`).
+ * (soit dans `business_profiles`, soit via le champ legacy `role`).
  */
 export function useUsersByProfile(profileTypes: BusinessProfileType[]) {
   const [users, setUsers] = useState<SimpleUser[]>([]);
@@ -26,16 +25,27 @@ export function useUsersByProfile(profileTypes: BusinessProfileType[]) {
     const load = async () => {
       try {
         setLoading(true);
-        const q = query(collection(db, 'users'), where('status', '==', 'active'));
-        const snap = await getDocs(q);
-        const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as SimpleUser));
+        const { data, error: err } = await supabase
+          .from('users')
+          .select('id, uid, full_name, nickname, phone, role, business_profiles')
+          .eq('status', 'active');
+
+        if (err) throw err;
+
+        const all: SimpleUser[] = (data || []).map(row => ({
+          id: row.id,
+          uid: row.uid,
+          fullName: row.full_name,
+          nickname: row.nickname,
+          phone: row.phone,
+          role: row.role,
+          businessProfiles: row.business_profiles || [],
+        }));
 
         const filtered = all.filter(u => {
-          // Nouveau système : profils métier
           const fromProfiles = (u.businessProfiles || []).some(p =>
             profileTypes.includes(p.type)
           );
-          // Système legacy : champ role
           const fromRole = u.role && profileTypes.includes(u.role as BusinessProfileType);
           return fromProfiles || fromRole;
         });
@@ -48,6 +58,7 @@ export function useUsersByProfile(profileTypes: BusinessProfileType[]) {
         setLoading(false);
       }
     };
+
     load();
   }, [JSON.stringify(profileTypes)]);
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 interface ServantStatus {
   isServant: boolean;
@@ -13,51 +12,43 @@ export function useServantStatus(userEmail: string | undefined): ServantStatus {
   const [status, setStatus] = useState<ServantStatus>({
     isServant: false,
     isDepartmentHead: false,
-    loading: true
+    loading: true,
   });
 
   useEffect(() => {
     if (!userEmail) {
-      setStatus({
-        isServant: false,
-        isDepartmentHead: false,
-        loading: false
-      });
+      setStatus({ isServant: false, isDepartmentHead: false, loading: false });
       return;
     }
 
-    const checkServantStatus = async () => {
+    const check = async () => {
       try {
-        const servantsRef = collection(db, 'servants');
-        const q = query(servantsRef, where('email', '==', userEmail));
-        const snapshot = await getDocs(q);
+        const { data, error } = await supabase
+          .from('servants')
+          .select('id, is_head, department_id')
+          .eq('email', userEmail)
+          .limit(1);
 
-        if (!snapshot.empty) {
-          const servantData = snapshot.docs[0].data();
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const servant = data[0];
           setStatus({
             isServant: true,
-            isDepartmentHead: servantData.isHead === true,
-            departmentId: servantData.departmentId,
-            loading: false
+            isDepartmentHead: servant.is_head === true,
+            departmentId: servant.department_id,
+            loading: false,
           });
         } else {
-          setStatus({
-            isServant: false,
-            isDepartmentHead: false,
-            loading: false
-          });
+          setStatus({ isServant: false, isDepartmentHead: false, loading: false });
         }
       } catch (error) {
         console.error('Error checking servant status:', error);
-        setStatus({
-          isServant: false,
-          isDepartmentHead: false,
-          loading: false
-        });
+        setStatus({ isServant: false, isDepartmentHead: false, loading: false });
       }
     };
 
-    checkServantStatus();
+    check();
   }, [userEmail]);
 
   return status;

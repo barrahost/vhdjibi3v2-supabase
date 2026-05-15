@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Department } from '../types/department.types';
 import toast from 'react-hot-toast';
 
@@ -10,28 +9,45 @@ export function useDepartments() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'departments'), orderBy('order', 'asc'));
-    
-    try {
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        setDepartments(snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Department)));
-        setLoading(false);
-      }, (error) => {
-        console.error('Error loading departments:', error);
-        setError('Erreur lors du chargement des départements');
-        toast.error('Erreur lors du chargement des départements');
-        setLoading(false);
-      });
+    const load = async () => {
+      try {
+        const { data, error: err } = await supabase
+          .from('departments')
+          .select('*')
+          .order('order', { ascending: true });
 
-      return () => unsubscribe();
-    } catch (error) {
-      console.error('Error setting up departments listener:', error);
-      setError('Erreur lors de l\'initialisation');
-      setLoading(false);
-    }
+        if (err) throw err;
+
+        setDepartments(
+          (data || []).map(row => ({
+            id: row.id,
+            name: row.name,
+            description: row.description,
+            leader: row.leader,
+            order: row.order,
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          })) as Department[]
+        );
+      } catch (err: any) {
+        console.error('Error loading departments:', err);
+        const msg = 'Erreur lors du chargement des départements';
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+
+    const channel = supabase
+      .channel('departments-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, load)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   return { departments, loading, error };

@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { ServiceFamily } from '../types/database.types';
+import { supabase } from '../lib/supabase';
+
+export interface ServiceFamily {
+  id: string;
+  name: string;
+  description: string;
+  leader: string;
+  leaderId?: string;
+  shepherdIds?: string[];
+  order: number;
+  status: 'active' | 'inactive';
+  createdAt: string | null;
+  updatedAt: string | null;
+}
 
 export function useServiceFamilies(onlyActive: boolean = true) {
   const [families, setFamilies] = useState<ServiceFamily[]>([]);
@@ -12,13 +23,32 @@ export function useServiceFamilies(onlyActive: boolean = true) {
     const load = async () => {
       try {
         setLoading(true);
-        const constraints = onlyActive
-          ? [where('status', '==', 'active'), orderBy('order', 'asc')]
-          : [orderBy('order', 'asc')];
-        const q = query(collection(db, 'serviceFamilies'), ...constraints);
-        const snap = await getDocs(q);
-        const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceFamily));
-        setFamilies(data);
+        let q = supabase
+          .from('service_families')
+          .select('*')
+          .order('order', { ascending: true });
+
+        if (onlyActive) {
+          q = q.eq('status', 'active');
+        }
+
+        const { data, error: err } = await q;
+        if (err) throw err;
+
+        setFamilies(
+          (data || []).map(row => ({
+            id: row.id,
+            name: row.name,
+            description: row.description,
+            leader: row.leader,
+            leaderId: row.leader_id,
+            shepherdIds: row.shepherd_ids,
+            order: row.order,
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          })) as ServiceFamily[]
+        );
       } catch (err: any) {
         console.error('Error loading service families:', err);
         setError(err?.message || 'Erreur de chargement');
@@ -26,6 +56,7 @@ export function useServiceFamilies(onlyActive: boolean = true) {
         setLoading(false);
       }
     };
+
     load();
   }, [onlyActive]);
 
