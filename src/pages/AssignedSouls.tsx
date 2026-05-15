@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Soul } from '../types/database.types';
 import { Pencil, Search, Phone } from 'lucide-react';
@@ -26,27 +25,24 @@ export default function AssignedSouls() {
 
   const loadLastContacts = async (soulIds: string[]) => {
     const map = new Map<string, Date>();
-    // Firestore "in" supporte 10 valeurs max
-    for (let i = 0; i < soulIds.length; i += 10) {
-      const batch = soulIds.slice(i, i + 10);
-      try {
-        const q = query(
-          collection(db, 'interactions'),
-          where('soulId', 'in', batch),
-          orderBy('date', 'desc')
-        );
-        const snap = await getDocs(q);
-        snap.docs.forEach((d) => {
-          const data = d.data() as any;
-          const sId = data.soulId;
-          const dt: Date = data.date?.toDate ? data.date.toDate() : new Date(data.date);
-          if (!map.has(sId) || map.get(sId)!.getTime() < dt.getTime()) {
-            map.set(sId, dt);
-          }
-        });
-      } catch (e) {
-        console.error('Error loading interactions batch:', e);
-      }
+    try {
+      const { data, error } = await supabase
+        .from('interactions')
+        .select('soulId, date')
+        .in('soulId', soulIds)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      (data ?? []).forEach((row: any) => {
+        const sId = row.soulId;
+        const dt = new Date(row.date);
+        if (!map.has(sId) || map.get(sId)!.getTime() < dt.getTime()) {
+          map.set(sId, dt);
+        }
+      });
+    } catch (e) {
+      console.error('Error loading interactions:', e);
     }
     setLastContactMap(map);
   };
@@ -121,16 +117,17 @@ export default function AssignedSouls() {
     if (!user) return;
 
     try {
-      const userQuery = query(
-        collection(db, 'users'),
-        where('uid', '==', user.uid),
-        where('status', '==', 'active')
-      );
-      const userDoc = await getDocs(userQuery);
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('uid', user.uid)
+        .eq('status', 'active');
 
-      if (!userDoc.empty) {
-        const userData = userDoc.docs[0].data();
-        const currentUserId = userDoc.docs[0].id;
+      if (usersError) throw usersError;
+
+      if (usersData && usersData.length > 0) {
+        const userData = usersData[0];
+        const currentUserId = userData.id;
 
         const hasShepherdProfile = userData.businessProfiles?.some((profile: any) =>
           profile.type === 'shepherd' && profile.isActive
@@ -140,17 +137,15 @@ export default function AssignedSouls() {
         if (hasShepherdProfile || hasOldShepherdRole) {
           setShepherdId(currentUserId);
 
-          const soulsQuery = query(
-            collection(db, 'souls'),
-            where('shepherdId', '==', currentUserId),
-            where('status', '==', 'active')
-          );
-          const soulsSnapshot = await getDocs(soulsQuery);
+          const { data: soulsData, error: soulsError } = await supabase
+            .from('souls')
+            .select('*')
+            .eq('shepherdId', currentUserId)
+            .eq('status', 'active');
 
-          const loaded = soulsSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          } as Soul));
+          if (soulsError) throw soulsError;
+
+          const loaded = (soulsData ?? []) as Soul[];
           setSouls(loaded);
 
           if (loaded.length > 0) {
