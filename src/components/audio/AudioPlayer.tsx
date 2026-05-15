@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download, ChevronDown } from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
-import { incrementPlayCount } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import toast from 'react-hot-toast';
 
@@ -32,11 +32,11 @@ export function AudioPlayer({
   onShare, 
   initialPlayState = false 
 }: AudioPlayerProps) {
-  // Créer une référence audio persistante qui ne sera pas recréée à chaque changement d'URL
+  // CrÃ©er une rÃ©fÃ©rence audio persistante qui ne sera pas recrÃ©Ã©e Ã  chaque changement d'URL
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   
-  // Ajout d'un état pour suivre si l'audio doit reprendre automatiquement après changement d'URL
+  // Ajout d'un Ã©tat pour suivre si l'audio doit reprendre automatiquement aprÃ¨s changement d'URL
   const [shouldPlay, setShouldPlay] = useState(initialPlayState);
   const [isPlaying, setIsPlaying] = useState(false); 
   const [currentTime, setCurrentTime] = useState(0);
@@ -53,7 +53,7 @@ export function AudioPlayer({
   const [isExpanded, setIsExpanded] = useState(false);
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
   
-  // Gérer les propriétés de l'audio et les événements de base lors du premier montage
+  // GÃ©rer les propriÃ©tÃ©s de l'audio et les Ã©vÃ©nements de base lors du premier montage
   // Initialize audio element once and reuse it throughout the component's lifecycle
   useEffect(() => {
     const audio = new Audio();
@@ -70,7 +70,7 @@ export function AudioPlayer({
     };
   }, []);
   
-  // Mettre à jour la source audio et les événements lorsque l'URL change
+  // Mettre Ã  jour la source audio et les Ã©vÃ©nements lorsque l'URL change
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -87,7 +87,7 @@ export function AudioPlayer({
     
     console.log(`Audio source changing to: ${url}, should continue playing: ${shouldContinuePlaying}`);
     
-    // Mettre à jour la source audio
+    // Mettre Ã  jour la source audio
     audio.src = url;
     audio.volume = isMuted ? 0 : volume;
     
@@ -111,7 +111,7 @@ export function AudioPlayer({
     
     const handleCanPlay = () => {
       setIsLoading(false);
-      // Restaurer l'état de lecture après changement d'URL
+      // Restaurer l'Ã©tat de lecture aprÃ¨s changement d'URL
       if (shouldPlay) {
         audio.play()
           .then(() => { 
@@ -133,7 +133,7 @@ export function AudioPlayer({
       setError(errorMessage);
       setIsLoading(false);
       setIsPlaying(false);
-      toast.error('Impossible de lire cet audio. Veuillez réessayer plus tard.');
+      toast.error('Impossible de lire cet audio. Veuillez rÃ©essayer plus tard.');
     };
     
     // Add event listeners
@@ -156,14 +156,14 @@ export function AudioPlayer({
     };
   }, [url, volume, isMuted, shouldPlay, initialPlayState]);
   
-  // Mettre à jour le volume quand il change
+  // Mettre Ã  jour le volume quand il change
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
   
-  // Mettre à jour la vitesse de lecture quand elle change
+  // Mettre Ã  jour la vitesse de lecture quand elle change
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackSpeed;
@@ -175,13 +175,13 @@ export function AudioPlayer({
     
     switch (error.code) {
       case MediaError.MEDIA_ERR_ABORTED:
-        return 'La lecture a été interrompue';
+        return 'La lecture a Ã©tÃ© interrompue';
       case MediaError.MEDIA_ERR_NETWORK:
-        return 'Erreur réseau lors du chargement';
+        return 'Erreur rÃ©seau lors du chargement';
       case MediaError.MEDIA_ERR_DECODE:
-        return 'Impossible de décoder l\'audio';
+        return 'Impossible de dÃ©coder l\'audio';
       case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-        return 'Format audio non supporté';
+        return 'Format audio non supportÃ©';
       default:
         return 'Erreur lors de la lecture';
     }
@@ -219,11 +219,11 @@ export function AudioPlayer({
         if (playPromise !== undefined) {
           // Track play count when user explicitly starts playing
           if (!playTrackedRef.current) {
-            incrementPlayCount(id);
+            supabase.from('teachings').select('plays').eq('id', id).single().then(({ data }) => { if (data) supabase.from('teachings').update({ plays: (data.plays || 0) + 1 }).eq('id', id).then(() => {}); });
             playTrackedRef.current = true;
             console.log("Tracking play count for:", id);
 
-            // Persist locally for "Récemment écoutés"
+            // Persist locally for "RÃ©cemment Ã©coutÃ©s"
             try {
               const key = 'recently_played';
               const stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
@@ -280,7 +280,7 @@ export function AudioPlayer({
     }
   };
 
-  // Keyboard shortcuts (desktop): Space, ←/→, ↑/↓, N, P, M
+  // Keyboard shortcuts (desktop): Space, â/â, â/â, N, P, M
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -351,7 +351,7 @@ export function AudioPlayer({
 
   const handleDownload = async () => {
     try {
-      toast.loading('Préparation du téléchargement...', { id: 'download' });
+      toast.loading('PrÃ©paration du tÃ©lÃ©chargement...', { id: 'download' });
       const response = await fetch(url);
       const blob = await response.blob();
       
@@ -364,10 +364,10 @@ export function AudioPlayer({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
       
-      toast.success('Téléchargement démarré', { id: 'download' });
+      toast.success('TÃ©lÃ©chargement dÃ©marrÃ©', { id: 'download' });
     } catch (error) {
       console.error('Download error:', error);
-      toast.error('Erreur lors du téléchargement', { id: 'download' });
+      toast.error('Erreur lors du tÃ©lÃ©chargement', { id: 'download' });
     }
   };
   
@@ -431,7 +431,7 @@ export function AudioPlayer({
               <button
                 onClick={() => setIsExpanded(false)}
                 className="p-2 text-gray-500 hover:text-gray-900"
-                aria-label="Réduire le lecteur"
+                aria-label="RÃ©duire le lecteur"
               >
                 <ChevronDown className="w-6 h-6" />
               </button>
@@ -486,7 +486,7 @@ export function AudioPlayer({
                 onClick={onPrevious}
                 disabled={!onPrevious || !!error}
                 className="p-2 text-gray-700 disabled:opacity-30"
-                aria-label="Précédent"
+                aria-label="PrÃ©cÃ©dent"
               >
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M19 20L9 12l10-8v16z" />
@@ -555,7 +555,7 @@ export function AudioPlayer({
                 className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#00665C] disabled:opacity-50"
               >
                 <Download className="w-6 h-6" />
-                <span className="text-xs">Télécharger</span>
+                <span className="text-xs">TÃ©lÃ©charger</span>
               </button>
               {onShare && (
                 <button
@@ -617,7 +617,7 @@ export function AudioPlayer({
             <button
               onClick={handleDownload}
               className="p-3 text-gray-400 hover:text-[#00665C] rounded-full hover:bg-[#00665C]/10 transition-all duration-200 hover:scale-110 shadow-md hover:shadow-lg"
-              title="Télécharger l'audio"
+              title="TÃ©lÃ©charger l'audio"
               disabled={!!error}
             >
               <Download className="w-6 h-6" />
@@ -673,7 +673,7 @@ export function AudioPlayer({
             <button
               onClick={onPrevious}
               className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
-              title="Piste précédente"
+              title="Piste prÃ©cÃ©dente"
               disabled={!onPrevious || !!error}
             >
               <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
