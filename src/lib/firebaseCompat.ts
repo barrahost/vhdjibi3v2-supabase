@@ -1,12 +1,12 @@
 /**
- * firebaseCompat.ts — Supabase-backed Firebase/Firestore API shim.
+ * firebaseCompat.ts â Supabase-backed Firebase/Firestore API shim.
  * Aliased via vite.config.ts + tsconfig.json paths so all existing
  * components keep their firebase/firestore imports unchanged.
  */
 import { supabase } from './supabase';
 
 // ============================================================
-// Collection name mapping (Firestore camelCase → Supabase snake_case)
+// Collection name mapping (Firestore camelCase â Supabase snake_case)
 // ============================================================
 const COLLECTION_MAP: Record<string, string> = {
   souls:             'souls',
@@ -71,7 +71,7 @@ export interface _QueryLike { _collection: string; _constraints: _Constraint[] }
 export interface _DocumentRef {
   _collection: string;
   _id: string;
-  /** Alias for _id — mirrors Firebase's DocumentReference.id */
+  /** Alias for _id â mirrors Firebase's DocumentReference.id */
   id: string;
 }
 
@@ -120,7 +120,7 @@ function makeDocRef(collection: string, id: string): _DocumentRef {
   return { _collection: collection, _id: id, id };
 }
 
-/** doc(collectionRef) — auto-ID new document reference */
+/** doc(collectionRef) â auto-ID new document reference */
 export function doc(collectionRef: _QueryLike): _DocumentRef;
 /** doc(db, 'collection', 'id') */
 export function doc(db: any, collection: string, id: string): _DocumentRef;
@@ -128,7 +128,7 @@ export function doc(db: any, collection: string, id: string): _DocumentRef;
 export function doc(collectionRef: _QueryLike, id: string): _DocumentRef;
 export function doc(dbOrRef: any, collectionOrId?: string, maybeId?: string): _DocumentRef {
   if (collectionOrId === undefined) {
-    // doc(collectionRef) — generate new auto-ID
+    // doc(collectionRef) â generate new auto-ID
     return makeDocRef(dbOrRef._collection ?? '', crypto.randomUUID());
   }
   if (maybeId !== undefined) {
@@ -163,17 +163,25 @@ export function query(ref: _QueryLike, ...constraints: _Constraint[]): _QueryLik
 // ============================================================
 // Apply constraints to a Supabase query builder
 // ============================================================
+// Convert Date objects to ISO strings for Supabase compatibility
+function serializeValue(v: any): any {
+  if (v instanceof Date) return v.toISOString();
+  if (v && typeof (v as any).toDate === 'function') return (v as any).toDate().toISOString();
+  return v;
+}
+
+// ============================================================
 function applyConstraints(sbq: any, constraints: _Constraint[]): any {
   for (const c of constraints) {
     if (c._type === 'where') {
       const col = camelToSnake(c.field!);
       switch (c.op) {
-        case '==':               sbq = sbq.eq(col, c.value); break;
-        case '!=':               sbq = sbq.neq(col, c.value); break;
-        case '>':                sbq = sbq.gt(col, c.value); break;
-        case '>=':               sbq = sbq.gte(col, c.value); break;
-        case '<':                sbq = sbq.lt(col, c.value); break;
-        case '<=':               sbq = sbq.lte(col, c.value); break;
+        case '==':               sbq = sbq.eq(col, serializeValue(c.value)); break;
+        case '!=':               sbq = sbq.neq(col, serializeValue(c.value)); break;
+        case '>':                sbq = sbq.gt(col, serializeValue(c.value)); break;
+        case '>=':               sbq = sbq.gte(col, serializeValue(c.value)); break;
+        case '<':                sbq = sbq.lt(col, serializeValue(c.value)); break;
+        case '<=':               sbq = sbq.lte(col, serializeValue(c.value)); break;
         case 'in':               sbq = sbq.in(col, c.value); break;
         case 'not-in':           sbq = sbq.not(col, 'in', `(${(c.value as any[]).join(',')})`); break;
         case 'array-contains':   sbq = sbq.contains(col, [c.value]); break;
@@ -263,7 +271,7 @@ export async function setDoc(
 }
 
 // ============================================================
-// updateDoc — handles increment() sentinels
+// updateDoc â handles increment() sentinels
 // ============================================================
 export async function updateDoc(docRef: _DocumentRef, data: any): Promise<void> {
   const table = getTable(docRef._collection);
