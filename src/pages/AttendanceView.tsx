@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, where, getDocs } from 'firebase/firestore';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { formatDate } from '../utils/dateUtils';
 import { CustomTable } from '../components/ui/CustomTable';
 import { Search } from 'lucide-react';
@@ -34,7 +32,7 @@ export default function AttendanceView() {
     },
     {
       key: 'soulId',
-      title: 'Âme',
+      title: 'Ame',
       render: (value: string) => {
         const soul = souls[value];
         return soul ? (
@@ -43,7 +41,7 @@ export default function AttendanceView() {
             <span className="ml-2 text-sm text-gray-500">{soul.phone}</span>
           </div>
         ) : (
-          <span className="text-gray-500">Âme inconnue</span>
+          <span className="text-gray-500">Ame inconnue</span>
         );
       }
     },
@@ -66,11 +64,11 @@ export default function AttendanceView() {
       title: 'Statut',
       render: (value: boolean) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value 
+          value
             ? 'bg-green-100 text-green-800'
             : 'bg-red-100 text-red-800'
         }`}>
-          {value ? 'Présent(e)' : 'Absent(e)'}
+          {value ? 'Present(e)' : 'Absent(e)'}
         </span>
       )
     },
@@ -81,86 +79,79 @@ export default function AttendanceView() {
     }
   ];
 
-  useEffect(() => {
-    let baseQuery = query(
-      collection(db, 'attendances'),
-      where('date', '>=', new Date(dateRange.startDate)),
-      where('date', '<=', new Date(dateRange.endDate)),
-      orderBy('date', 'desc') 
-    );
+  const fetchAttendances = useCallback(async () => {
+    setLoading(true);
+    try {
+      let q = supabase
+        .from('attendances')
+        .select('*')
+        .order('date', { ascending: false });
 
+      if (selectedShepherdId) {
+        q = q.eq('shepherdId', selectedShepherdId);
+      } else {
+        q = q.gte('date', dateRange.startDate).lte('date', dateRange.endDate);
+      }
 
-    if (selectedShepherdId) {
-      baseQuery = query(
-        collection(db, 'attendances'),
-        where('shepherdId', '==', selectedShepherdId),
-        orderBy('date', 'desc')
-      );
-    }
+      const { data, error } = await q;
+      if (error) throw error;
 
-    const unsubscribe = onSnapshot(baseQuery, async (snapshot) => {
-      const attendancesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date.toDate()
+      const attendancesData = (data || []).map((row: any) => ({
+        ...row,
+        date: row.date ? new Date(row.date) : null,
       }));
 
-      // Charger les informations des âmes et des bergers
+      // Batch load souls and shepherds
+      const uniqueSoulIds = [...new Set(attendancesData.map((a: any) => a.soulId).filter(Boolean))] as string[];
+      const uniqueShepherdIds = [...new Set(attendancesData.map((a: any) => a.shepherdId).filter(Boolean))] as string[];
+
       const soulsData: Record<string, any> = {};
       const shepherdsData: Record<string, any> = {};
 
-      // Récupérer les IDs uniques
-      const uniqueSoulIds = [...new Set(attendancesData.map((a: any) => a.soulId).filter(Boolean))];
-      const uniqueShepherdIds = [...new Set(attendancesData.map((a: any) => a.shepherdId).filter(Boolean))];
-
-      // Charger les âmes
-      for (const soulId of uniqueSoulIds) {
-        try {
-          const soulDoc = await getDoc(doc(db, 'souls', soulId));
-          if (soulDoc.exists()) {
-            soulsData[soulId] = {
-              id: soulId,
-              ...soulDoc.data()
-            };
-          }
-        } catch (error) {
-          console.error(`Error loading soul ${soulId}:`, error);
-        }
+      if (uniqueSoulIds.length > 0) {
+        const { data: soulsResult } = await supabase
+          .from('souls')
+          .select('id, fullName, phone')
+          .in('id', uniqueSoulIds);
+        (soulsResult || []).forEach((s: any) => { soulsData[s.id] = s; });
       }
 
-      // Charger les bergers
-      for (const shepherdId of uniqueShepherdIds) {
-        try {
-          const shepherdDoc = await getDoc(doc(db, 'users', shepherdId));
-          if (shepherdDoc.exists()) {
-            shepherdsData[shepherdId] = {
-              id: shepherdId,
-              ...shepherdDoc.data()
-            };
-          }
-        } catch (error) {
-          console.error(`Error loading shepherd ${shepherdId}:`, error);
-        }
+      if (uniqueShepherdIds.length > 0) {
+        const { data: shepherdsResult } = await supabase
+          .from('users')
+          .select('id, fullName')
+          .in('id', uniqueShepherdIds);
+        (shepherdsResult || []).forEach((s: any) => { shepherdsData[s.id] = s; });
       }
 
       setSouls(soulsData);
       setShepherds(shepherdsData);
       setAttendances(attendancesData);
-      setLoading(false);
-    }, (error) => {
+    } catch (error) {
       console.error('Error loading attendances:', error);
-      toast.error('Erreur lors du chargement des présences');
+      toast.error('Erreur lors du chargement des presences');
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, [selectedShepherdId, dateRange]);
 
-  // Filtrer les présences
+  useEffect(() => {
+    fetchAttendances();
+
+    const channel = supabase
+      .channel('attendances-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendances' }, () => {
+        fetchAttendances();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAttendances]);
+
+  // Filter attendances
   const filteredAttendances = attendances.filter(attendance => {
     const soul = souls[attendance.soulId];
     if (!soul) return false;
-
     return soul.fullName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -174,7 +165,7 @@ export default function AttendanceView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500">Chargement des présences...</div>
+        <div className="text-gray-500">Chargement des presences...</div>
       </div>
     );
   }
@@ -182,17 +173,17 @@ export default function AttendanceView() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Historique des Présences</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Historique des Presences</h1>
       </div>
 
       <div className="space-y-4">
         <div className="bg-white p-4 rounded-lg border space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Filtres</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de début
+                Date de debut
               </label>
               <input
                 type="date"
@@ -201,7 +192,7 @@ export default function AttendanceView() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Date de fin
@@ -219,12 +210,12 @@ export default function AttendanceView() {
             value={selectedShepherdId}
             onChange={setSelectedShepherdId}
           />
-          
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher une âme..."
+              placeholder="Rechercher une ame..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
