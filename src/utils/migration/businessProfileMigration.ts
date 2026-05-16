@@ -1,119 +1,71 @@
 import { BusinessProfile } from '../../types/businessProfile.types';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 
 export class BusinessProfileMigration {
-  /**
-   * Migrates users with department_leader role to use the new business profile system
-   * Offers choice between department_leader only or department_leader + shepherd
-   */
-  static async migrateDepartmentLeaders(): Promise<{ 
-    migrated: number; 
-    errors: string[]; 
-  }> {
+  static async migrateDepartmentLeaders(): Promise<{ migrated: number; errors: string[] }> {
     const results = { migrated: 0, errors: [] as string[] };
-    
     try {
-      // Find all users with department_leader role
-      const usersQuery = query(collection(db, 'users'), where('role', '==', 'department_leader'))
-      
-      const snapshot = await getDocs(usersQuery);
-      console.log(`Found ${snapshot.size} department leaders to migrate`);
-      
-      for (const userDoc of snapshot.docs) {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, full_name, business_profiles')
+        .eq('role', 'department_leader');
+      if (error) throw error;
+
+      console.log(`Found ${(users || []).length} department leaders to migrate`);
+
+      for (const user of users || []) {
         try {
-          const userData = userDocData;
-          
-          // Skip if already has business profiles
-          if (userData.businessProfiles && userData.businessProfiles.length > 0) {
-            console.log(`User ${userData.fullName} already has business profiles, skipping`);
+          if (user.business_profiles && user.business_profiles.length > 0) {
+            console.log(`User ${user.full_name} already has business profiles, skipping`);
             continue;
           }
-          
-          // Default migration: department_leader + shepherd profiles
           const businessProfiles: BusinessProfile[] = [
-            {
-              type: 'department_leader',
-              isActive: true
-            },
-            {
-              type: 'shepherd',
-              isActive: true
-            }
+            { type: 'department_leader', isActive: true },
+            { type: 'shepherd', isActive: true },
           ];
-          
-          const { error: _updateErr } = await supabase.from('users').update({
-            businessProfiles,
-            // Keep the old role for backward compatibility
-            role: 'department_leader'
-          });
-          
+          await supabase
+            .from('users')
+            .update({ business_profiles: businessProfiles, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
           results.migrated++;
-          console.log(`Migrated user: ${userData.fullName}`);
-          
-        } catch (error) {
-          const errorMsg = `Failed to migrate user ${userDocData.id}: ${error}`;
-          console.error(errorMsg);
-          results.errors.push(errorMsg);
+          console.log(`Migrated user: ${user.full_name}`);
+        } catch (err) {
+          const msg = `Failed to migrate user ${user.id}: ${err}`;
+          console.error(msg);
+          results.errors.push(msg);
         }
       }
-      
     } catch (error) {
-      const errorMsg = `Migration failed: ${error}`;
-      console.error(errorMsg);
-      results.errors.push(errorMsg);
+      const msg = `Migration failed: ${error}`;
+      console.error(msg);
+      results.errors.push(msg);
     }
-    
     return results;
   }
-  
-  /**
-   * Allows individual profile customization for specific users
-   */
-  static async updateUserProfiles(
-    userId: string, 
-    profiles: BusinessProfile[]
-  ): Promise<void> {
-    try {
-      const { error: _updateErr } = await supabase.from('users').update({
-        businessProfiles: profiles
-      });
-      
-      console.log(`Updated business profiles for user ${userId}`);
-    } catch (error) {
-      throw new Error(`Failed to update user profiles: ${error}`);
-    }
+
+  static async updateUserProfiles(userId: string, profiles: BusinessProfile[]): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({ business_profiles: profiles, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) throw new Error(`Failed to update user profiles: ${error.message}`);
+    console.log(`Updated business profiles for user ${userId}`);
   }
-  
-  /**
-   * Runs the full migration with user feedback
-   */
+
   static async runMigration(): Promise<void> {
     const loadingToast = toast.loading('Migration des profils métier en cours...');
-    
     try {
       const results = await this.migrateDepartmentLeaders();
-      
       toast.dismiss(loadingToast);
-      
       if (results.errors.length === 0) {
-        toast.success(
-          `Migration réussie ! ${results.migrated} responsables de département migrés vers le nouveau système.`
-        );
+        toast.success(`Migration réussie ! ${results.migrated} responsables de département migrés.`);
       } else {
-        toast.error(
-          `Migration partiellement réussie. ${results.migrated} migrés, ${results.errors.length} erreurs.`
-        );
-        console.error('Migration errors:', results.errors);
+        toast.error(`Migration partiellement réussie. ${results.migrated} migrés, ${results.errors.length} erreurs.`);
       }
-      
-      console.log('Migration results:', results);
-      
     } catch (error) {
       toast.dismiss(loadingToast);
       toast.error(`Erreur lors de la migration: ${error}`);
-      console.error('Migration failed:', error);
     }
   }
 }

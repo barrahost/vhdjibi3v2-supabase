@@ -1,126 +1,70 @@
 import toast from 'react-hot-toast';
-import { getDocs,  collection, db, doc, limit, query, where, writeBatch  } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
 
 /**
- * Migration script to implement the servant management schema changes
- * This script will:
- * 1. Create a 'servants' collection for all servants (including shepherds who are servants)
- * 2. Add necessary fields to track department assignments and leadership roles
- */
-/**
- * Migration script to implement the servant management schema changes
- * This script will:
- * 1. Create a 'servants' collection for all servants (including shepherds who are servants)
- * 2. Add necessary fields to track department assignments and leadership roles
+ * Migration script to implement the servant management schema changes.
+ * Creates servant records for shepherds/interns who don't have one yet.
  */
 export async function migrateToServantSchema() {
   try {
-    let batch = writeBatch(db);
-    let operationsCount = 0;
-    const BATCH_LIMIT = 500;
-    
-    // Step 1: Create the 'servants' collection if it doesn't exist
-    // Note: In Firestore, collections are created implicitly when documents are added
-    
-    // Step 2: Migrate existing shepherds who should also be servants
-    const shepherdsQuery = query(collection(db, 'users'), where('role', 'in', ['shepherd', 'intern']),
-      where('status', '==', 'active'))
-    
-    const shepherdsData = await getDocs(shepherdsQuery);
-    
-    // Track migration statistics
     let shepherdsMigrated = 0;
     let shepherdsSkipped = 0;
-    
-    // For each shepherd, check if they already exist in the servants collection
-    for (const shepherdDoc of shepherdsData) {
-      const shepherdData = shepherdDocData;
-      
-      // Check if this shepherd already exists in the servants collection
-      const existingServantQuery = query(collection(db, 'servants'), where('phone', '==', shepherdData.phone))
-      
-      const existingServantData = await getDocs(existingServantQuery);
-      
-      if (!existingServantData.empty) {
-        // Shepherd already exists as a servant, update their record
-        const servantDoc = existingServantData[0];
-        const servantData = servantDocData;
-        
-        // Update the servant record to link it to the shepherd
-        batch.update(doc(db, 'servants', servantDocData.id), {
-          isShepherd: true,
-          shepherdId: shepherdDocData.id,
-          updatedAt: new Date()
-        });
-        
-        operationsCount++;
+
+    const { data: shepherds, error: sErr } = await supabase
+      .from('users')
+      .select('id, full_name, nickname, gender, phone, email, role, business_profiles')
+      .in('role', ['shepherd', 'intern'])
+      .eq('status', 'active');
+
+    if (sErr) throw sErr;
+
+    for (const shepherd of shepherds || []) {
+      const { data: existing } = await supabase
+        .from('servants')
+        .select('id')
+        .eq('phone', shepherd.phone)
+        .limit(1);
+
+      const now = new Date().toISOString();
+
+      if (existing && existing.length > 0) {
+        await supabase.from('servants').update({
+          is_shepherd: true,
+          shepherd_id: shepherd.id,
+          updated_at: now,
+        }).eq('id', existing[0].id);
         shepherdsSkipped++;
       } else {
-        // Create a new servant record for this shepherd
-        const servantData = {
-          fullName: shepherdData.fullName,
-          nickname: shepherdData.nickname || null,
-          gender: shepherdData.gender || 'male', // Default to male if not specified
-          phone: shepherdData.phone,
-          email: shepherdData.email,
-          isShepherd: true,
-          shepherdId: shepherdDocData.id,
-          departmentId: null, // Will be assigned later
-          isHead: false, // Will be updated later if they are a department head
+        await supabase.from('servants').insert({
+          full_name: shepherd.full_name,
+          nickname: shepherd.nickname || null,
+          gender: shepherd.gender || 'male',
+          phone: shepherd.phone,
+          email: shepherd.email,
+          is_shepherd: true,
+          shepherd_id: shepherd.id,
+          department_id: null,
+          is_head: false,
           status: 'active',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        // Add the new servant document
-        const servantRef = doc(collection(db, 'servants'));
-        batch.set(servantRef, servantData);
-        
-        operationsCount++;
+          created_at: now,
+          updated_at: now,
+        });
         shepherdsMigrated++;
       }
-      
-      // Commit the batch if we've reached the limit
-      if (operationsCount >= BATCH_LIMIT) {
-        await batch.commit();
-        operationsCount = 0;
-        // Create a new batch
-        batch = writeBatch(db);
-      }
     }
-    
-    // Commit any remaining operations
-    if (operationsCount > 0) {
-      await batch.commit();
-    }
-    
-    return {
-      success: true,
-      stats: {
-        shepherdsMigrated,
-        shepherdsSkipped
-      }
-    };
+
+    return { success: true, stats: { shepherdsMigrated, shepherdsSkipped } };
   } catch (error) {
     console.error('Error migrating to servant schema:', error);
     toast.error('Erreur lors de la migration du schéma des serviteurs');
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
-/**
- * Function to run the migration and display results
- */
 export async function runServantSchemaMigration() {
   toast.loading('Migration en cours...');
-  
   try {
     const result = await migrateToServantSchema();
-    
     if (result.success) {
       toast.success(`Migration réussie: ${result.stats?.shepherdsMigrated || 0} berger(s) migré(s), ${result.stats?.shepherdsSkipped || 0} déjà existant(s)`);
     } else {
@@ -128,6 +72,6 @@ export async function runServantSchemaMigration() {
     }
   } catch (error) {
     console.error('Error running migration:', error);
-    toast.error('Erreur lors de l\'exécution de la migration');
+    toast.error("Erreur lors de l'exécution de la migration");
   }
 }
