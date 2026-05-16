@@ -1,0 +1,14 @@
+{
+  "name": "AGC Bergerie",
+  "short_name": "Bergerie",
+  "description": "Application de suivi pastoral — Assemblée Grâce Confondante",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#00665C",
+  "theme_color": "#00665C",
+  "icons": [
+    { "src": "/logo-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
