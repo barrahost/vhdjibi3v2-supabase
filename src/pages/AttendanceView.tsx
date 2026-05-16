@@ -88,7 +88,7 @@ export default function AttendanceView() {
         .order('date', { ascending: false });
 
       if (selectedShepherdId) {
-        q = q.eq('shepherdId', selectedShepherdId);
+        q = q.eq('shepherd_id', selectedShepherdId);
       } else {
         q = q.gte('date', dateRange.startDate).lte('date', dateRange.endDate);
       }
@@ -98,6 +98,8 @@ export default function AttendanceView() {
 
       const attendancesData = (data || []).map((row: any) => ({
         ...row,
+        soulId: row.soulId || row.soul_id,
+        shepherdId: row.shepherdId || row.shepherd_id,
         date: row.date ? new Date(row.date) : null,
       }));
 
