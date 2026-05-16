@@ -28,14 +28,14 @@ export default function AssignedSouls() {
     try {
       const { data, error } = await supabase
         .from('interactions')
-        .select('soulId, date')
-        .in('soulId', soulIds)
+        .select('soul_id, date')
+        .in('soul_id', soulIds)
         .order('date', { ascending: false });
 
       if (error) throw error;
 
       (data ?? []).forEach((row: any) => {
-        const sId = row.soulId;
+        const sId = row.soul_id;
         const dt = new Date(row.date);
         if (!map.has(sId) || map.get(sId)!.getTime() < dt.getTime()) {
           map.set(sId, dt);
@@ -117,19 +117,22 @@ export default function AssignedSouls() {
     if (!user) return;
 
     try {
-      const { data: usersData } = await supabase
+      const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUserId = localUser.id;
+      if (!currentUserId) { toast.error('Session expirée'); setLoading(false); return; }
+
+      const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('*')
-        .eq('uid', user.uid)
+        .eq('id', currentUserId)
         .eq('status', 'active');
 
       if (usersError) throw usersError;
 
       if (usersData && usersData.length > 0) {
         const userData = usersData[0];
-        const currentUserId = userData.id;
 
-        const hasShepherdProfile = userData.businessProfiles?.some((profile: any) =>
+        const hasShepherdProfile = (userData.business_profiles || userData.businessProfiles)?.some((profile: any) =>
           profile.type === 'shepherd' && profile.isActive
         );
         const hasOldShepherdRole = userData.role === 'shepherd' || userData.role === 'intern' || userData.role === 'adn';
@@ -137,7 +140,7 @@ export default function AssignedSouls() {
         if (hasShepherdProfile || hasOldShepherdRole) {
           setShepherdId(currentUserId);
 
-          const { data: soulsData } = await supabase
+          const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
             .eq('shepherd_id', currentUserId)
