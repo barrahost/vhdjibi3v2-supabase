@@ -88,7 +88,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
     } catch (err: any) {
       console.error('EvangelizedSoulForm insert error:', err);
       const msg = err?.message || err?.details || JSON.stringify(err);
-      toast.error(\`Erreur: \${msg}\`);
+      toast.error('Erreur: ' + msg);
     } finally {
       setSubmitting(false);
     }
