@@ -81,7 +81,7 @@ export function ShepherdDashboard() {
     const loadData = async () => {
       try {
         const [soulsResult, interactionsResult] = await Promise.all([
-          supabase.from('souls').select('id, full_name, phone, spiritual_status, origin_source, status').eq('shepherd_id', shepherdId).eq('status', 'active'),
+          supabase.from('souls').select('*').eq('shepherd_id', shepherdId).eq('status', 'active'),
           supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes, created_at').eq('shepherd_id', shepherdId).order('created_at', { ascending: false }).limit(50),
         ]);
 
@@ -91,11 +91,13 @@ export function ShepherdDashboard() {
         if (!cancelled) {
           setSouls((soulsResult.data ?? []).map((r: any) => ({
             id: r.id,
-            fullName: r.full_name || '',
-            phone: r.phone,
-            spiritualStatus: r.spiritual_status,
-            originSource: r.origin_source,
-            status: r.status,
+            fullName: r.full_name || r.fullName || '',
+            phone: r.phone || '',
+            spiritualStatus: r.spiritual_profile?.spiritualStatus || r.spiritual_status || null,
+            originSource: r.origin_source || r.originSource || null,
+            status: r.status || 'active',
+            firstVisitDate: r.first_visit_date ? new Date(r.first_visit_date) : null,
+            shepherdId: r.shepherd_id || null,
           } as unknown as Soul)));
 
           const mapped = (interactionsResult.data ?? []).map((r: any) => ({
@@ -123,8 +125,8 @@ export function ShepherdDashboard() {
     const soulsChannel = supabase
       .channel('shepherd-souls-' + shepherdId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'souls', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
-        const { data } = await supabase.from('souls').select('id, full_name, phone, spiritual_status, origin_source, status').eq('shepherd_id', shepherdId).eq('status', 'active');
-        if (!cancelled) setSouls((data ?? []).map((r: any) => ({ id: r.id, fullName: r.full_name || '', phone: r.phone, spiritualStatus: r.spiritual_status, originSource: r.origin_source, status: r.status } as unknown as Soul)));
+        const { data } = await supabase.from('souls').select('*').eq('shepherd_id', shepherdId).eq('status', 'active');
+        if (!cancelled) setSouls((data ?? []).map((r: any) => ({ id: r.id, fullName: r.full_name || r.fullName || '', phone: r.phone || '', spiritualStatus: r.spiritual_profile?.spiritualStatus || r.spiritual_status || null, originSource: r.origin_source || null, status: r.status || 'active', firstVisitDate: r.first_visit_date ? new Date(r.first_visit_date) : null, shepherdId: r.shepherd_id || null } as unknown as Soul)));
       })
       .subscribe();
 
