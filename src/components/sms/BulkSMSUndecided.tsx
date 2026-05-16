@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
+
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate, SMSRecipient } from '../../types/sms.types';
 import { Search, Send, X } from 'lucide-react';
@@ -27,27 +27,19 @@ export default function BulkSMSUndecided() {
       if (!user) return;
       
       try {
-        // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
-        const userData = await getDocs(userQuery);
-        
-        if (!userData.empty) {
-          const userData = userData?.[0];
-          setUserInfo({
-            fullName: userData.fullName || '',
-            phone: userData.phone || ''
-          });
-        } else {
-          // Try to get from admins collection
-          const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid))
-          const adminData = await getDocs(adminQuery);
-          
-          if (!adminData.empty) {
-            const adminData = adminData?.[0];
-            setUserInfo({
-              fullName: adminData.fullName || '',
-              phone: adminData.phone || ''
-            });
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (currentUserId) {
+          const { data: userRows } = await supabase
+            .from('users').select('full_name, phone').eq('id', currentUserId).limit(1);
+          if (userRows && userRows.length > 0) {
+            setUserInfo({ fullName: userRows[0].full_name || '', phone: userRows[0].phone || '' });
+          } else {
+            const { data: adminRows } = await supabase
+              .from('admins').select('full_name, phone').eq('id', currentUserId).limit(1);
+            if (adminRows && adminRows.length > 0) {
+              setUserInfo({ fullName: adminRows[0].full_name || '', phone: adminRows[0].phone || '' });
+            }
           }
         }
       } catch (error) {
@@ -62,17 +54,21 @@ export default function BulkSMSUndecided() {
   useEffect(() => {
     const loadUndecidedSouls = async () => {
       try {
-        const soulsQuery = query(collection(db, 'souls'), where('isUndecided', '==', true),
-          where('status', '==', 'active'))
-        
-        const snapshot = await getDocs(soulsQuery);
-const souls = snapshot.docs.map(doc => ({
-          id: doc.id,
-          fullName: doc.data().fullName,
-          nickname: doc.data().nickname || null,
-          phone: doc.data().phone.replace('+225', '')
+        const { data: soulsData, error: soulsErr } = await supabase
+          .from('souls')
+          .select('id, full_name, nickname, phone')
+          .eq('is_undecided', true)
+          .eq('status', 'active');
+
+        if (soulsErr) throw soulsErr;
+
+        const souls = (soulsData ?? []).map((r: any) => ({
+          id: r.id,
+          fullName: r.full_name || '',
+          nickname: r.nickname || null,
+          phone: (r.phone || '').replace('+225', '')
         }));
-        
+
         setUndecidedSouls(souls);
       } catch (error) {
         console.error('Error loading undecided souls:', error);

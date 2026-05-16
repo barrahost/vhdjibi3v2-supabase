@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { Send, X, Search } from 'lucide-react';
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate, SMSRecipient, SMS_VARIABLES } from '../../types/sms.types';
@@ -29,16 +29,17 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
       if (!user) return;
       
       try {
-        // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
-        const userData = await getDocs(userQuery);
-        
-        if (!userData.empty) {
-          const userData = userData?.[0];
-          setUserInfo({
-            fullName: userData.fullName || '',
-            phone: userData.phone || ''
-          });
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (currentUserId) {
+          const { data: rows } = await supabase
+            .from('users')
+            .select('full_name, phone')
+            .eq('id', currentUserId)
+            .limit(1);
+          if (rows && rows.length > 0) {
+            setUserInfo({ fullName: rows[0].full_name || '', phone: rows[0].phone || '' });
+          }
         }
       } catch (error) {
         console.error('Error loading user info:', error);

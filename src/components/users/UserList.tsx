@@ -1,5 +1,5 @@
 
-import { getDocs,  collection, db, onData, orderBy, query, where  } from '../../lib/firebase';
+
 import { useState, useEffect } from 'react';
 import { User } from '../../types/user.types';
 import { Search, Pencil, Trash2, User as UserIcon, Building2 } from 'lucide-react';
@@ -77,7 +77,7 @@ function ActionButtons({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onPromoteShepherd(user.uid, user.fullName);
+            onPromoteShepherd(user.id, user.fullName);
           }}
           className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
           title="Promouvoir responsable de département"
@@ -214,78 +214,77 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
   useEffect(() => {
     setLoading(true);
 
-    // Écoute temps réel sur la collection users
-    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'))
-
-    const unsubscribe = onData(usersQuery, async (usersData) => {
+    const loadUsers = async () => {
       try {
-        let allUsers = usersData.map(d => ({
-          id: d.id,
-          ...d.data(),
-          fromAdminsCollection: false
+        const { data: usersRaw, error: usersErr } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (usersErr) throw usersErr;
+
+        let allUsers = (usersRaw ?? []).map((r: any) => ({
+          id: r.id,
+          fullName: r.full_name || '',
+          email: r.email,
+          phone: r.phone,
+          role: r.role,
+          status: r.status,
+          createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+          fromAdminsCollection: false,
+          ...r,
         } as User));
 
-        // Super admins de la collection admins
+        // Super admins
         if (filter === 'all' || filter === 'admins') {
-          const superAdminQuery = query(collection(db, 'admins'), where('role', '==', 'super_admin'))
-          const superAdminData = await getDocs(superAdminQuery);
-const superAdmins = superAdminData.map(d => ({
-            id: d.id,
-            ...d.data(),
-            fromAdminsCollection: true
+          const { data: adminsRaw } = await supabase
+            .from('admins')
+            .select('*')
+            .eq('role', 'super_admin');
+          const superAdmins = (adminsRaw ?? []).map((r: any) => ({
+            id: r.id,
+            fullName: r.full_name || '',
+            email: r.email,
+            phone: r.phone,
+            role: r.role,
+            status: r.status || 'active',
+            fromAdminsCollection: true,
+            ...r,
           } as User));
           allUsers = [...allUsers, ...superAdmins];
         }
 
-        // Déduplication basée sur l'uid (ou l'email uniquement s'il est renseigné)
+        // Deduplicate by email
         const deduplicatedUsers = allUsers.reduce((acc: User[], user) => {
-          const existing = acc.find(u =>
-            u.uid === user.uid ||
-            (user.email && u.email && u.email === user.email)
-          );
-          if (!existing) {
-            acc.push(user);
-          }
+          const existing = acc.find(u => user.email && u.email && u.email === user.email);
+          if (!existing) acc.push(user);
           return acc;
         }, []);
 
-        // Appliquer les filtres
         let filteredUsers = deduplicatedUsers;
-
         if (filter !== 'all') {
-          if (filter === 'admins') {
-            filteredUsers = filteredUsers.filter(user => isAdminUser(user));
-          } else if (filter === 'shepherds') {
-            filteredUsers = filteredUsers.filter(user => isShepherdUser(user));
-          } else if (filter === 'adn') {
-            filteredUsers = filteredUsers.filter(user => isADNUser(user));
-          } else if (filter === 'department_leader') {
-            filteredUsers = filteredUsers.filter(user => isDepartmentLeaderUser(user));
-          } else if (filter === 'family_leader') {
-            filteredUsers = filteredUsers.filter(user => isFamilyLeaderUser(user));
-          } else if (filter === 'evangelist') {
-            filteredUsers = filteredUsers.filter(user => isEvangelistUser(user));
-          }
+          if (filter === 'admins') filteredUsers = filteredUsers.filter(user => isAdminUser(user));
+          else if (filter === 'shepherds') filteredUsers = filteredUsers.filter(user => isShepherdUser(user));
+          else if (filter === 'adn') filteredUsers = filteredUsers.filter(user => isADNUser(user));
+          else if (filter === 'department_leader') filteredUsers = filteredUsers.filter(user => isDepartmentLeaderUser(user));
+          else if (filter === 'family_leader') filteredUsers = filteredUsers.filter(user => isFamilyLeaderUser(user));
+          else if (filter === 'evangelist') filteredUsers = filteredUsers.filter(user => isEvangelistUser(user));
         }
-
         if (statusFilter !== 'all') {
           filteredUsers = filteredUsers.filter(user => user.status === statusFilter);
         }
 
         setUsers(filteredUsers);
-        setLoading(false);
       } catch (error) {
-        console.error('Error processing users snapshot:', error);
+        console.error('Error loading users:', error);
+        toast.error('Erreur lors du chargement des utilisateurs');
+      } finally {
         setLoading(false);
       }
-    }, (error) => {
-      console.error('Error loading users:', error);
-      toast.error('Erreur lors du chargement des utilisateurs');
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, [filter, statusFilter]); // Réagir aux changements de filtre
+    loadUsers();
+  }, [filter, statusFilter]);
   // Réinitialiser la page courante quand le filtre change
   useEffect(() => {
     setCurrentPage(1);
@@ -455,7 +454,7 @@ const superAdmins = superAdminData.map(d => ({
             canDeleteUsers={canDeleteUsers}
             onPromoteShepherd={onPromoteShepherd}
             onEdit={() => setEditingUser(user)}
-            onDelete={() => handleDelete(user.id, user.uid)}
+            onDelete={() => handleDelete(user.id, user.id)}
           />
         );
       }
