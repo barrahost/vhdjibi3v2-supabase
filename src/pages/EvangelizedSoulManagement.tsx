@@ -427,7 +427,7 @@ export default function EvangelizedSoulManagement() {
       {showForm && canCreateEvangelized && (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold text-[#00665C] mb-4">Ajouter une ame evangelisee</h2>
-          <EvangelizedSoulForm onCreated={() => setShowForm(false)} />
+          <EvangelizedSoulForm onCreated={() => { setShowForm(false); fetchSouls(); }} />
         </div>
       )}
 
@@ -579,7 +579,7 @@ export default function EvangelizedSoulManagement() {
           onPageChange={setCurrentPage} totalItems={filtered.length} itemsPerPage={ITEMS_PER_PAGE} />
       )}
 
-      {editing && <EditEvangelizedSoulModal soul={editing} isOpen={!!editing} onClose={() => setEditing(null)} />}
+      {editing && <EditEvangelizedSoulModal soul={editing} isOpen={!!editing} onClose={() => setEditing(null)} onUpdated={() => fetchSouls()} />}
       {importing && <ImportToSoulModal soul={importing} isOpen={!!importing} onClose={() => setImporting(null)} />}
       {interactingSoul && userId && (
         <InteractionModal isOpen={!!interactingSoul}
