@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, onData, query, where  } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';

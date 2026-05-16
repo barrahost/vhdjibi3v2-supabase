@@ -122,7 +122,7 @@ export default function BackupRestore() {
 
         // Supprimer les documents existants (sauf super_admin)
         if (name === 'admins') {
-          const existingAdmins = await getDocs(supabase)
+          const { data: existingAdmins } = await supabase
             .from('admins')
             .select('id, role');
           const toDelete = (existingAdmins ?? [])

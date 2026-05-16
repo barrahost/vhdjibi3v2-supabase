@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, db, onData, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, onData, query, where  } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';

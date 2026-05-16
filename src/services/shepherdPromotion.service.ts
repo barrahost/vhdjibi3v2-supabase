@@ -1,5 +1,5 @@
 import { toast } from 'react-hot-toast';
-import { collection, db, doc, query, where, writeBatch } from '../lib/firebase';
+import { getDocs,  collection, db, doc, query, where, writeBatch  } from '../lib/firebase';
 import { ServantService } from './servant.service';
 import { BusinessProfile } from '../types/businessProfile.types';
 import { supabase } from '../lib/supabase';

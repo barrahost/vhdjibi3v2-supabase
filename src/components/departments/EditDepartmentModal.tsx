@@ -46,7 +46,7 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
 
       // Vérifier si le nom existe déjà (sauf pour le même département)
       if (formData.name.trim() !== department.name) {
-        const nameData = await getDocs(supabase)
+        const { data: nameData } = await supabase
           .from('departments')
           .select('id')
           .eq('name', formData.name.trim())

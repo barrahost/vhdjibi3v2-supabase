@@ -17,7 +17,7 @@ export class SoulServantMigration {
 
     try {
       // Récupérer toutes les âmes actives
-      const soulsRows = await getDocs(supabase)
+      const { data: soulsRows } = await supabase
         .from('souls')
         .select('*')
         .eq('status', 'active');
@@ -37,7 +37,7 @@ export class SoulServantMigration {
       })) as Soul[];
 
       // Récupérer tous les serviteurs actifs
-      const servantsRows = await getDocs(supabase)
+      const { data: servantsRows } = await supabase
         .from('servants')
         .select('*')
         .eq('status', 'active');
@@ -105,7 +105,7 @@ export class SoulServantMigration {
     let validLinks = 0;
 
     try {
-      const promotedSouls = await getDocs(supabase)
+      const { data: promotedSouls } = await supabase
         .from('souls')
         .select('id, full_name, servant_id, is_servant')
         .eq('is_servant', true);
@@ -113,7 +113,7 @@ export class SoulServantMigration {
 
       for (const soul of promotedSouls ?? []) {
         if (soul.servant_id) {
-          const servantRows = await getDocs(supabase)
+          const { data: servantRows } = await supabase
             .from('servants')
             .select('id')
             .eq('id', soul.servant_id)

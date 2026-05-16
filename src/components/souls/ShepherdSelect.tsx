@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import { ShepherdOption } from '../../types/database.types';
 import { supabase } from '../../lib/supabase';
 

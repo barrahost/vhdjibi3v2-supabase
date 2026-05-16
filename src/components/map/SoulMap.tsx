@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, db, doc, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import mapboxgl from 'mapbox-gl';
 import * as GeoJSON from 'geojson';
 import type { Soul } from '../../types/database.types';

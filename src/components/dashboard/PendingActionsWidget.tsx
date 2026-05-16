@@ -30,7 +30,7 @@ export default function PendingActionsWidget(props: Props) {
         const next: Action[] = [];
 
         if (props.role === 'adn') {
-          const souls = await getDocs(supabase)
+          const { data: souls } = await supabase
             .from('souls')
             .select('id, is_undecided, service_family_id')
             .eq('status', 'active');
@@ -58,7 +58,7 @@ export default function PendingActionsWidget(props: Props) {
           });
 
         } else if (props.role === 'family_leader') {
-          const souls = await getDocs(supabase)
+          const { data: souls } = await supabase
             .from('souls')
             .select('id, shepherd_id, status')
             .eq('service_family_id', props.familyId);

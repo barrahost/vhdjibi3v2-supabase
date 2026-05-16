@@ -111,7 +111,7 @@ export default function AttendanceView() {
       const shepherdsData: Record<string, any> = {};
 
       if (uniqueSoulIds.length > 0) {
-        const soulsResult = await getDocs(supabase)
+        const { data: soulsResult } = await supabase
           .from('souls')
           .select('id, fullName, phone')
           .in('id', uniqueSoulIds);
@@ -119,7 +119,7 @@ export default function AttendanceView() {
       }
 
       if (uniqueShepherdIds.length > 0) {
-        const shepherdsResult = await getDocs(supabase)
+        const { data: shepherdsResult } = await supabase
           .from('users')
           .select('id, fullName')
           .in('id', uniqueShepherdIds);

@@ -1,5 +1,5 @@
 
-import { collection, db, onData, orderBy, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, onData, orderBy, query, where  } from '../../lib/firebase';
 import { useState, useEffect } from 'react';
 import { User } from '../../types/user.types';
 import { Search, Pencil, Trash2, User as UserIcon, Building2 } from 'lucide-react';

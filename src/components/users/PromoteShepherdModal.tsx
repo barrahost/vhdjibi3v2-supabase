@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import { ShepherdPromotionService } from '../../services/shepherdPromotion.service';
 import { Modal } from '../ui/Modal';
 import { UserCircle, Building2 } from 'lucide-react';

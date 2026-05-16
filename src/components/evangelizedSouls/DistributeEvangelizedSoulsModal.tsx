@@ -103,7 +103,7 @@ export default function DistributeEvangelizedSoulsModal({
     setLoading(true);
     try {
       // Âmes non attribuées
-      const soulsData = await getDocs(supabase)
+      const { data: soulsData } = await supabase
         .from('evangelized_souls')
         .select('id, evangelist_id')
         .eq('status', 'active');
@@ -119,7 +119,7 @@ export default function DistributeEvangelizedSoulsModal({
       });
 
       // Évangélistes actifs
-      const usersData = await getDocs(supabase)
+      const { data: usersData } = await supabase
         .from('users')
         .select('id, full_name, phone, role, business_profiles')
         .eq('status', 'active');

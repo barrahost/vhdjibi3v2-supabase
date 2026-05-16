@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, db, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { Send, X, Search } from 'lucide-react';
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate, SMSRecipient, SMS_VARIABLES } from '../../types/sms.types';

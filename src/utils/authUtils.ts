@@ -1,5 +1,5 @@
 
-import { collection, db, query, where } from '../lib/firebase';import { supabase } from '../lib/supabase';
+import { getDocs,  collection, db, query, where  } from '../lib/firebase';import { supabase } from '../lib/supabase';
 
 interface UserRole {
   isAdmin: boolean;

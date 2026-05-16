@@ -33,7 +33,7 @@ export default function SMSManagement() {
 
       try {
         // Récupérer l'utilisateur (incluant bergers multi-casquettes)
-        const usersData = await getDocs(supabase)
+        const { data: usersData } = await supabase
           .from('users')
           .select('*')
           .eq('uid', user.uid)
@@ -48,7 +48,7 @@ export default function SMSManagement() {
           setShepherdId(currentShepherdId);
 
           // Récupérer les âmes assignées
-          const soulsData = await getDocs(supabase)
+          const { data: soulsData } = await supabase
             .from('souls')
             .select('id, fullName, nickname, phone')
             .eq('shepherd_id', currentShepherdId)

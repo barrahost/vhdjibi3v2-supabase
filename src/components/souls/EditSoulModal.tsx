@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { Soul } from '../../types/database.types';
 import { Modal } from '../ui/Modal';
 import { EditSoulTabs } from './tabs/EditSoulTabs';

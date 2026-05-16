@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, query, where } from '../../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../../lib/firebase';
 import { Modal } from '../../ui/Modal';
 import { MessageSquare } from 'lucide-react';
 import { SMS_VARIABLES } from '../../../types/sms.types';

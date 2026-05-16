@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, query, where } from '../../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../../lib/firebase';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';

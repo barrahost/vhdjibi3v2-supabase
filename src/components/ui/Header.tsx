@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut, Bell } from 'lucide-react';

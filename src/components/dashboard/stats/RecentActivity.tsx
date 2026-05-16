@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, db, doc, limit, orderBy, query } from '../../../lib/firebase';
+import { getDocs,  collection, db, doc, limit, orderBy, query  } from '../../../lib/firebase';
 import { formatDate } from '../../../utils/dateUtils';
 import { Soul, Interaction } from '../../../types/database.types';
 import { supabase } from '../../../lib/supabase';

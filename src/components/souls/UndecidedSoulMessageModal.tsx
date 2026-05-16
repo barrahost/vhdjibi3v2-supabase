@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, db, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Soul } from '../../types/database.types';
 import { SMSTemplate } from '../../types/sms.types';

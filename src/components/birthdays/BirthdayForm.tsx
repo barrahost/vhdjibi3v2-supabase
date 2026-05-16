@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { collection, db, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Cake, User } from 'lucide-react';
 import toast from 'react-hot-toast';

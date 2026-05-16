@@ -54,7 +54,7 @@ export default function AnnouncementManagement() {
     const loadInitialData = async () => {
       try {
         // Load or create the default announcement
-        const existing = await getDocs(supabase)
+        const { data: existing } = await supabase
           .from('announcements')
           .select('*')
           .eq('id', 'default')

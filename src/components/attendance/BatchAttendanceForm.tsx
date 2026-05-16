@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDateForInput } from '../../utils/dateUtils';
 import { CheckSquare, Square } from 'lucide-react';

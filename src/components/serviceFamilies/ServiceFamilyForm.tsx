@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, limit, orderBy, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, limit, orderBy, query, where  } from '../../lib/firebase';
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';

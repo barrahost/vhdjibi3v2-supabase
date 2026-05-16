@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, orderBy, query, where } from '../../../lib/firebase';
+import { getDocs,  collection, db, doc, orderBy, query, where  } from '../../../lib/firebase';
 import { SpiritualProfile, Soul } from '../../../types/database.types';
 import { formatDate } from '../../../utils/dateUtils';
 import { SpiritualCheckbox } from './SpiritualCheckbox';

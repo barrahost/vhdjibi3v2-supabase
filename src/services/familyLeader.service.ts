@@ -1,5 +1,5 @@
 import type { ServiceFamily, Soul } from '../types/database.types';
-import { collection, db, query, where } from '../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
 
 export class FamilyLeaderService {

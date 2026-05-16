@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, getDoc, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, getDoc, query, where  } from '../../lib/firebase';
 import { Input } from '../ui/input';
 import { useAuth } from '../../contexts/AuthContext';
 import { SMSService } from '../../services/sms.service';

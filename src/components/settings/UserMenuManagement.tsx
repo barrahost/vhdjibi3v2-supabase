@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, query, where } from '../../lib/firebase';
+import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import { Search, Save } from 'lucide-react';
 import { MenuAssignment } from '../users/MenuAssignment';
 import { isShepherdUser, isInternUser } from '../../utils/roleHelpers';

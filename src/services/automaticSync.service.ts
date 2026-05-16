@@ -1,5 +1,5 @@
 import { BusinessProfile } from '../types/businessProfile.types';
-import { collection, db, query, where } from '../lib/firebase';
+import { getDocs,  collection, db, query, where  } from '../lib/firebase';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 

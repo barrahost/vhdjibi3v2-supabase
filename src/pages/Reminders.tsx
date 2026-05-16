@@ -21,7 +21,7 @@ export default function Reminders() {
     const loadData = async () => {
       try {
         // Récupérer l'ID de l'utilisateur (berger ou multi-casquettes incluant berger)
-        const usersData = await getDocs(supabase)
+        const { data: usersData } = await supabase
           .from('users')
           .select('*')
           .eq('uid', user.uid)
@@ -35,7 +35,7 @@ export default function Reminders() {
           const shepherdId = matched.id;
 
           // Récupérer les âmes assignées
-          const soulsData = await getDocs(supabase)
+          const { data: soulsData } = await supabase
             .from('souls')
             .select('*')
             .eq('shepherd_id', shepherdId)
@@ -45,7 +45,7 @@ export default function Reminders() {
           setSouls((soulsData ?? []) as Soul[]);
 
           // Récupérer les interactions
-          const interactionsData = await getDocs(supabase)
+          const { data: interactionsData } = await supabase
             .from('interactions')
             .select('*')
             .eq('shepherd_id', shepherdId);
