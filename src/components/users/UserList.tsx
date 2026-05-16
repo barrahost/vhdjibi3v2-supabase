@@ -215,7 +215,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
     setLoading(true);
 
     // Écoute temps réel sur la collection users
-    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc')
+    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'))
 
     const unsubscribe = onData(usersQuery, async (usersData) => {
       try {
@@ -227,8 +227,8 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
         // Super admins de la collection admins
         if (filter === 'all' || filter === 'admins') {
-          const superAdminQuery = query(collection(db, 'admins'), where('role', '==', 'super_admin')
-          const { data: superAdminData } = await superAdminQuery;
+          const superAdminQuery = query(collection(db, 'admins'), where('role', '==', 'super_admin'))
+          const superAdminData = await getDocs(superAdminQuery);
 const superAdmins = superAdminData.map(d => ({
             id: d.id,
             ...d.data(),

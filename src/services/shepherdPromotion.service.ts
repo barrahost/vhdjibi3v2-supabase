@@ -17,15 +17,15 @@ export class ShepherdPromotionService {
       console.log('🔄 [ShepherdPromotion] Début de la promotion:', { userId, departmentId });
 
       // Récupérer les données de l'utilisateur
-      const userQuery = query(collection(db, 'users'), where('uid', '==', userId)
-      const { data: userData } = await userQuery;
+      const userQuery = query(collection(db, 'users'), where('uid', '==', userId))
+      const userSnap = await getDocs(userQuery);
 
-      if (userData.empty) {
+      if (userSnap.empty) {
         throw new Error('Utilisateur non trouvé');
       }
 
-      const userDoc = userData[0];
-      const userData = userDocData;
+      const userDoc = userSnap.docs[0];
+      const userData = userDoc.data();
 
       console.log('📋 [ShepherdPromotion] Données utilisateur:', {
         fullName: userData.fullName,
@@ -84,8 +84,8 @@ export class ShepherdPromotionService {
       console.log('📝 [ShepherdPromotion] Profils mis à jour:', updatedProfiles);
 
       // Vérifier si un serviteur existe déjà pour cet utilisateur
-      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email)
-      const { data: servantData } = await servantQuery;
+      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email))
+      const servantData = await getDocs(servantQuery);
 
       const batch = writeBatch(db);
       const now = new Date();
@@ -151,15 +151,15 @@ export class ShepherdPromotionService {
       console.log('🔄 [ShepherdPromotion] Début de la rétrogradation:', { userId });
 
       // Récupérer les données de l'utilisateur
-      const userQuery = query(collection(db, 'users'), where('uid', '==', userId)
-      const { data: userData } = await userQuery;
+      const userQuery = query(collection(db, 'users'), where('uid', '==', userId))
+      const userSnap = await getDocs(userQuery);
 
-      if (userData.empty) {
+      if (userSnap.empty) {
         throw new Error('Utilisateur non trouvé');
       }
 
-      const userDoc = userData[0];
-      const userData = userDocData;
+      const userDoc = userSnap.docs[0];
+      const userData = userDoc.data();
 
       // Retirer le profil department_leader
       const updatedProfiles = (userData.businessProfiles || []).filter(
@@ -167,8 +167,8 @@ export class ShepherdPromotionService {
       );
 
       // Mettre à jour le serviteur s'il existe
-      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email)
-      const { data: servantData } = await servantQuery;
+      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email))
+      const servantData = await getDocs(servantQuery);
 
       const batch = writeBatch(db);
       const now = new Date();

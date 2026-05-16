@@ -34,8 +34,8 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     const check = async () => {
       try {
         const q = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber),
-          where('status', '==', 'active')
-        const { data: snap } = await q;
+          where('status', '==', 'active'))
+        const snap = await getDocs(q);
         if (cancelled) return;
         const others = snap.docs
           .map(d => d.data() as any)

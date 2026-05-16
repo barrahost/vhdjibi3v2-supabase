@@ -40,8 +40,8 @@ export default function EvangelistDashboard() {
     (async () => {
       try {
         const usersQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        const { data: snap } = await usersQuery;
+          where('status', '==', 'active'))
+        const snap = await getDocs(usersQuery);
         if (snap.empty) {
           if (!cancelled) {
             toast.error('Utilisateur non trouvé');
@@ -81,8 +81,8 @@ export default function EvangelistDashboard() {
   useEffect(() => {
     if (!evangelistId) return;
 
-    const soulsQuery = query(collection(db, 'evangelized_souls'), where('evangelistId', '==', evangelistId)
-    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', evangelistId)
+    const soulsQuery = query(collection(db, 'evangelized_souls'), where('evangelistId', '==', evangelistId))
+    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', evangelistId))
 
     const soulsUnsub = onData(
       soulsQuery,

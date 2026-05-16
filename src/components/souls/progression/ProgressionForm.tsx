@@ -29,8 +29,8 @@ export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: Progres
     const loadData = async () => {
       try {
         // Charger les départements actifs
-        const deptQuery = query(collection(db, 'departments'), orderBy('order', 'asc')
-        const { data: deptData } = await deptQuery;
+        const deptQuery = query(collection(db, 'departments'), orderBy('order', 'asc'))
+        const deptData = await getDocs(deptQuery);
         setDepartments(deptData.map(doc => ({
           id: doc.id,
           name: doc.data().name
@@ -38,8 +38,8 @@ export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: Progres
 
         // Charger les familles de service actives
         const familiesQuery = query(collection(db, 'serviceFamilies'), where('status', '==', 'active'),
-          orderBy('order', 'asc')
-        const { data: familiesData } = await familiesQuery;
+          orderBy('order', 'asc'))
+        const familiesData = await getDocs(familiesQuery);
         setServiceFamilies(familiesData.map(doc => ({
           id: doc.id,
           name: doc.data().name

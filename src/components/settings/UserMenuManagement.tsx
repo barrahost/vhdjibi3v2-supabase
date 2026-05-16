@@ -20,9 +20,9 @@ export default function UserMenuManagement() {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
         // pour inclure les bergers/stagiaires multi-casquettes
-        const usersQuery = query(collection(db, 'users'), where('status', '==', 'active')
+        const usersQuery = query(collection(db, 'users'), where('status', '==', 'active'))
         
-        const { data: snapshot } = await usersQuery;
+        const snapshot = await getDocs(usersQuery);
 const usersData = snapshot.docs
           .map(doc => ({
             id: doc.id,

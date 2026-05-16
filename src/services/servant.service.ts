@@ -61,7 +61,7 @@ export class ServantService {
     try {
       // Duplicate check: same source in same department
       if (data.sourceType && data.sourceId) {
-        const { data: dup } = await supabase
+        const dup = await getDocs(supabase)
           .from('servants')
           .select('id')
           .eq('source_type', data.sourceType)
@@ -73,7 +73,7 @@ export class ServantService {
         }
       } else {
         // Manual: prevent duplicate phone in same department
-        const { data: phoneSnap } = await supabase
+        const phoneSnap = await getDocs(supabase)
           .from('servants')
           .select('id')
           .eq('phone', data.phone)
@@ -85,7 +85,7 @@ export class ServantService {
 
         // Cross-department warning (non-blocking)
         try {
-          const { data: globalSnap } = await supabase
+          const globalSnap = await getDocs(supabase)
             .from('servants')
             .select('department_id')
             .eq('phone', data.phone)
@@ -101,7 +101,7 @@ export class ServantService {
 
       // Check for existing department head
       if (data.isHead) {
-        const { data: headSnap } = await supabase
+        const headSnap = await getDocs(supabase)
           .from('servants')
           .select('id')
           .eq('department_id', data.departmentId)
@@ -180,7 +180,7 @@ export class ServantService {
         formattedPhone = phoneValidation.formattedNumber || '';
 
         if (formattedPhone !== current.phone) {
-          const { data: phoneSnap } = await supabase
+          const phoneSnap = await getDocs(supabase)
             .from('servants')
             .select('id')
             .eq('phone', formattedPhone)
@@ -196,7 +196,7 @@ export class ServantService {
       if (data.email !== undefined) {
         formattedEmail = data.email?.trim() || '';
         if (formattedEmail && formattedEmail !== current.email) {
-          const { data: emailSnap } = await supabase
+          const emailSnap = await getDocs(supabase)
             .from('servants')
             .select('id')
             .eq('email', formattedEmail)
@@ -211,7 +211,7 @@ export class ServantService {
       const newDepartmentId = data.departmentId || current.departmentId;
       const newIsHead = data.isHead !== undefined ? data.isHead : current.isHead;
       if (newIsHead && (data.departmentId || data.isHead !== undefined)) {
-        const { data: headSnap } = await supabase
+        const headSnap = await getDocs(supabase)
           .from('servants')
           .select('id')
           .eq('department_id', newDepartmentId)
@@ -329,7 +329,7 @@ export class ServantService {
       const now = new Date().toISOString();
 
       // Remove any existing department head
-      const { data: currentHead } = await supabase
+      const currentHead = await getDocs(supabase)
         .from('servants')
         .select('id')
         .eq('department_id', departmentId)
@@ -446,7 +446,7 @@ export class ServantService {
 
     for (let i = 0; i < soulIds.length; i += 100) {
       const chunk = soulIds.slice(i, i + 100);
-      const { data: souls, error } = await supabase
+      const souls = await getDocs(supabase)
         .from('souls')
         .select('*')
         .in('id', chunk);
@@ -503,7 +503,7 @@ export class ServantService {
 
     for (let i = 0; i < userDocIds.length; i += 100) {
       const chunk = userDocIds.slice(i, i + 100);
-      const { data: users, error } = await supabase
+      const users = await getDocs(supabase)
         .from('users')
         .select('*')
         .in('id', chunk);

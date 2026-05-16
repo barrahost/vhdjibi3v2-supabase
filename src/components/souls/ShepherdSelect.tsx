@@ -18,9 +18,9 @@ function Options() {
       try {
         // Récupérer tous les utilisateurs actifs puis filtrer côté client
         // pour combiner le champ legacy `role` ET le système `businessProfiles`.
-        const q = query(collection(db, 'users'), where('status', '==', 'active')
+        const q = query(collection(db, 'users'), where('status', '==', 'active'))
 
-        const { data: snapshot } = await q;
+        const snapshot = await getDocs(q);
 const shepherdsData = snapshot.docs
           .map(doc => {
             const data: any = doc.data();

@@ -51,7 +51,7 @@ export function UserProfileModal() {
       try {
         setLoading(true);
         // Chercher dans la collection users
-        const { data: usersRows } = await supabase
+        const usersRows = await getDocs(supabase)
           .from('users')
           .select('*')
           .eq('uid', user.uid)
@@ -83,7 +83,7 @@ export function UserProfileModal() {
         }
 
         // Si non trouvé, chercher dans admins
-        const { data: adminRows } = await supabase
+        const adminRows = await getDocs(supabase)
           .from('admins')
           .select('*')
           .eq('uid', user.uid)
@@ -249,12 +249,12 @@ export function UserProfileModal() {
 
       // Vérifier si le numéro existe déjà
       try {
-        const { data: usersData } = await supabase
+        const usersData = await getDocs(supabase)
           .from('users')
           .select('id, uid')
           .eq('phone', phoneValidation.formattedNumber);
         
-        const { data: adminsData } = await supabase
+        const adminsData = await getDocs(supabase)
           .from('admins')
           .select('id, uid')
           .eq('phone', phoneValidation.formattedNumber);
@@ -277,7 +277,7 @@ export function UserProfileModal() {
       const _table = userRole === 'super_admin' ? 'admins' : 'users';
       
       // Vérifier si le document existe avant de le mettre à jour
-      const { data: existingDoc } = await supabase
+      const existingDoc = await getDocs(supabase)
         .from(_table)
         .select('id')
         .eq('id', userData.id)

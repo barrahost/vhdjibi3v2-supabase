@@ -81,7 +81,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
       const _table = user.fromAdminsCollection ? 'admins' : 'users';
 
       // Get current user data to ensure we have the latest photoURL
-      const { data: currentUserDoc } = await supabase
+      const currentUserDoc = await getDocs(supabase)
         .from(_table)
         .select('photo_url')
         .eq('id', user.id)

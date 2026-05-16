@@ -30,7 +30,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
     const loadTemplate = async () => {
       try {
         // Supabase: use id directly: const docRefId = templateId; // table: smsTemplates
-        const { data: docData, error: docErr } = await supabase.from('sms_templates').select('*').eq('id', templateId).single();
+        const docData = await supabase.from('sms_templates').select('*').eq('id', templateId).single();
         if (docErr) throw docErr;
         
         if (!!docData) {
@@ -58,8 +58,8 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', '==', 'active')
-        const { data: snapshot } = await categoriesQuery;
+        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', '==', 'active'))
+        const snapshot = await getDocs(categoriesQuery);
         setCategories(snapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name

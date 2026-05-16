@@ -139,7 +139,7 @@ export default function InteractionsManagement() {
 
       if (!isAdminView) {
         // Shepherd or evangelist: find their document ID by uid
-        const { data: userDocs } = await supabase
+        const userDocs = await getDocs(supabase)
           .from('users')
           .select('*')
           .eq('uid', user.uid)
@@ -194,7 +194,7 @@ export default function InteractionsManagement() {
       // Batch load actors
       const actorsData: Record<string, Actor> = {};
       if (uniqueActorIds.length > 0) {
-        const { data: actorDocs } = await supabase
+        const actorDocs = await getDocs(supabase)
           .from('users')
           .select('id, fullName, role')
           .in('id', uniqueActorIds);

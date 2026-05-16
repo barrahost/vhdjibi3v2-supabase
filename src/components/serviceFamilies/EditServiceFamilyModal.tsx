@@ -67,8 +67,8 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
       }
 
       if (formData.name.trim() !== family.name) {
-        const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()
-        const { data: nameData } = await nameQuery;
+        const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()))
+        const nameData = await getDocs(nameQuery);
         if (!nameData.empty) {
           toast.error('Une famille avec ce nom existe déjà');
           return;

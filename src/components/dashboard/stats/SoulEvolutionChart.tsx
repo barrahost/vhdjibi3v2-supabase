@@ -19,12 +19,11 @@ export function SoulEvolutionChart() {
     const fetchEvolutionData = async () => {
       try {
         // Récupérer toutes les âmes enregistrées (sans filtre de statut)
-        const soulsQuery = supabase.from('souls').select('*'));
-        const { data: soulsData } = await soulsQuery;
-const allSouls = soulsData.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date()
+        const { data: soulsRaw } = await supabase.from('souls').select('*');
+        const allSouls = (soulsRaw ?? []).map(row => ({
+          id: row.id,
+          ...row,
+          createdAt: row.created_at ? new Date(row.created_at) : new Date(),
         })) as Soul[];
 
         // Utiliser toutes les âmes enregistrées pour l'évolution

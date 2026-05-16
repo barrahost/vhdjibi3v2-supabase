@@ -19,8 +19,8 @@ export function InteractionStats() {
       try {
         // D'abord récupérer les âmes actives et assignées
         const soulsQuery = query(collection(db, 'souls'), where('status', '==', 'active'),
-          where('shepherdId', '!=', null)
-        const { data: soulsData } = await soulsQuery;
+          where('shepherdId', '!=', null))
+        const soulsData = await getDocs(soulsQuery);
 const activeSoulIds = soulsData.map(doc => doc.id);
         
         if (activeSoulIds.length === 0) {
@@ -40,7 +40,7 @@ const activeSoulIds = soulsData.map(doc => doc.id);
         weekStart.setDate(now.getDate() - 7);
         
         const interactionsRef = collection(db, 'interactions');
-        const { data: snapshot } = await interactionsRef;
+        const snapshot = await getDocs(interactionsRef);
 
         const stats = {
           weekly: 0,

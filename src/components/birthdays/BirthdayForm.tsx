@@ -41,8 +41,8 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       }
 
       // Vérifier si le numéro existe déjà
-      const phoneQuery = query(collection(db, 'birthdays'), where('phone', '==', formData.phone)
-      const { data: phoneData } = await phoneQuery;
+      const phoneQuery = query(collection(db, 'birthdays'), where('phone', '==', formData.phone))
+      const phoneData = await getDocs(phoneQuery);
       
       if (!phoneData.empty) {
         toast.error('Ce numéro de téléphone est déjà enregistré');

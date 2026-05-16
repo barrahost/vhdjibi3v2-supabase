@@ -23,8 +23,8 @@ export default function AttendanceStats() {
       try {
         // Récupérer l'ID du berger depuis la collection users
         const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        const { data: userDoc } = await userQuery;
+          where('status', '==', 'active'))
+        const userDoc = await getDocs(userQuery);
         
         if (userDocData.empty) {
           toast.error('Utilisateur non trouvé');
@@ -45,8 +45,8 @@ export default function AttendanceStats() {
         const shepherdId = userDocData.docs[0].id;
 
         // Récupérer toutes les présences
-        const attendancesQuery = query(collection(db, 'attendances'), where('shepherdId', '==', shepherdId)
-        const { data: attendancesData } = await attendancesQuery;
+        const attendancesQuery = query(collection(db, 'attendances'), where('shepherdId', '==', shepherdId))
+        const attendancesData = await getDocs(attendancesQuery);
 const totalAttendances = attendancesData.size;
         const presentCount = attendancesData.filter(
           doc => doc.data().present

@@ -39,16 +39,16 @@ export default function ServiceFamilyForm() {
         return;
       }
 
-      const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()
-      const { data: nameData } = await nameQuery;
+      const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()))
+      const nameData = await getDocs(nameQuery);
       if (!nameData.empty) {
         toast.error('Une famille avec ce nom existe déjà');
         return;
       }
 
       const orderQuery = query(collection(db, 'serviceFamilies'), orderBy('order', 'desc'),
-        limit(1)
-      const { data: orderData } = await orderQuery;
+        limit(1))
+      const orderData = await getDocs(orderQuery);
 const lastOrder = orderData.empty ? 0 : orderData?.[0].order;
 
       // Récupérer le nom du responsable pour le champ legacy `leader`

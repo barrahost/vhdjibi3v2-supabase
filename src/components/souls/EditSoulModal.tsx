@@ -52,8 +52,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
 
       try {
         const shepherdsQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        const { data: shepherdDoc } = await shepherdsQuery;
+          where('status', '==', 'active'))
+        const shepherdDoc = await getDocs(shepherdsQuery);
 const matched = shepherdDocData.docs.find(d => isShepherdUser(d.data() as any));
 
         if (matched) {

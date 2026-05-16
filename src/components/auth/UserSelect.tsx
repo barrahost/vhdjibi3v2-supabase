@@ -77,9 +77,9 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
       
       // Charger les utilisateurs réguliers
       const usersQuery = query(collection(db, 'users'), where('status', '==', 'active'),
-        orderBy('fullName')
-      const { data: usersData } = await usersQuery;
-const usersData = usersData.flatMap(doc => {
+        orderBy('fullName'))
+      const usersSnap = await getDocs(usersQuery);
+      const usersData = usersSnap.docs.flatMap(doc => {
         const data = doc.data();
         const phoneValidation = validatePhoneNumber(data.phone as string);
         
@@ -99,9 +99,9 @@ const usersData = usersData.flatMap(doc => {
 
       // Charger les administrateurs
       const adminsQuery = query(collection(db, 'admins'), where('status', '==', 'active'),
-        orderBy('fullName')
-      const { data: adminsData } = await adminsQuery;
-const adminsData = adminsData.flatMap(doc => {
+        orderBy('fullName'))
+      const adminsSnap = await getDocs(adminsQuery);
+      const adminsData = adminsSnap.docs.flatMap(doc => {
         const data = doc.data();
         const phoneValidation = validatePhoneNumber(data.phone as string);
         

@@ -28,8 +28,8 @@ export default function BulkSMSUndecided() {
       
       try {
         // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
-        const { data: userData } = await userQuery;
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
+        const userData = await getDocs(userQuery);
         
         if (!userData.empty) {
           const userData = userData?.[0];
@@ -39,8 +39,8 @@ export default function BulkSMSUndecided() {
           });
         } else {
           // Try to get from admins collection
-          const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid)
-          const { data: adminData } = await adminQuery;
+          const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid))
+          const adminData = await getDocs(adminQuery);
           
           if (!adminData.empty) {
             const adminData = adminData?.[0];
@@ -63,9 +63,9 @@ export default function BulkSMSUndecided() {
     const loadUndecidedSouls = async () => {
       try {
         const soulsQuery = query(collection(db, 'souls'), where('isUndecided', '==', true),
-          where('status', '==', 'active')
+          where('status', '==', 'active'))
         
-        const { data: snapshot } = await soulsQuery;
+        const snapshot = await getDocs(soulsQuery);
 const souls = snapshot.docs.map(doc => ({
           id: doc.id,
           fullName: doc.data().fullName,

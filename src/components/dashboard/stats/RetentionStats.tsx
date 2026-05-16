@@ -20,8 +20,8 @@ export function RetentionStats() {
       try {
         setLoading(true);
         const soulsQuery = query(collection(db, 'souls'), where('status', '==', 'active'),
-          where('shepherdId', '!=', null)
-        const { data: snapshot } = await soulsQuery;
+          where('shepherdId', '!=', null))
+        const snapshot = await getDocs(soulsQuery);
 const totalSouls = snapshot.size;
         
         if (totalSouls === 0) {

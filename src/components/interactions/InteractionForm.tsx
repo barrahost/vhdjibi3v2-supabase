@@ -53,8 +53,8 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
       
       try {
         // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
-        const { data: userData } = await userQuery;
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
+        const userData = await getDocs(userQuery);
         
         if (!userData.empty) {
           const userData = userData?.[0];
@@ -203,7 +203,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
     try {
       // sourceCollection is either 'souls' or 'evangelized_souls'
       const table = sourceCollection === 'evangelized_souls' ? 'evangelized_souls' : 'souls';
-      const { data: soulData } = await supabase.from(table).select('phone').eq('id', soulId).single();
+      const soulData = await supabase.from(table).select('phone').eq('id', soulId).single();
       if (soulData) {
         return soulData?.phone?.replace('+225', '') || null;
       }

@@ -216,7 +216,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
         const profileType = row.profileType!;
         const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-        const docRef = const { error: _insertErr } = await supabase.from('users').insert({
+        const { data: insertedUser, error: _insertErr } = await supabase.from('users').insert({
           uid,
           fullName: row.fullName,
           nickname: row.nickname || null,
@@ -228,7 +228,8 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
           status: 'active',
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
+        }).select('id').single();
+        const docRef = { id: insertedUser?.id ?? '' };
 
         if (profileType === 'shepherd' || profileType === 'department_leader') {
           try {

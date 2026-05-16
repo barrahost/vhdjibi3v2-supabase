@@ -12,8 +12,8 @@ export function RecentActivity() {
     const fetchRecentActivity = async () => {
       // Récupérer les âmes récentes
       const recentSoulsQuery = query(collection(db, 'souls'), orderBy('createdAt', 'desc'),
-        limit(5)
-      const { data: recentSoulsData } = await recentSoulsQuery;
+        limit(5))
+      const recentSoulsData = await getDocs(recentSoulsQuery);
 const soulsData = recentSoulsData.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -21,8 +21,8 @@ const soulsData = recentSoulsData.map(doc => ({
 
       // Récupérer les interactions récentes
       const recentInteractionsQuery = query(collection(db, 'interactions'), orderBy('date', 'desc'),
-        limit(5)
-      const { data: recentInteractionsData } = await recentInteractionsQuery;
+        limit(5))
+      const recentInteractionsData = await getDocs(recentInteractionsQuery);
 const interactionsData = recentInteractionsData.map(doc => ({
         id: doc.id,
         ...doc.data(),

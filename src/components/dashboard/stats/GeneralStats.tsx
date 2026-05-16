@@ -24,17 +24,20 @@ export function GeneralStats() {
     const fetchStats = async () => {
       try {
         // Récupérer toutes les âmes (actives et inactives)
-        const soulsQuery = supabase.from('souls').select('*'));
-        const { data: soulsData } = await soulsQuery;
-const souls = soulsData.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+        const { data: soulsRaw } = await supabase.from('souls').select('*');
+        const souls = (soulsRaw ?? []).map(row => ({
+          id: row.id,
+          ...row,
+          shepherdId: row.shepherd_id,
+          isUndecided: row.is_undecided,
+          status: row.status,
+          gender: row.gender,
         })) as Soul[];
         
         // Récupérer les bergers actifs (incl. multi-casquettes)
-        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active')
-        const { data: shepherdsData } = await shepherdsQuery;
-        const activeShepherds = shepherdsData
+        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active'))
+        const shepherdsData = await getDocs(shepherdsQuery);
+        const activeShepherds = shepherdsData.docs
           .map(d => d.data() as any)
           .filter(u => isShepherdUser(u));
         

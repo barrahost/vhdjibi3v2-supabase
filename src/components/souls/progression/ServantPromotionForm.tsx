@@ -47,7 +47,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
 
   // Charger les départements disponibles
   useEffect(() => {
-    const q = query(collection(db, 'departments'), where('status', '==', 'active')
+    const q = query(collection(db, 'departments'), where('status', '==', 'active'))
     const unsubscribe = onData(q, (snapshot) => {
       const deptData = snapshot.docs.map(doc => ({
         id: doc.id,

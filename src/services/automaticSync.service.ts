@@ -26,17 +26,17 @@ export class AutomaticSyncService {
 
     try {
       // Trouver l'utilisateur correspondant
-      const userQuery = query(collection(db, 'users'), where('email', '==', servantData.email)
+      const userQuery = query(collection(db, 'users'), where('email', '==', servantData.email))
       
-      const { data: userData } = await userQuery;
+      const userSnap = await getDocs(userQuery);
       
-      if (userData.empty) {
+      if (userSnap.empty) {
         console.log(`Aucun utilisateur trouvé pour ${servantData.email}, synchronisation ignorée`);
         return;
       }
 
-      const userDoc = userData[0];
-      const userData = userDocData;
+      const userDoc = userSnap.docs[0];
+      const userData = userDoc.data();
 
       // Vérifier si l'utilisateur a déjà les bons profils
       const hasProperProfiles = userData.businessProfiles && 
@@ -106,17 +106,17 @@ export class AutomaticSyncService {
 
     try {
       // Trouver l'utilisateur
-      const userQuery = query(collection(db, 'users'), where('email', '==', emailToUse)
+      const userQuery = query(collection(db, 'users'), where('email', '==', emailToUse))
       
-      const { data: userData } = await userQuery;
+      const userSnap = await getDocs(userQuery);
       
-      if (userData.empty) {
+      if (userSnap.empty) {
         console.log(`Aucun utilisateur trouvé pour ${emailToUse}`);
         return;
       }
 
-      const userDoc = userData[0];
-      const userData = userDocData;
+      const userDoc = userSnap.docs[0];
+      const userData = userDoc.data();
 
       if (isNowHead) {
         // Promotion: ajouter les profils department_leader et shepherd
@@ -187,16 +187,16 @@ export class AutomaticSyncService {
 
     try {
       // Trouver l'utilisateur
-      const userQuery = query(collection(db, 'users'), where('email', '==', servantData.email)
+      const userQuery = query(collection(db, 'users'), where('email', '==', servantData.email))
       
-      const { data: userData } = await userQuery;
+      const userSnap = await getDocs(userQuery);
       
-      if (userData.empty) {
+      if (userSnap.empty) {
         return;
       }
 
-      const userDoc = userData[0];
-      const userData = userDocData;
+      const userDoc = userSnap.docs[0];
+      const userData = userDoc.data();
 
       // Retirer le profil department_leader
       const existingProfiles = userData.businessProfiles || [];

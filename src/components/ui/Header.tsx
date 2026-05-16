@@ -21,8 +21,8 @@ export function Header() {
 
       try {
         // Chercher dans la collection users
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
-        const { data: userData } = await userQuery;
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
+        const userData = await getDocs(userQuery);
 
         if (!userData.empty) {
           const userData = userData?.[0];
@@ -32,8 +32,8 @@ export function Header() {
         }
 
         // Si non trouvé, chercher dans admins
-        const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid)
-        const { data: adminData } = await adminQuery;
+        const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid))
+        const adminData = await getDocs(adminQuery);
 
         if (!adminData.empty) {
           const userData = adminData?.[0];

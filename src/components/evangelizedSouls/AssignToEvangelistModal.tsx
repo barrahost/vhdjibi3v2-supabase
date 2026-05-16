@@ -37,7 +37,7 @@ export default function AssignToEvangelistModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('status', '==', 'active')
+    const q = query(collection(db, 'users'), where('status', '==', 'active'))
     const unsubscribe = onData(q, (snapshot) => {
       const data = snapshot.docs
         .map(doc => {

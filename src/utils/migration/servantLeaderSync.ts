@@ -20,9 +20,9 @@ export class ServantLeaderSync {
     try {
       // Find all servants with isHead = true
       const servantsQuery = query(collection(db, 'servants'), where('isHead', '==', true),
-        where('status', '==', 'active')
+        where('status', '==', 'active'))
       
-      const { data: servantsData } = await servantsQuery;
+      const servantsData = await getDocs(servantsQuery);
       console.log(`Found ${servantsData.size} department heads to sync`);
       
       for (const servantDoc of servantsData) {
@@ -35,17 +35,17 @@ export class ServantLeaderSync {
             continue;
           }
           
-          const usersQuery = query(collection(db, 'users'), where('email', '==', servantData.email)
+          const usersQuery = query(collection(db, 'users'), where('email', '==', servantData.email))
           
-          const { data: userData } = await usersQuery;
+          const userSnap = await getDocs(usersQuery);
           
-          if (userData.empty) {
+          if (userSnap.empty) {
             console.warn(`No user found for servant ${servantData.fullName} (${servantData.email})`);
             continue;
           }
           
-          const userDoc = userData[0];
-          const userData = userDocData;
+          const userDoc = userSnap.docs[0];
+          const userData = userDoc.data();
           
           // Check if user already has proper business profiles
           const hasProperProfiles = userData.businessProfiles && 
@@ -101,20 +101,20 @@ export class ServantLeaderSync {
     try {
       // Find servant
       const servantQuery = query(collection(db, 'servants'), where('email', '==', servantEmail),
-        where('isHead', '==', true)
+        where('isHead', '==', true))
       
-      const { data: servantData } = await servantQuery;
+      const servantSnap = await getDocs(servantQuery);
       
-      if (servantData.empty) {
+      if (servantSnap.empty) {
         throw new Error('Servant not found or not a department head');
       }
       
-      const servantData = servantData?.[0];
+      const servantData = servantSnap.docs[0].data();
       
       // Find user
-      const userQuery = query(collection(db, 'users'), where('email', '==', servantEmail)
+      const userQuery = query(collection(db, 'users'), where('email', '==', servantEmail))
       
-      const { data: userData } = await userQuery;
+      const userData = await getDocs(userQuery);
       
       if (userData.empty) {
         throw new Error('User not found');

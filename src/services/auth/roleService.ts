@@ -8,7 +8,7 @@ export class RoleService {
 
     try {
       // Check users table first
-      const { data: userData } = await supabase
+      const userData = await getDocs(supabase)
         .from('users')
         .select('role')
         .eq('uid', userId)
@@ -19,7 +19,7 @@ export class RoleService {
       }
 
       // Check admins table (super_admin only)
-      const { data: adminData } = await supabase
+      const adminData = await getDocs(supabase)
         .from('admins')
         .select('role')
         .eq('uid', userId)

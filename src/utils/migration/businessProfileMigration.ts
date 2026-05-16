@@ -16,9 +16,9 @@ export class BusinessProfileMigration {
     
     try {
       // Find all users with department_leader role
-      const usersQuery = query(collection(db, 'users'), where('role', '==', 'department_leader')
+      const usersQuery = query(collection(db, 'users'), where('role', '==', 'department_leader'))
       
-      const { data: snapshot } = await usersQuery;
+      const snapshot = await getDocs(usersQuery);
       console.log(`Found ${snapshot.size} department leaders to migrate`);
       
       for (const userDoc of snapshot.docs) {

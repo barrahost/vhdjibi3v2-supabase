@@ -98,10 +98,10 @@ export function SoulMap({ className = '' }: SoulMapProps) {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
         // pour inclure les bergers multi-casquettes
-        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active')
+        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active'))
 
-        const { data: shepherdsData } = await shepherdsQuery;
-        const shepherdsData = shepherdsData
+        const shepherdsSnap = await getDocs(shepherdsQuery);
+        const shepherdsData = shepherdsSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as User))
           .filter(u => isShepherdUser(u));
         setUsers(shepherdsData);
@@ -126,8 +126,8 @@ export function SoulMap({ className = '' }: SoulMapProps) {
           );
         }
 
-        const { data: soulsData } = await baseQuery;
-const soulsData = soulsData.map(doc => ({
+        const soulsSnap = await getDocs(baseQuery);
+        const soulsData = soulsSnap.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Soul[];

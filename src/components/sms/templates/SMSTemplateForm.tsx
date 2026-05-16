@@ -22,8 +22,8 @@ export default function SMSTemplateForm() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive'])
-        const { data: snapshot } = await categoriesQuery;
+        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive']))
+        const snapshot = await getDocs(categoriesQuery);
         setCategories(snapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name,

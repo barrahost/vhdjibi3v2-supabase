@@ -79,7 +79,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
       setLoading(true);
       try {
         // Existing servants in this department to flag duplicates
-        const { data: existingServants } = await supabase
+        const existingServants = await getDocs(supabase)
           .from('servants')
           .select('source_type, source_id, original_soul_id')
           .eq('department_id', selectedDept);
@@ -97,7 +97,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           );
 
         if (tab === 'souls') {
-          const { data: soulsData } = await supabase
+          const soulsData = await getDocs(supabase)
             .from('souls')
             .select('id, full_name, phone, gender')
             .eq('status', 'active');
@@ -110,7 +110,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           }));
           setSouls(sortByName(rows));
         } else {
-          const { data: usersData } = await supabase
+          const usersData = await getDocs(supabase)
             .from('users')
             .select('id, full_name, phone, email, role')
             .eq('status', 'active');

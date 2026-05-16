@@ -117,7 +117,7 @@ export default function AssignedSouls() {
     if (!user) return;
 
     try {
-      const { data: usersData, error: usersError } = await supabase
+      const usersData = await getDocs(supabase)
         .from('users')
         .select('*')
         .eq('uid', user.uid)
@@ -137,7 +137,7 @@ export default function AssignedSouls() {
         if (hasShepherdProfile || hasOldShepherdRole) {
           setShepherdId(currentUserId);
 
-          const { data: soulsData, error: soulsError } = await supabase
+          const soulsData = await getDocs(supabase)
             .from('souls')
             .select('*')
             .eq('shepherd_id', currentUserId)

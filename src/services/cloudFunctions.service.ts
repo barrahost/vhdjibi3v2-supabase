@@ -63,7 +63,7 @@ export class CloudFunctionsService {
 
     // Strategy 1: direct lookup by docId
     if (docId) {
-      const { data: usersRow } = await supabase
+      const usersRow = await getDocs(supabase)
         .from('users')
         .select('*')
         .eq('id', docId)
@@ -72,7 +72,7 @@ export class CloudFunctionsService {
         resolvedDocId = usersRow.id;
         targetData = usersRow;
       } else {
-        const { data: adminsRow } = await supabase
+        const adminsRow = await getDocs(supabase)
           .from('admins')
           .select('*')
           .eq('id', docId)
@@ -87,7 +87,7 @@ export class CloudFunctionsService {
 
     // Strategy 2: fallback — lookup by uid field
     if (!resolvedDocId && uid) {
-      const { data: usersRows } = await supabase
+      const usersRows = await getDocs(supabase)
         .from('users')
         .select('*')
         .eq('uid', uid)
@@ -96,7 +96,7 @@ export class CloudFunctionsService {
         resolvedDocId = usersRows[0].id;
         targetData = usersRows[0];
       } else {
-        const { data: adminsRows } = await supabase
+        const adminsRows = await getDocs(supabase)
           .from('admins')
           .select('*')
           .eq('uid', uid)

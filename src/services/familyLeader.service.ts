@@ -5,8 +5,8 @@ import { supabase } from '../lib/supabase';
 export class FamilyLeaderService {
   /** Trouve la famille dont le user est responsable (via leaderId). */
   static async getFamilyByLeaderId(userId: string): Promise<ServiceFamily | null> {
-    const q = query(collection(db, 'serviceFamilies'), where('leaderId', '==', userId)
-    const { data: snap } = await q;
+    const q = query(collection(db, 'serviceFamilies'), where('leaderId', '==', userId))
+    const snap = await getDocs(q);
     if (snap.empty) return null;
     const d = snap.docs[0];
     return { id: d.id, ...d.data() } as ServiceFamily;
@@ -14,8 +14,8 @@ export class FamilyLeaderService {
 
   /** Liste les âmes assignées à une famille. */
   static async getSoulsByFamilyId(familyId: string): Promise<Soul[]> {
-    const q = query(collection(db, 'souls'), where('serviceFamilyId', '==', familyId)
-    const { data: snap } = await q;
+    const q = query(collection(db, 'souls'), where('serviceFamilyId', '==', familyId))
+    const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Soul));
   }
 

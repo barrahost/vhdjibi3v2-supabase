@@ -25,9 +25,9 @@ export async function migrateToServantSchema() {
     
     // Step 2: Migrate existing shepherds who should also be servants
     const shepherdsQuery = query(collection(db, 'users'), where('role', 'in', ['shepherd', 'intern']),
-      where('status', '==', 'active')
+      where('status', '==', 'active'))
     
-    const { data: shepherdsData } = await shepherdsQuery;
+    const shepherdsData = await getDocs(shepherdsQuery);
     
     // Track migration statistics
     let shepherdsMigrated = 0;
@@ -38,9 +38,9 @@ export async function migrateToServantSchema() {
       const shepherdData = shepherdDocData;
       
       // Check if this shepherd already exists in the servants collection
-      const existingServantQuery = query(collection(db, 'servants'), where('phone', '==', shepherdData.phone)
+      const existingServantQuery = query(collection(db, 'servants'), where('phone', '==', shepherdData.phone))
       
-      const { data: existingServantData } = await existingServantQuery;
+      const existingServantData = await getDocs(existingServantQuery);
       
       if (!existingServantData.empty) {
         // Shepherd already exists as a servant, update their record

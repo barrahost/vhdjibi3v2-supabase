@@ -71,8 +71,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si le numéro existe déjà (sauf pour le même serviteur)
       if (phoneValidation.formattedNumber !== servant.phone) {
-        const phoneQuery = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber)
-        const { data: phoneData } = await phoneQuery;
+        const phoneQuery = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber))
+        const phoneData = await getDocs(phoneQuery);
         
         if (!phoneData.empty) {
           toast.error('Ce numéro de téléphone est déjà utilisé');
@@ -82,8 +82,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si l'email existe déjà (sauf pour le même serviteur)
       if (formData.email && formData.email !== servant.email) {
-        const emailQuery = query(collection(db, 'servants'), where('email', '==', formData.email.trim()
-        const { data: emailData } = await emailQuery;
+        const emailQuery = query(collection(db, 'servants'), where('email', '==', formData.email.trim()))
+        const emailData = await getDocs(emailQuery);
         
         if (!emailData.empty) {
           toast.error('Cet email est déjà utilisé');
@@ -95,8 +95,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
       if (formData.isHead && formData.departmentId !== servant.departmentId) {
         const headQuery = query(collection(db, 'servants'), where('departmentId', '==', formData.departmentId),
           where('isHead', '==', true),
-          where('status', '==', 'active')
-        const { data: headData } = await headQuery;
+          where('status', '==', 'active'))
+        const headData = await getDocs(headQuery);
         
         if (!headData.empty) {
           toast.error('Ce département a déjà un responsable');
@@ -113,8 +113,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
       if (formData.isHead && !servant.isHead) {
         const headQuery = query(collection(db, 'servants'), where('departmentId', '==', formData.departmentId),
           where('isHead', '==', true),
-          where('status', '==', 'active')
-        const { data: headData } = await headQuery;
+          where('status', '==', 'active'))
+        const headData = await getDocs(headQuery);
         
         if (!headData.empty) {
           toast.error('Ce département a déjà un responsable');

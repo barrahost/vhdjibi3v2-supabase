@@ -14,7 +14,7 @@ export default function DepartmentList() {
   const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'departments'), orderBy('order', 'asc')
+    const q = query(collection(db, 'departments'), orderBy('order', 'asc'))
     
     const unsubscribe = onData(q, (snapshot) => {
       setDepartments(snapshot.docs.map(doc => ({

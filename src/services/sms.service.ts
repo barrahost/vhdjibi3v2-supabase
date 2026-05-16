@@ -85,23 +85,27 @@ export class SMSService {
 
   static async getTemplates(category?: string): Promise<any[]> {
     try {
-      const constraints: any[] = [where('status', '==', 'active')];
+      let q = supabase
+        .from('sms_templates')
+        .select('*')
+        .eq('status', 'active')
+        .order('title', { ascending: true });
+
       if (category) {
-        constraints.push(where('category', '==', category));
+        q = q.eq('category', category);
       }
-      constraints.push(orderBy('title', 'asc'));
 
-      const templatesQuery = supabase.from('smsTemplates').select('*'), ...constraints);
+      const { data, error } = await q;
+      if (error) throw error;
 
-      const { data: snapshot } = await templatesQuery;
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        title: doc.data().title,
-        content: doc.data().content,
-        status: doc.data().status as 'active' | 'inactive',
-        category: doc.data().category,
-        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
-        updatedAt: doc.data().updatedAt instanceof Timestamp ? doc.data().updatedAt.toDate() : new Date(doc.data().updatedAt)
+      return (data ?? []).map(row => ({
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        status: row.status as 'active' | 'inactive',
+        category: row.category,
+        createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+        updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
       }));
     } catch (error) {
       console.error('Error loading SMS templates:', error);

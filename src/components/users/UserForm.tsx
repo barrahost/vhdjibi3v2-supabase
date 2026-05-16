@@ -61,8 +61,8 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       }
 
       // Vérifier si le numéro existe déjà
-      const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneValidation.formattedNumber)
-      const { data: phoneData } = await phoneQuery;
+      const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneValidation.formattedNumber))
+      const phoneData = await getDocs(phoneQuery);
       if (!phoneData.empty) {
         toast.error('Ce numéro de téléphone est déjà utilisé');
         return;
@@ -71,8 +71,8 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       // Vérifier si l'email existe déjà — uniquement s'il est renseigné
       const trimmedEmail = formData.email.trim();
       if (trimmedEmail) {
-        const emailQuery = query(collection(db, 'users'), where('email', '==', trimmedEmail)
-        const { data: emailData } = await emailQuery;
+        const emailQuery = query(collection(db, 'users'), where('email', '==', trimmedEmail))
+        const emailData = await getDocs(emailQuery);
         if (!emailData.empty) {
           toast.error('Cet email est déjà utilisé');
           return;
@@ -100,7 +100,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
                           'shepherd';
 
       // Créer l'utilisateur dans Firestore
-      docRef = const { error: _insertErr } = await supabase.from('users').insert({
+      const { data: insertedUser, error: _insertErr } = await supabase.from('users').insert({
         uid,
         fullName: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,
@@ -115,7 +115,8 @@ export default function UserForm({ onSuccess }: UserFormProps) {
         createdAt: new Date(),
         updatedAt: new Date(),
         status: 'active'
-      });
+      }).select('id').single();
+      docRef = { id: insertedUser?.id ?? '' };
 
       if (!docRef || !docRef.id) {
         throw new Error('Failed to create user document');

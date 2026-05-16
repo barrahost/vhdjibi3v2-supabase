@@ -37,7 +37,7 @@ export default function ShepherdReminders() {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
         // afin d'inclure les bergers multi-casquettes (businessProfiles)
-        const { data: usersData, error: usersError } = await supabase
+        const usersData = await getDocs(supabase)
           .from('users')
           .select('*')
           .eq('status', 'active');
@@ -57,7 +57,7 @@ export default function ShepherdReminders() {
 
         // Charger les données en parallèle pour chaque berger
         await Promise.all(shepherds.map(async (shepherd) => {
-          const { data: soulsData, error: soulsError } = await supabase
+          const soulsData = await getDocs(supabase)
             .from('souls')
             .select('*')
             .eq('shepherd_id', shepherd.id)
@@ -80,7 +80,7 @@ export default function ShepherdReminders() {
 
           if (souls.length === 0) return;
 
-          const { data: interactionsData, error: interactionsError } = await supabase
+          const interactionsData = await getDocs(supabase)
             .from('interactions')
             .select('*')
             .eq('shepherd_id', shepherd.id);

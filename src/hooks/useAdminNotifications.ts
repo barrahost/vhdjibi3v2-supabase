@@ -32,7 +32,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         const newAlerts: AdminAlert[] = [];
 
         // 1. Toutes les âmes actives (une seule requête pour tout)
-        const { data: allSouls, error: soulsErr } = await supabase
+        const allSouls = await getDocs(supabase)
           .from('souls')
           .select('id, full_name, shepherd_id, is_undecided, service_family_id, status');
 
@@ -77,7 +77,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         }
 
         // 5. Âmes évangélisées en attente (non importées)
-        const { data: evangelizedData, error: evangErr } = await supabase
+        const evangelizedData = await getDocs(supabase)
           .from('evangelized_souls')
           .select('id, full_name, status, imported_to_soul_id')
           .neq('status', 'imported');
@@ -94,7 +94,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         }
 
         // 6. Anniversaires dans les 7 prochains jours (table birthdays)
-        const { data: birthdaysData, error: bdErr } = await supabase
+        const birthdaysData = await getDocs(supabase)
           .from('birthdays')
           .select('id, full_name, birth_date, soul_id');
 

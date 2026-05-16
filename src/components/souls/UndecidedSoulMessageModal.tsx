@@ -52,8 +52,8 @@ export default function UndecidedSoulMessageModal({
       if (!user) return;
       
       try {
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
-        const { data: userData } = await userQuery;
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
+        const userData = await getDocs(userQuery);
         
         if (!userData.empty) {
           const userData = userData?.[0];

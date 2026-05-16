@@ -54,9 +54,9 @@ export default function DepartmentLeaderDashboard() {
         }
         
         // Get department details
-        const deptQuery = query(collection(db, 'departments'), where('__name__', '==', deptLeaderProfile.departmentId)
+        const deptQuery = query(collection(db, 'departments'), where('__name__', '==', deptLeaderProfile.departmentId))
         
-        const { data: deptData } = await deptQuery;
+        const deptData = await getDocs(deptQuery);
         if (!deptData.empty) {
           const deptData = deptData?.[0] as Department;
           setDepartment({
@@ -79,7 +79,7 @@ export default function DepartmentLeaderDashboard() {
     if (!department?.id) return;
 
     const q = query(collection(db, 'servants'), where('departmentId', '==', department.id),
-      where('status', '==', 'active')
+      where('status', '==', 'active'))
 
     const unsubscribe = onData(q, (snapshot) => {
       const servantsData = snapshot.docs.map(doc => ({

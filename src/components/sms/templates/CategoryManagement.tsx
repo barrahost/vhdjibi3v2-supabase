@@ -34,8 +34,8 @@ export function CategoryManagement() {
 
   const loadCategories = async () => {
     try {
-      const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive'])
-      const { data: snapshot } = await categoriesQuery;
+      const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive']))
+      const snapshot = await getDocs(categoriesQuery);
       setCategories(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -61,8 +61,8 @@ export function CategoryManagement() {
       }
 
       // Vérifier si le nom existe déjà
-      const existingQuery = query(collection(db, 'smsCategories'), where('name', '==', formData.name.trim()
-      const { data: existingDocs } = await existingQuery;
+      const existingQuery = query(collection(db, 'smsCategories'), where('name', '==', formData.name.trim()))
+      const existingDocs = await getDocs(existingQuery);
       
       if (!editingCategoryId && !existingDocs.empty) {
         toast.error('Une catégorie avec ce nom existe déjà');
@@ -98,8 +98,8 @@ export function CategoryManagement() {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
       try {
         // Vérifier si la catégorie est utilisée
-        const templatesQuery = query(collection(db, 'smsTemplates'), where('category', '==', category.name)
-        const { data: templatesData } = await templatesQuery;
+        const templatesQuery = query(collection(db, 'smsTemplates'), where('category', '==', category.name))
+        const templatesData = await getDocs(templatesQuery);
         
         if (!templatesData.empty) {
           toast.error('Cette catégorie est utilisée par des modèles et ne peut pas être supprimée');

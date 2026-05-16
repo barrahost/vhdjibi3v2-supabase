@@ -31,7 +31,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
 
   useEffect(() => {
     const q = query(collection(db, 'interactions'), where('soulId', '==', soulId),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'))
 
     const unsubscribe = onData(q, (snapshot) => {
       setInteractions(snapshot.docs.map(doc => {

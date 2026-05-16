@@ -21,7 +21,7 @@ export function CategoryList() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'audio_categories'), orderBy('createdAt', 'desc')
+    const q = query(collection(db, 'audio_categories'), orderBy('createdAt', 'desc'))
     
     const unsubscribe = onData(q, (snapshot) => {
       const categoriesData = snapshot.docs.map(doc => ({

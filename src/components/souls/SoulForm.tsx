@@ -151,11 +151,12 @@ export default function SoulForm() {
         );
       }
 
-      const docRef = const { error: _insertErr } = await supabase.from('souls').insert({
-        ...soulData,
-        createdBy: user.id,
-        photoURL: photoURL || null,
-      });
+      const { data: insertedSoul, error: _insertErr } = await supabase
+        .from('souls')
+        .insert({ ...soulData, createdBy: user.id, photoURL: photoURL || null })
+        .select('id')
+        .single();
+      const docRef = { id: insertedSoul?.id ?? '' };
 
       if (!docRef.id) {
         throw new Error("Erreur lors de l'ajout de l'âme");

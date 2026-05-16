@@ -34,7 +34,7 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
     if (!isOpen) return;
 
     const q = query(collection(db, 'souls'), where('status', '==', 'active'),
-      where('shepherdId', '==', null)
+      where('shepherdId', '==', null))
 
     const unsubscribe = onData(q, (snapshot) => {
       const soulsData = snapshot.docs.map(doc => ({
@@ -55,7 +55,7 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('status', '==', 'active')
+    const q = query(collection(db, 'users'), where('status', '==', 'active'))
     const unsubscribe = onData(q, (snapshot) => {
       const shepherdData = snapshot.docs
         .map(doc => {

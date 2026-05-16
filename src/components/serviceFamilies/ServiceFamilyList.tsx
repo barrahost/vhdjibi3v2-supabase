@@ -23,7 +23,7 @@ export default function ServiceFamilyList() {
   const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'serviceFamilies'), orderBy('order', 'asc')
+    const q = query(collection(db, 'serviceFamilies'), orderBy('order', 'asc'))
     
     const unsubscribe = onData(q, (snapshot) => {
       setFamilies(snapshot.docs.map(doc => ({

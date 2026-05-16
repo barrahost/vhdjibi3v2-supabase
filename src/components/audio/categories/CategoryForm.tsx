@@ -22,8 +22,8 @@ export function CategoryForm() {
       }
 
       // Check if category already exists
-      const existingQuery = query(collection(db, 'audio_categories'), where('name', '==', formData.name.trim()
-      const { data: existingDocs } = await existingQuery;
+      const existingQuery = query(collection(db, 'audio_categories'), where('name', '==', formData.name.trim()))
+      const existingDocs = await getDocs(existingQuery);
       
       if (!existingDocs.empty) {
         toast.error('Une catégorie avec ce nom existe déjà');

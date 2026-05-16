@@ -12,8 +12,8 @@ export async function getUserRole(uid: string): Promise<UserRole> {
   try {
     // Vérifier dans la collection users
     const userQuery = query(collection(db, 'users'), where('uid', '==', uid),
-      where('status', '==', 'active')
-    const { data: userDocs } = await userQuery;
+      where('status', '==', 'active'))
+    const userDocs = await getDocs(userQuery);
     
     let isAdmin = false;
     let isShepherd = false;
@@ -30,8 +30,8 @@ export async function getUserRole(uid: string): Promise<UserRole> {
     // Check if user is a super admin
     if (!isAdmin) {
       const adminQuery = query(collection(db, 'admins'), where('uid', '==', uid),
-        where('role', '==', 'super_admin')
-      const { data: adminDocs } = await adminQuery;
+        where('role', '==', 'super_admin'))
+      const adminDocs = await getDocs(adminQuery);
       
       if (!adminDocs.empty) {
         isAdmin = true;

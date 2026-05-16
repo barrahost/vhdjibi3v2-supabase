@@ -301,7 +301,7 @@ export async function updateDoc(docRef: _DocumentRef, data: any): Promise<void> 
   }
 
   for (const [col, delta] of Object.entries(increments)) {
-    const { data: cur, error: e1 } = await (supabase as any).from(table).select(col).eq('id', docRef._id).limit(1);
+    const cur = await getDocs((supabase as any).from(table).select(col).eq('id', docRef._id).limit(1));
     if (e1) throw e1;
     const { error: e2 } = await (supabase as any).from(table).update({ [col]: ((cur?.[0]?.[col] ?? 0) as number) + delta }).eq('id', docRef._id);
     if (e2) throw e2;

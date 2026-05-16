@@ -106,7 +106,9 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
         importedFromEvangelistId: soul.evangelistId,
       };
 
-      const docRef = const { error: _insertErr } = await supabase.from('souls').insert(soulData);
+      const { data: insertedSoul, error: _insertErr } = await supabase
+        .from('souls').insert(soulData).select('id').single();
+      const docRef = { id: insertedSoul?.id ?? '' };
 
       // Marquer l'âme évangélisée comme importée
       const { error: _updateErr } = await supabase.from('evangelized_souls').update({

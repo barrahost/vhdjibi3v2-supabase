@@ -37,8 +37,8 @@ export default function PromoteShepherdModal({
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const q = query(collection(db, 'departments'), where('status', '==', 'active')
-        const { data: snapshot } = await q;
+        const q = query(collection(db, 'departments'), where('status', '==', 'active'))
+        const snapshot = await getDocs(q);
 const deptData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()

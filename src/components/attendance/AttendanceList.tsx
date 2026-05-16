@@ -29,7 +29,7 @@ export default function AttendanceList() {
     const loadData = async () => {
       try {
         // Récupérer le profil berger depuis users
-        const { data: userRows } = await supabase
+        const userRows = await getDocs(supabase)
           .from('users')
           .select('id, role, business_profiles')
           .eq('uid', user.uid)
@@ -59,7 +59,7 @@ export default function AttendanceList() {
         const shepherdId = userData.id;
 
         // Récupérer les présences
-        const { data: attendancesRows, error: attErr } = await supabase
+        const attendancesRows = await getDocs(supabase)
           .from('attendances')
           .select('*')
           .eq('shepherd_id', shepherdId)
@@ -80,7 +80,7 @@ export default function AttendanceList() {
         const soulsData: Record<string, Soul> = {};
         const soulIds = [...new Set(attendancesData.map(a => a.soulId).filter(Boolean))];
         if (soulIds.length > 0) {
-          const { data: soulsRows } = await supabase
+          const soulsRows = await getDocs(supabase)
             .from('souls')
             .select('id, full_name, phone, location, gender')
             .in('id', soulIds);
@@ -105,7 +105,7 @@ export default function AttendanceList() {
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'attendances', filter: `shepherd_id=eq.${shepherdId}` },
             async () => {
-              const { data: freshRows } = await supabase
+              const freshRows = await getDocs(supabase)
                 .from('attendances')
                 .select('*')
                 .eq('shepherd_id', shepherdId)

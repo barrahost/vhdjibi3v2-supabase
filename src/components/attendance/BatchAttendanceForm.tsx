@@ -21,8 +21,8 @@ export default function BatchAttendanceForm() {
       try {
         // Récupérer l'ID du berger depuis la collection users
         const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        const { data: userDoc } = await userQuery;
+          where('status', '==', 'active'))
+        const userDoc = await getDocs(userQuery);
         
         if (userDocData.empty) {
           toast.error('Utilisateur non trouvé');
@@ -45,8 +45,8 @@ export default function BatchAttendanceForm() {
 
         // Récupérer les âmes assignées
         const soulsQuery = query(collection(db, 'souls'), where('shepherdId', '==', currentShepherdId),
-          where('status', '==', 'active')
-        const { data: soulsData } = await soulsQuery;
+          where('status', '==', 'active'))
+        const soulsData = await getDocs(soulsQuery);
         
         setSouls(soulsData.map(doc => ({
           id: doc.id,

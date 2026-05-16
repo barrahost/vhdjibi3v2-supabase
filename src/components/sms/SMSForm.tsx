@@ -30,8 +30,8 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
       
       try {
         // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
-        const { data: userData } = await userQuery;
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
+        const userData = await getDocs(userQuery);
         
         if (!userData.empty) {
           const userData = userData?.[0];

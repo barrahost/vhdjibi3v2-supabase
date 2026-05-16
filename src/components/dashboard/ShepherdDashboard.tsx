@@ -25,10 +25,10 @@ export function ShepherdDashboard() {
     (async () => {
       try {
         const usersQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        const { data: userData } = await usersQuery;
+          where('status', '==', 'active'))
+        const userSnap = await getDocs(usersQuery);
 
-        if (userData.empty) {
+        if (userSnap.empty) {
           if (!cancelled) {
             toast.error('Utilisateur non trouvé');
             setLoading(false);
@@ -36,8 +36,8 @@ export function ShepherdDashboard() {
           return;
         }
 
-        const userData = userData?.[0];
-        const currentShepherdId = userData[0].id;
+        const userData = userSnap.docs[0].data();
+        const currentShepherdId = userSnap.docs[0].id;
 
         const hasShepherdProfile = userData.businessProfiles?.some(
           (profile: any) => profile.type === 'shepherd'
@@ -72,8 +72,8 @@ export function ShepherdDashboard() {
     if (!shepherdId) return;
 
     const soulsQuery = query(collection(db, 'souls'), where('shepherdId', '==', shepherdId),
-      where('status', '==', 'active')
-    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', shepherdId)
+      where('status', '==', 'active'))
+    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', shepherdId))
 
     const soulsUnsub = onData(
       soulsQuery,
