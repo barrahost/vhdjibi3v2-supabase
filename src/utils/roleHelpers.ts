@@ -19,20 +19,25 @@ interface BusinessProfileLike {
 interface UserLike {
   role?: RoleType | null;
   businessProfiles?: BusinessProfileLike[] | null;
+  // Supabase returns snake_case — accept both
+  business_profiles?: BusinessProfileLike[] | null;
   status?: string | null;
 }
 
 /** Vérifie si un utilisateur a un profil métier actif d'un type donné. */
 export function hasActiveBusinessProfile(user: UserLike | null | undefined, type: RoleType): boolean {
-  if (!user?.businessProfiles?.length) return false;
-  return user.businessProfiles.some(p => p?.type === type && p?.isActive !== false);
+  const profiles = user?.businessProfiles ?? user?.business_profiles;
+  if (!profiles?.length) return false;
+  return profiles.some(p => p?.type === type && p?.isActive !== false);
 }
 
 /** Vérifie si l'utilisateur possède l'un des rôles donnés (legacy OU businessProfiles). */
 export function hasAnyRole(user: UserLike | null | undefined, roles: RoleType[]): boolean {
   if (!user) return false;
   if (user.role && roles.includes(user.role)) return true;
-  return user.businessProfiles?.some(
+  // Accept both camelCase (TypeScript types) and snake_case (Supabase raw response)
+  const profiles = user.businessProfiles ?? user.business_profiles;
+  return profiles?.some(
     p => p && roles.includes(p.type) && p.isActive !== false
   ) ?? false;
 }
