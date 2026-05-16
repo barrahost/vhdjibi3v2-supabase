@@ -16,13 +16,19 @@ function Options() {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('id, full_name, role')
-          .eq('status', 'active')
-          .in('role', ['shepherd', 'intern']);
+          .select('id, uid, full_name, role, business_profiles')
+          .eq('status', 'active');
 
         if (error) throw error;
 
         const list = (data ?? [])
+          .filter((r: any) => {
+            // Include if role is shepherd/intern OR has shepherd profile in business_profiles
+            const roleMatch = ['shepherd', 'intern'].includes(r.role);
+            const profileMatch = Array.isArray(r.business_profiles) &&
+              r.business_profiles.some((p: any) => p.type === 'shepherd');
+            return roleMatch || profileMatch;
+          })
           .map((r: any) => ({
             id: r.id,
             fullName: r.full_name || '',

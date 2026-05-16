@@ -164,21 +164,34 @@ export default function SoulManagement() {
     }
     const names: Record<string, string> = {};
     try {
-      const { data, error } = await supabase
+      // Match by Supabase id (new assignments) AND by uid (migrated Firestore data)
+      const { data: byId } = await supabase
         .from('users')
-        .select('id, fullName')
+        .select('id, uid, full_name')
         .in('id', shepherdIds);
-      if (!error && data) {
-        data.forEach((u: { id: string; fullName: string }) => {
-          names[u.id] = u.fullName || 'Berger non trouve';
+      (byId || []).forEach((u: any) => {
+        if (u.full_name) {
+          names[u.id] = u.full_name;
+          if (u.uid) names[u.uid] = u.full_name; // also map by Firebase UID
+        }
+      });
+      // For shepherd_ids not matched by Supabase UUID, try matching by uid column
+      const unmatchedIds = shepherdIds.filter(sid => !names[sid]);
+      if (unmatchedIds.length > 0) {
+        const { data: byUid } = await supabase
+          .from('users')
+          .select('id, uid, full_name')
+          .in('uid', unmatchedIds);
+        (byUid || []).forEach((u: any) => {
+          if (u.full_name) {
+            names[u.id] = u.full_name;
+            if (u.uid) names[u.uid] = u.full_name;
+          }
         });
       }
     } catch (error) {
       console.error('Error loading shepherd names:', error);
     }
-    shepherdIds.forEach(id => {
-      if (!names[id]) names[id] = 'Berger non trouve';
-    });
     setShepherdNames(names);
   }, []);
 
@@ -353,7 +366,23 @@ export default function SoulManagement() {
       if (selectedShepherdId === 'unassigned') {
         q = q.is('shepherd_id', null);
       } else if (selectedShepherdId) {
-        q = q.eq('shepherd_id', selectedShepherdId);
+        // Look up the shepherd's uid too (migrated souls may use Firebase UID)
+        try {
+          const { data: sUser } = await supabase
+            .from('users')
+            .select('id, uid')
+            .eq('id', selectedShepherdId)
+            .limit(1)
+            .single();
+          if (sUser?.uid && sUser.uid !== sUser.id) {
+            // Filter by Supabase id OR Firebase uid
+            (q as any) = (q as any).or(`shepherd_id.eq.${sUser.id},shepherd_id.eq.${sUser.uid}`);
+          } else {
+            q = q.eq('shepherd_id', selectedShepherdId);
+          }
+        } catch {
+          q = q.eq('shepherd_id', selectedShepherdId);
+        }
       }
 
       if (statusFilter !== 'all') {
