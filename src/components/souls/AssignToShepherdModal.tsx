@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, query, where, writeBatch } from '../../lib/firebase';
+
 import { ShepherdOption } from '../../types/database.types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -32,31 +32,18 @@ export default function AssignToShepherdModal({
 
   useEffect(() => {
     if (!isOpen) return;
-
-    const q = query(collection(db, 'users'), where('status', '==', 'active'))
-    const unsubscribe = onData(q, (snapshot) => {
-      const shepherdData = snapshot.docs
-        .map(doc => {
-          const data: any = doc.data();
-          const profiles: any[] = Array.isArray(data.businessProfiles) ? data.businessProfiles : [];
-          const fromRole = data.role === 'shepherd' || data.role === 'intern' || data.role === 'admin';
-          const fromProfiles = profiles.some(
-            (p: any) => (p?.type === 'shepherd' || p?.type === 'intern') && p?.isActive !== false
-          );
-          if (!fromRole && !fromProfiles) return null;
-          const isIntern =
-            data.role === 'intern' ||
-            (data.role !== 'shepherd' && data.role !== 'admin' &&
-              profiles.some((p: any) => p?.type === 'intern' && p?.isActive !== false));
-          const role: string = data.role === 'admin' ? 'admin' : (isIntern ? 'intern' : 'shepherd');
-          return { id: doc.id, fullName: (data.fullName || '') as string, role };
-        })
-        .filter((s): s is ShepherdOption => s !== null && !!s.fullName)
-        .sort((a, b) => a.fullName.localeCompare(b.fullName));
-      setShepherds(shepherdData);
-    });
-
-    return () => unsubscribe();
+    supabase
+      .from('users')
+      .select('id, full_name, role')
+      .eq('status', 'active')
+      .in('role', ['shepherd', 'intern', 'admin'])
+      .then(({ data }) => {
+        const list = (data ?? [])
+          .map((r: any) => ({ id: r.id, fullName: r.full_name || '', role: r.role } as ShepherdOption))
+          .filter((s: ShepherdOption) => !!s.fullName)
+          .sort((a: ShepherdOption, b: ShepherdOption) => a.fullName.localeCompare(b.fullName));
+        setShepherds(list);
+      });
   }, [isOpen]);
 
   const handleClose = () => {
@@ -76,15 +63,13 @@ export default function AssignToShepherdModal({
 
     setLoading(true);
     try {
-      const batch = writeBatch(db);
-      const now = new Date();
-      soulIds.forEach(soulId => {
-        batch.update(doc(db, 'souls', soulId), {
-          shepherdId: selectedShepherd,
-          updatedAt: now,
-        });
-      });
-      await batch.commit();
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('souls')
+        .update({ shepherd_id: selectedShepherd, updated_at: now })
+        .in('id', soulIds);
+
+      if (error) throw error;
 
       const shepherdName =
         shepherds.find(s => s.id === selectedShepherd)?.fullName || 'le berger sélectionné';

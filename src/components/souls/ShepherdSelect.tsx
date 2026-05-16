@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import { ShepherdOption } from '../../types/database.types';
 import { supabase } from '../../lib/supabase';
 
@@ -9,45 +8,34 @@ interface ShepherdSelectProps {
   disabled?: boolean;
 }
 
-// Composant pour les options uniquement
 function Options() {
   const [shepherds, setShepherds] = useState<ShepherdOption[]>([]);
 
   useEffect(() => {
     const loadShepherds = async () => {
       try {
-        // Récupérer tous les utilisateurs actifs puis filtrer côté client
-        // pour combiner le champ legacy `role` ET le système `businessProfiles`.
-        const q = query(collection(db, 'users'), where('status', '==', 'active'))
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name, role')
+          .eq('status', 'active')
+          .in('role', ['shepherd', 'intern']);
 
-        const snapshot = await getDocs(q);
-const shepherdsData = snapshot.docs
-          .map(doc => {
-            const data: any = doc.data();
-            const profiles: any[] = Array.isArray(data.businessProfiles) ? data.businessProfiles : [];
-            const fromRole = data.role === 'shepherd' || data.role === 'intern';
-            const fromProfiles = profiles.some(
-              (p: any) => (p?.type === 'shepherd' || p?.type === 'intern') && p?.isActive !== false
-            );
-            if (!fromRole && !fromProfiles) return null;
-            const isIntern =
-              data.role === 'intern' ||
-              profiles.some((p: any) => p?.type === 'intern' && p?.isActive !== false);
-            return {
-              id: doc.id,
-              fullName: data.fullName || '',
-              role: isIntern ? 'intern' : 'shepherd',
-            } as ShepherdOption;
-          })
-          .filter((s): s is ShepherdOption => s !== null && !!s.fullName)
+        if (error) throw error;
+
+        const list = (data ?? [])
+          .map((r: any) => ({
+            id: r.id,
+            fullName: r.full_name || '',
+            role: r.role,
+          } as ShepherdOption))
+          .filter(s => !!s.fullName)
           .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-        setShepherds(shepherdsData);
+        setShepherds(list);
       } catch (error) {
         console.error('Error loading shepherds:', error);
       }
     };
-
     loadShepherds();
   }, []);
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { Soul } from '../../types/database.types';
 import { Modal } from '../ui/Modal';
 import { EditSoulTabs } from './tabs/EditSoulTabs';
@@ -51,13 +51,18 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       if (!user || userRole !== 'shepherd') return;
 
       try {
-        const shepherdsQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active'))
-        const shepherdDoc = await getDocs(shepherdsQuery);
-const matched = shepherdDocData.docs.find(d => isShepherdUser(d.data() as any));
-
-        if (matched) {
-          setCurrentShepherdId(matched.id);
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (currentUserId) {
+          const { data: rows } = await supabase
+            .from('users')
+            .select('id, role')
+            .eq('id', currentUserId)
+            .eq('status', 'active')
+            .limit(1);
+          if (rows && rows.length > 0 && isShepherdUser(rows[0])) {
+            setCurrentShepherdId(rows[0].id);
+          }
         }
       } catch (error) {
         console.error('Error loading shepherd info:', error);
