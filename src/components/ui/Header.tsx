@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
-import { User as UserIcon, LogOut, Bell } from 'lucide-react';
+import { User as UserIcon, LogOut } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ProfileSwitcher } from './ProfileSwitcher';
 import toast from 'react-hot-toast';
@@ -17,28 +16,34 @@ export function Header() {
 
   useEffect(() => {
     const loadUserData = async () => {
-      if (!user) return;
-
       try {
-        // Chercher dans la collection users
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
-        const userData = await getDocs(userQuery);
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (!currentUserId) return;
 
-        if (!userData.empty) {
-          const userData = userData?.[0];
-          setUserFullName(userData?.[0].fullName);
-          setUserPhotoURL(userData.photoURL || null);
+        // Chercher dans users
+        const { data: userRows } = await supabase
+          .from('users')
+          .select('full_name, photo_url')
+          .eq('id', currentUserId)
+          .limit(1);
+
+        if (userRows && userRows.length > 0) {
+          setUserFullName(userRows[0].full_name || '');
+          setUserPhotoURL(userRows[0].photo_url || null);
           return;
         }
 
-        // Si non trouvé, chercher dans admins
-        const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid))
-        const adminData = await getDocs(adminQuery);
+        // Chercher dans admins
+        const { data: adminRows } = await supabase
+          .from('admins')
+          .select('full_name, photo_url')
+          .eq('id', currentUserId)
+          .limit(1);
 
-        if (!adminData.empty) {
-          const userData = adminData?.[0];
-          setUserFullName(adminData?.[0].fullName);
-          setUserPhotoURL(userData.photoURL || null);
+        if (adminRows && adminRows.length > 0) {
+          setUserFullName(adminRows[0].full_name || '');
+          setUserPhotoURL(adminRows[0].photo_url || null);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -51,20 +56,13 @@ export function Header() {
   const getRoleLabel = () => {
     const role = activeRole || userRole;
     switch (role) {
-      case 'super_admin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Administrateur';
-      case 'shepherd':
-        return 'Berger(e)';
-      case 'adn':
-        return 'ADN';
-      case 'department_leader':
-        return 'Responsable Département';
-      case 'family_leader':
-        return 'Responsable de Famille';
-      default:
-        return 'Utilisateur';
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Administrateur';
+      case 'shepherd': return 'Berger(e)';
+      case 'adn': return 'ADN';
+      case 'department_leader': return 'Responsable Département';
+      case 'family_leader': return 'Responsable de Famille';
+      default: return 'Utilisateur';
     }
   };
 
@@ -86,16 +84,13 @@ export function Header() {
   return (
     <header className="bg-white border-b px-6 py-3">
       <div className="flex items-center justify-between">
-        <div className="flex-1" /> {/* Spacer */}
-        
+        <div className="flex-1" />
+
         <div className="flex items-center space-x-4">
-          {/* Role Switcher */}
           <ProfileSwitcher />
-          
-          {/* Notifications */}
+
           {((activeRole || userRole) === 'shepherd' || (userRole as any) === 'intern' || (activeRole || userRole) === 'admin' || (activeRole || userRole) === 'super_admin' || (activeRole || userRole) === 'adn') && <NotificationBell />}
 
-          {/* Profile */}
           <button
             onClick={openProfileModal}
             className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -107,9 +102,8 @@ export function Header() {
                   alt="Photo de profil"
                   className="w-8 h-8 rounded-full object-cover"
                   onError={(e) => {
-                    // If image fails to load, show default icon
                     const target = e.target as HTMLImageElement;
-                    target.onerror = null; // Prevent infinite loop
+                    target.onerror = null;
                     setUserPhotoURL(null);
                   }}
                 />
@@ -123,7 +117,6 @@ export function Header() {
             </div>
           </button>
 
-          {/* Logout */}
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}

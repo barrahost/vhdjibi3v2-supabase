@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getDocs,  collection, db, onData, query, where  } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
@@ -19,16 +18,27 @@ export function ShepherdDashboard() {
 
   // 1) Identifier le berger une seule fois
   useEffect(() => {
-    if (!user) return;
     let cancelled = false;
 
     (async () => {
       try {
-        const usersQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active'))
-        const userSnap = await getDocs(usersQuery);
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (!currentUserId) {
+          toast.error('Utilisateur non trouvé');
+          setLoading(false);
+          return;
+        }
 
-        if (userSnap.empty) {
+        const { data: userRows, error: userErr } = await supabase
+          .from('users')
+          .select('id, role')
+          .eq('id', currentUserId)
+          .eq('status', 'active')
+          .limit(1);
+
+        if (userErr) throw userErr;
+        if (!userRows || userRows.length === 0) {
           if (!cancelled) {
             toast.error('Utilisateur non trouvé');
             setLoading(false);
@@ -36,15 +46,10 @@ export function ShepherdDashboard() {
           return;
         }
 
-        const userData = userSnap.docs[0].data();
-        const currentShepherdId = userSnap.docs[0].id;
+        const userData = userRows[0];
+        const hasShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
 
-        const hasShepherdProfile = userData.businessProfiles?.some(
-          (profile: any) => profile.type === 'shepherd'
-        );
-        const hasLegacyShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
-
-        if (!hasShepherdProfile && !hasLegacyShepherdRole) {
+        if (!hasShepherdRole) {
           if (!cancelled) {
             toast.error('Vous devez avoir un profil Berger pour accéder à ce tableau de bord');
             setLoading(false);
@@ -52,7 +57,7 @@ export function ShepherdDashboard() {
           return;
         }
 
-        if (!cancelled) setShepherdId(currentShepherdId);
+        if (!cancelled) setShepherdId(userData.id);
       } catch (error) {
         console.error('Error loading shepherd identity:', error);
         if (!cancelled) {
@@ -62,52 +67,80 @@ export function ShepherdDashboard() {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user]);
 
-  // 2) Écoute temps réel des âmes et interactions
+  // 2) Charger les âmes et interactions une fois le shepherdId connu
   useEffect(() => {
     if (!shepherdId) return;
+    let cancelled = false;
 
-    const soulsQuery = query(collection(db, 'souls'), where('shepherdId', '==', shepherdId),
-      where('status', '==', 'active'))
-    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', shepherdId))
+    const loadData = async () => {
+      try {
+        const [{ data: soulsRows, error: soulsErr }, { data: interactionsRows, error: intErr }] = await Promise.all([
+          supabase.from('souls').select('id, full_name, phone, spiritual_status, origin_source, status').eq('shepherd_id', shepherdId).eq('status', 'active'),
+          supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes').eq('shepherd_id', shepherdId),
+        ]);
 
-    const soulsUnsub = onData(
-      soulsQuery,
-      (snap) => {
-        const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Soul[];
-        setSouls(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error listening to souls:', err);
-        toast.error('Erreur de synchronisation des âmes');
-        setLoading(false);
+        if (soulsErr) throw soulsErr;
+        if (intErr) throw intErr;
+
+        if (!cancelled) {
+          setSouls((soulsRows ?? []).map((r: any) => ({
+            id: r.id,
+            fullName: r.full_name || '',
+            phone: r.phone,
+            spiritualStatus: r.spiritual_status,
+            originSource: r.origin_source,
+            status: r.status,
+          } as unknown as Soul)));
+
+          const mapped = (interactionsRows ?? []).map((r: any) => ({
+            id: r.id,
+            soulId: r.soul_id,
+            shepherdId: r.shepherd_id,
+            date: r.date ? new Date(r.date) : new Date(),
+            type: r.type,
+            notes: r.notes,
+          } as unknown as Interaction));
+          setRecentInteractions(mapped.sort((a, b) => b.date.getTime() - a.date.getTime()));
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        if (!cancelled) {
+          toast.error('Erreur lors du chargement des données');
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    const interactionsUnsub = onData(
-      interactionsQuery,
-      (snap) => {
-        const data = snap.docs.map(d => ({
-          id: d.id,
-          ...d.data(),
-          date: d.data().date.toDate(),
-        })) as Interaction[];
-        const sorted = data.sort((a, b) => b.date.getTime() - a.date.getTime());
-        setRecentInteractions(sorted);
-      },
-      (err) => {
-        console.error('Error listening to interactions:', err);
-      }
-    );
+    loadData();
+
+    // Realtime subscriptions
+    const soulsChannel = supabase
+      .channel('shepherd-souls-' + shepherdId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'souls', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
+        const { data } = await supabase.from('souls').select('id, full_name, phone, spiritual_status, origin_source, status').eq('shepherd_id', shepherdId).eq('status', 'active');
+        if (!cancelled) setSouls((data ?? []).map((r: any) => ({ id: r.id, fullName: r.full_name || '', phone: r.phone, spiritualStatus: r.spiritual_status, originSource: r.origin_source, status: r.status } as unknown as Soul)));
+      })
+      .subscribe();
+
+    const interactionsChannel = supabase
+      .channel('shepherd-interactions-' + shepherdId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'interactions', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
+        const { data } = await supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes').eq('shepherd_id', shepherdId);
+        if (!cancelled) {
+          const mapped = (data ?? []).map((r: any) => ({ id: r.id, soulId: r.soul_id, shepherdId: r.shepherd_id, date: r.date ? new Date(r.date) : new Date(), type: r.type, notes: r.notes } as unknown as Interaction));
+          setRecentInteractions(mapped.sort((a, b) => b.date.getTime() - a.date.getTime()));
+        }
+      })
+      .subscribe();
 
     return () => {
-      soulsUnsub();
-      interactionsUnsub();
+      cancelled = true;
+      supabase.removeChannel(soulsChannel);
+      supabase.removeChannel(interactionsChannel);
     };
   }, [shepherdId]);
 
@@ -117,7 +150,7 @@ export function ShepherdDashboard() {
     attentionThreshold.setDate(attentionThreshold.getDate() - 14);
 
     const soulsNeedingAttention = souls.filter(soul => {
-      const soulInteractions = recentInteractions.filter(i => i.soulId === soul.id);
+      const soulInteractions = recentInteractions.filter(i => (i as any).soulId === soul.id);
       if (soulInteractions.length === 0) return true;
       const lastInteraction = new Date(Math.max(...soulInteractions.map(i => i.date.getTime())));
       return lastInteraction < attentionThreshold;
@@ -132,7 +165,7 @@ export function ShepherdDashboard() {
 
   const soulsWithLastContact = useMemo(() => {
     return souls.map(soul => {
-      const soulInteractions = recentInteractions.filter(i => i.soulId === soul.id);
+      const soulInteractions = recentInteractions.filter(i => (i as any).soulId === soul.id);
       const lastContact = soulInteractions.length > 0
         ? new Date(Math.max(...soulInteractions.map(i => i.date.getTime())))
         : null;
@@ -200,30 +233,25 @@ export function ShepherdDashboard() {
           trend={`${stats.totalSouls}`}
           trendLabel="âmes assignées"
         />
-        
         <StatCard
           title="Interactions"
           value={stats.totalInteractions}
           icon={MessageSquare}
-          trend={stats.totalSouls > 0 
+          trend={stats.totalSouls > 0
             ? `${(stats.totalInteractions / stats.totalSouls).toFixed(1)}`
-            : '0'
-          }
+            : '0'}
           trendLabel="par âme"
         />
-        
         <StatCard
           title="Nécessitent attention"
           value={stats.soulsNeedingAttention}
           icon={AlertTriangle}
           trend={stats.totalSouls > 0
             ? `${((stats.soulsNeedingAttention / stats.totalSouls) * 100).toFixed(1)}%`
-            : '0%'
-          }
+            : '0%'}
           trendLabel="des âmes"
           iconClassName="text-yellow-500"
         />
-
         <StatCard
           title="Progression spirituelle"
           value={spiritualStats.spiritualProgressRate}
@@ -283,7 +311,6 @@ export function ShepherdDashboard() {
       {/* Progression spirituelle */}
       <div className="bg-white border rounded-lg p-4 shadow-sm">
         <h3 className="font-semibold text-[#00665C] text-sm mb-4">Progression spirituelle de mes âmes</h3>
-
         {[
           { label: 'Né de nouveau', count: spiritualStats.byStatus.bornAgain, color: '#0F6E56' },
           { label: 'Baptisé',       count: spiritualStats.byStatus.baptized,  color: '#1D9E75' },
@@ -294,19 +321,11 @@ export function ShepherdDashboard() {
           <div key={label} className="flex items-center gap-2 mb-2">
             <span className="text-xs text-gray-500 w-28 shrink-0">{label}</span>
             <div className="flex-1 bg-gray-100 rounded h-2">
-              <div
-                style={{
-                  width: `${spiritualStats.total > 0 ? Math.round((count / spiritualStats.total) * 100) : 0}%`,
-                  background: color,
-                  height: '8px',
-                  borderRadius: '4px',
-                }}
-              />
+              <div style={{ width: `${spiritualStats.total > 0 ? Math.round((count / spiritualStats.total) * 100) : 0}%`, background: color, height: '8px', borderRadius: '4px' }} />
             </div>
             <span className="text-xs font-medium w-6 text-right">{count}</span>
           </div>
         ))}
-
         <div className="mt-4 pt-3 border-t">
           <p className="text-xs text-gray-400 mb-2">Origine</p>
           <div className="flex flex-wrap gap-2">

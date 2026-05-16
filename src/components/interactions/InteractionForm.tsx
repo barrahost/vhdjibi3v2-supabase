@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, getDoc, query, where  } from '../../lib/firebase';
 import { Input } from '../ui/input';
 import { useAuth } from '../../contexts/AuthContext';
 import { SMSService } from '../../services/sms.service';
@@ -7,7 +6,7 @@ import { SMSTemplate } from '../../types/sms.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 
-const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user signature
+const MAX_SMS_LENGTH = 125;
 
 interface InteractionFormProps {
   soulId: string;
@@ -41,7 +40,6 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
         toast.error('Erreur lors du chargement des modèles');
       }
     };
-
     if (formData.type === 'sms') {
       loadTemplates();
     }
@@ -49,25 +47,27 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
 
   useEffect(() => {
     const loadUserInfo = async () => {
-      if (!user) return;
-      
       try {
-        // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
-        const userData = await getDocs(userQuery);
-        
-        if (!userData.empty) {
-          const userData = userData?.[0];
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (!currentUserId) return;
+
+        const { data: rows } = await supabase
+          .from('users')
+          .select('full_name, phone')
+          .eq('id', currentUserId)
+          .limit(1);
+
+        if (rows && rows.length > 0) {
           setUserInfo({
-            fullName: userData.fullName || '',
-            phone: userData.phone || ''
+            fullName: rows[0].full_name || '',
+            phone: rows[0].phone || ''
           });
         }
       } catch (error) {
         console.error('Error loading user info:', error);
       }
     };
-    
     loadUserInfo();
   }, [user]);
 
@@ -84,13 +84,12 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const [year, month, day] = formData.date.split('-').map(Number);
       const [hours, minutes] = formData.time.split(':').map(Number);
       const interactionDate = new Date(year, month - 1, day, hours, minutes);
 
-      // Si c'est un SMS, l'envoyer d'abord
       if (formData.type === 'sms') {
         setIsSending(true);
         try {
@@ -98,7 +97,6 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
             throw new Error('Le message ne peut pas être vide');
           }
 
-          // Check if we have sufficient credits
           const creditCheck = await SMSService.checkSufficientCredits();
           if (!creditCheck.sufficient) {
             toast.error('Crédit SMS insuffisant. Veuillez contacter l\'administrateur pour recharger le crédit.');
@@ -106,51 +104,47 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           }
 
           const phone = await getSoulPhone(soulId);
-          if (!phone) {
-            return;
-          }
+          if (!phone) return;
 
-          // Récupérer le surnom de l'âme
-          const soulDoc = await getDoc(doc(db, sourceCollection, soulId));
-          const soulData = soulDocData;
-          if (!soulData) {
+          // Récupérer les infos de l'âme depuis Supabase
+          const table = sourceCollection === 'evangelized_souls' ? 'evangelized_souls' : 'souls';
+          const { data: soulRows } = await supabase
+            .from(table)
+            .select('full_name, nickname')
+            .eq('id', soulId)
+            .limit(1);
+
+          if (!soulRows || soulRows.length === 0) {
             throw new Error('Données de l\'âme non trouvées');
           }
-          
-          const soulFullName = soulData.fullName;
-          const soulNickname = soulData.nickname;
-          
-          // Get user surname (first part of fullName)
+
+          const soulFullName = soulRows[0].full_name || '';
+          const soulNickname = soulRows[0].nickname || '';
+
           const userSurname = userInfo.fullName.split(' ')[0] || '';
           const userPhone = userInfo.phone.replace('+225', '') || '';
-          
-          // Append user info to the message
-          const userSignature = `\n- ${userSurname} (${userPhone})`;
-          
-          // Personnaliser le message avant l'envoi
+          const userSignature = '\n- ' + userSurname + ' (' + userPhone + ')';
+
           const personalizedMessage = formData.messageContent
             .replace(/\[nom\]/g, soulFullName)
             .replace(/\[surnom\]/g, soulNickname || soulFullName.split(' ')[0])
             + userSignature;
 
-          await SMSService.sendSMS(
-            phone,
-            personalizedMessage,
-            soulFullName,
-            soulNickname
-          );
+          await SMSService.sendSMS(phone, personalizedMessage, soulFullName, soulNickname);
 
-          // Créer l'interaction seulement si l'envoi du SMS a réussi
-          const { error: _insertErr } = await supabase.from('interactions').insert({
+          const { error: insertErr } = await supabase.from('interactions').insert({
+            id: crypto.randomUUID(),
             type: formData.type,
-            soulId,
-            shepherdId,
-            sourceCollection,
-            date: interactionDate,
-            notes: `Envoi du message suivant:\n${personalizedMessage}`,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            soul_id: soulId,
+            shepherd_id: shepherdId,
+            source_collection: sourceCollection,
+            date: interactionDate.toISOString(),
+            notes: 'Envoi du message suivant:\n' + personalizedMessage,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
+
+          if (insertErr) throw insertErr;
 
           toast.success('Message envoyé et interaction enregistrée');
           onSuccess?.();
@@ -170,23 +164,26 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
       }
 
       // Pour les autres types d'interactions
-      const { error: _insertErr } = await supabase.from('interactions').insert({
-        ...formData,
-        soulId,
-        shepherdId,
-        sourceCollection,
-        date: interactionDate,
+      const { error: insertErr } = await supabase.from('interactions').insert({
+        id: crypto.randomUUID(),
+        type: formData.type,
+        soul_id: soulId,
+        shepherd_id: shepherdId,
+        source_collection: sourceCollection,
+        date: interactionDate.toISOString(),
         notes: formData.notes,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
+
+      if (insertErr) throw insertErr;
 
       toast.success('Interaction enregistrée avec succès');
       onSuccess?.();
       onClose();
 
-      setFormData({ 
-        type: 'call', 
+      setFormData({
+        type: 'call',
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
         notes: '',
@@ -198,17 +195,22 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
     }
   };
 
-  // Fonction utilitaire pour récupérer le numéro de téléphone de l'âme
+  // Récupérer le numéro de téléphone de l'âme
   const getSoulPhone = async (soulId: string): Promise<string | null> => {
     try {
-      // sourceCollection is either 'souls' or 'evangelized_souls'
       const table = sourceCollection === 'evangelized_souls' ? 'evangelized_souls' : 'souls';
-      const soulData = await supabase.from(table).select('phone').eq('id', soulId).single();
-      if (soulData) {
-        return soulData?.phone?.replace('+225', '') || null;
+      const { data: rows, error } = await supabase
+        .from(table)
+        .select('phone')
+        .eq('id', soulId)
+        .limit(1);
+
+      if (error) throw error;
+      if (!rows || rows.length === 0) {
+        toast.error('Âme non trouvée');
+        return null;
       }
-      toast.error('Âme non trouvée');
-      return null;
+      return rows[0].phone?.replace('+225', '') || null;
     } catch (error) {
       console.error('Error getting soul phone:', error);
       toast.error('Erreur lors de la récupération du numéro de téléphone');
@@ -224,10 +226,9 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
         </label>
         <select
           value={formData.type}
-          onChange={(e) => setFormData(prev => ({ 
-            ...prev, 
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
             type: e.target.value as 'call' | 'visit' | 'sms' | 'message',
-            // Reset notes when changing type
             notes: ''
           }))}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
@@ -239,7 +240,6 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
         </select>
       </div>
 
-      {/* Formulaire pour les SMS */}
       {formData.type === 'sms' ? (
         <div className="space-y-4">
           <div>
@@ -253,13 +253,10 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
             >
               <option value="">Sélectionnez un modèle</option>
               {templates.map(template => (
-                <option key={template.id} value={template.id}>
-                  {template.title}
-                </option>
+                <option key={template.id} value={template.id}>{template.title}</option>
               ))}
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Message
@@ -272,9 +269,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
               placeholder="Votre message..."
             />
-            <p className={`mt-1 text-sm ${
-              formData.messageContent.length > MAX_SMS_LENGTH - 20 ? 'text-amber-600' : 'text-gray-500'
-            }`}>
+            <p className={`mt-1 text-sm ${formData.messageContent.length > MAX_SMS_LENGTH - 20 ? 'text-amber-600' : 'text-gray-500'}`}>
               {formData.messageContent.length}/{MAX_SMS_LENGTH} caractères
             </p>
             <p className="mt-1 text-sm text-gray-500">
@@ -283,7 +278,6 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           </div>
         </div>
       ) : (
-        // Formulaire pour les autres types d'interactions (appel, visite, message)
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Notes
@@ -308,7 +302,6 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           value={formData.date}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, date: e.target.value }))}
         />
-
         <Input
           label="Heure"
           id="time"
@@ -325,10 +318,9 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           disabled={formData.type === 'sms' && (!formData.messageContent.trim() || isSending)}
           className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00665C] disabled:opacity-50"
         >
-          {formData.type === 'sms' 
-            ? (isSending ? 'Envoi en cours...' : 'Envoyer le message') 
-            : 'Enregistrer l\'interaction'
-          }
+          {formData.type === 'sms'
+            ? (isSending ? 'Envoi en cours...' : 'Envoyer le message')
+            : 'Enregistrer l\'interaction'}
         </button>
         <button
           type="button"
@@ -336,7 +328,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           disabled={isSending}
           className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
         >
-          Fermer
+          Fercer
         </button>
       </div>
     </form>
