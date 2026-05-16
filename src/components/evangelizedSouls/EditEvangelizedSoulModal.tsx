@@ -74,25 +74,25 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
     if (!data.fullName.trim()) return toast.error('Le nom est obligatoire');
     try {
       setSubmitting(true);
-      const { error: _updateErr } = await supabase.from('evangelized_souls').update({
-        fullName: data.fullName.trim(),
+      const { error: updateErr } = await supabase.from('evangelized_souls').update({
+        full_name: data.fullName.trim(),
         nickname: data.nickname.trim() || null,
         gender: data.gender,
         phone: data.phone.trim(),
         location: data.location.trim(),
-        evangelizationDate: data.evangelizationDate ? new Date(data.evangelizationDate) : null,
-        evangelizationLocation: data.evangelizationLocation.trim() || null,
+        evangelization_date: data.evangelizationDate ? new Date(data.evangelizationDate).toISOString() : null,
+        evangelization_location: data.evangelizationLocation.trim() || null,
         notes: data.notes.trim() || null,
-        attendedCommunity: data.attendedCommunity.trim() || null,
-        gaveLifeToJesus: data.gaveLifeToJesus || null,
-        
-        plannedService: data.plannedService || null,
-        prayerTopics: data.prayerTopics.trim() || null,
-        interviewerName: data.interviewerName.trim() || null,
+        attended_community: data.attendedCommunity.trim() || null,
+        gave_life_to_jesus: data.gaveLifeToJesus || null,
+        planned_service: data.plannedService || null,
+        prayer_topics: data.prayerTopics.trim() || null,
+        interviewer_name: data.interviewerName.trim() || null,
         status: data.status,
-        ...(isAdmin ? { evangelistId: data.evangelistId || soul.evangelistId } : {}),
-        updatedAt: new Date(),
-      });
+        ...(isAdmin ? { evangelist_id: data.evangelistId || soul.evangelistId } : {}),
+        updated_at: new Date().toISOString(),
+      }).eq('id', soul.id);
+      if (updateErr) throw updateErr;
       toast.success('Âme mise à jour');
       onUpdated?.();
       onClose();
