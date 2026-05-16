@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import UndecidedSouls from './pages/UndecidedSouls';
 import { UserProfileProvider } from './contexts/UserProfileContext';
+import { OnboardingProvider } from './contexts/OnboardingContext';
 import { CookieBanner } from './components/gdpr/CookieBanner';
 import { UserProfileModal } from './components/profile/UserProfileModal';
 import { FeatureAnnouncementModal } from './components/announcements/FeatureAnnouncementModal';
@@ -316,7 +317,9 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <UserProfileProvider>
+          <OnboardingProvider>
             <AppContent />
+          </OnboardingProvider>
           </UserProfileProvider>
         </AuthProvider>
       </BrowserRouter>

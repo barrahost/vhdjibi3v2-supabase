@@ -584,7 +584,7 @@ export function UserProfileModal() {
                 {tourRole && (
                   <button
                     type="button"
-                    onClick={() => { restartTour(); }}
+                    onClick={() => { closeProfileModal(); setTimeout(restartTour, 150); }}
                     className="flex items-center space-x-2 px-3 py-2 bg-[#00665C]/10 text-[#00665C] rounded-md hover:bg-[#00665C]/20 transition-colors w-full"
                   >
                     <PlayCircle className="w-4 h-4" />
