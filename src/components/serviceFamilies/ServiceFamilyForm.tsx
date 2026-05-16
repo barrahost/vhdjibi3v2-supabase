@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, limit, orderBy, query, where  } from '../../lib/firebase';
+
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -49,7 +49,7 @@ export default function ServiceFamilyForm() {
       const orderQuery = query(collection(db, 'serviceFamilies'), orderBy('order', 'desc'),
         limit(1))
       const orderData = await getDocs(orderQuery);
-const lastOrder = orderData.empty ? 0 : orderData?.[0].order;
+const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
       // Récupérer le nom du responsable pour le champ legacy `leader`
       const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);

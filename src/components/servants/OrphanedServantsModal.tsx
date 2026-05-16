@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { db, doc, writeBatch } from '../../lib/firebase';
+
 import { Servant } from '../../types/servant.types';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -36,9 +36,8 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
     if (!window.confirm(`Supprimer définitivement les ${orphans.length} serviteur(s) orphelin(s) ?`)) return;
     try {
       setDeletingAll(true);
-      const batch = writeBatch(db);
-      orphans.forEach(o => batch.delete(o.id /* was doc in servants */));
-      await batch.commit();
+      const ids = orphans.map(o => o.id);
+      await supabase.from('servants').delete().in('id', ids);
       toast.success(`${orphans.length} serviteur(s) orphelin(s) supprimé(s)`);
       onClose();
     } catch (e) {

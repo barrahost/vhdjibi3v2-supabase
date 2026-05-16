@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { db, doc, writeBatch } from '../../lib/firebase';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Users, CheckSquare, Square, Shuffle, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -202,14 +202,19 @@ export default function DistributeEvangelizedSoulsModal({
         cursor += count;
       });
 
-      // Batch writes
+      // Batch writes using Supabase
       const BATCH_SIZE = 400;
       for (let i = 0; i < ops.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db);
-        ops.slice(i, i + BATCH_SIZE).forEach(({ soulId, evangelistId }) => {
-          batch.update(doc(db, 'evangelized_souls', soulId), { evangelistId });
+        const slice = ops.slice(i, i + BATCH_SIZE);
+        // Group by evangelistId to minimize requests
+        const byEvangelist = new Map<string, string[]>();
+        slice.forEach(({ soulId, evangelistId }) => {
+          if (!byEvangelist.has(evangelistId)) byEvangelist.set(evangelistId, []);
+          byEvangelist.get(evangelistId)!.push(soulId);
         });
-        await batch.commit();
+        await Promise.all(Array.from(byEvangelist.entries()).map(([evangelistId, ids]) =>
+          supabase.from('evangelized_souls').update({ evangelist_id: evangelistId, updated_at: new Date().toISOString() }).in('id', ids)
+        ));
       }
 
       setDone(true);

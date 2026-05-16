@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, onData, query, where  } from '../../lib/firebase';
+
 import { Servant } from '../../types/servant.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -54,16 +54,10 @@ export default function DepartmentLeaderDashboard() {
         }
         
         // Get department details
-        const deptQuery = query(collection(db, 'departments'), where('__name__', '==', deptLeaderProfile.departmentId))
-        
-        const deptData = await getDocs(deptQuery);
-        if (!deptData.empty) {
-          const deptData = deptData?.[0] as Department;
-          setDepartment({
-            id: deptData[0].id,
-            name: deptData.name,
-            description: deptData.description
-          });
+        const { data: deptRows } = await supabase.from('departments').select('id, name, description').eq('id', deptLeaderProfile.departmentId).limit(1);
+        if (deptRows && deptRows.length > 0) {
+          const d = deptRows[0];
+          setDepartment({ id: d.id, name: d.name, description: d.description });
         }
       } catch (error) {
         console.error('Erreur lors du chargement du département:', error);
@@ -78,35 +72,37 @@ export default function DepartmentLeaderDashboard() {
   useEffect(() => {
     if (!department?.id) return;
 
-    const q = query(collection(db, 'servants'), where('departmentId', '==', department.id),
-      where('status', '==', 'active'))
-
-    const unsubscribe = onData(q, (snapshot) => {
-      const servantsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-        promotionDate: doc.data().promotionDate?.toDate()
-      })) as Servant[];
-
+    const loadServants = async () => {
+      const { data } = await supabase.from('servants').select('*').eq('department_id', department.id).eq('status', 'active');
+      const servantsData = (data ?? []).map((r: any) => ({
+        id: r.id,
+        fullName: r.full_name || '',
+        nickname: r.nickname || '',
+        gender: r.gender,
+        phone: r.phone || '',
+        email: r.email || '',
+        departmentId: r.department_id || '',
+        isHead: r.is_head || false,
+        isShepherd: r.is_shepherd || false,
+        originalSoulId: r.original_soul_id || null,
+        status: r.status || 'active',
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+        promotionDate: r.promotion_date ? new Date(r.promotion_date) : undefined
+      } as Servant));
       setServants(servantsData);
-
-      // Calculer les statistiques
-      const totalServants = servantsData.length;
-      const activeServants = servantsData.filter(s => s.status === 'active').length;
-      const promotedFromSouls = servantsData.filter(s => s.originalSoulId).length;
-      const shepherds = servantsData.filter(s => s.isShepherd).length;
-
       setStats({
-        totalServants,
-        activeServants,
-        promotedFromSouls,
-        shepherds
+        totalServants: servantsData.length,
+        activeServants: servantsData.filter(s => s.status === 'active').length,
+        promotedFromSouls: servantsData.filter(s => s.originalSoulId).length,
+        shepherds: servantsData.filter(s => s.isShepherd).length
       });
-    });
-
-    return () => unsubscribe();
+    };
+    loadServants();
+    const channel = supabase.channel('dept_servants_' + department.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servants' }, () => loadServants())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [department?.id]);
 
   if (loading) {

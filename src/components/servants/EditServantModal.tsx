@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { Servant } from '../../types/servant.types';
 import { Modal } from '../ui/Modal';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
@@ -71,10 +71,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si le numéro existe déjà (sauf pour le même serviteur)
       if (phoneValidation.formattedNumber !== servant.phone) {
-        const phoneQuery = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber))
-        const phoneData = await getDocs(phoneQuery);
-        
-        if (!phoneData.empty) {
+        const { data: phoneData } = await supabase.from('servants').select('id').eq('phone', phoneValidation.formattedNumber).limit(1);
+        if (phoneData && phoneData.length > 0) {
           toast.error('Ce numéro de téléphone est déjà utilisé');
           return;
         }
@@ -82,10 +80,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si l'email existe déjà (sauf pour le même serviteur)
       if (formData.email && formData.email !== servant.email) {
-        const emailQuery = query(collection(db, 'servants'), where('email', '==', formData.email.trim()))
-        const emailData = await getDocs(emailQuery);
-        
-        if (!emailData.empty) {
+        const { data: emailData } = await supabase.from('servants').select('id').eq('email', formData.email.trim()).limit(1);
+        if (emailData && emailData.length > 0) {
           toast.error('Cet email est déjà utilisé');
           return;
         }
@@ -93,12 +89,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Si le département a changé et que c'est un responsable, vérifier qu'il n'y a pas déjà un responsable
       if (formData.isHead && formData.departmentId !== servant.departmentId) {
-        const headQuery = query(collection(db, 'servants'), where('departmentId', '==', formData.departmentId),
-          where('isHead', '==', true),
-          where('status', '==', 'active'))
-        const headData = await getDocs(headQuery);
-        
-        if (!headData.empty) {
+        const { data: headData } = await supabase.from('servants').select('id').eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
+        if (headData && headData.length > 0) {
           toast.error('Ce département a déjà un responsable');
           return;
         }
@@ -111,12 +103,8 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Si le serviteur devient responsable
       if (formData.isHead && !servant.isHead) {
-        const headQuery = query(collection(db, 'servants'), where('departmentId', '==', formData.departmentId),
-          where('isHead', '==', true),
-          where('status', '==', 'active'))
-        const headData = await getDocs(headQuery);
-        
-        if (!headData.empty) {
+        const { data: headData } = await supabase.from('servants').select('id').eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
+        if (headData && headData.length > 0) {
           toast.error('Ce département a déjà un responsable');
           return;
         }

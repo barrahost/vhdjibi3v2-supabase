@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, orderBy, query, writeBatch } from '../../lib/firebase';
+
 import type { Department } from '../../types/department.types';
 import DepartmentListItem from './DepartmentListItem';
 import EditDepartmentModal from './EditDepartmentModal';
@@ -14,16 +14,15 @@ export default function DepartmentList() {
   const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'departments'), orderBy('order', 'asc'))
-    
-    const unsubscribe = onData(q, (snapshot) => {
-      setDepartments(snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Department)));
-    });
-
-    return () => unsubscribe();
+    const loadDepts = async () => {
+      const { data } = await supabase.from('departments').select('*').order('order', { ascending: true });
+      setDepartments((data ?? []) as Department[]);
+    };
+    loadDepts();
+    const channel = supabase.channel('departments_list')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => loadDepts())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleMove = async (departmentId: string, direction: 'up' | 'down') => {
@@ -31,26 +30,14 @@ export default function DepartmentList() {
       setReordering(true);
       const currentIndex = departments.findIndex(d => d.id === departmentId);
       if (currentIndex === -1) return;
-
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
       if (newIndex < 0 || newIndex >= departments.length) return;
-
-      // Swap orders
-      const batch = writeBatch(db);
       const currentDept = departments[currentIndex];
       const targetDept = departments[newIndex];
-
-      batch.update(doc(db, 'departments', currentDept.id), {
-        order: targetDept.order,
-        updatedAt: new Date()
-      });
-
-      batch.update(doc(db, 'departments', targetDept.id), {
-        order: currentDept.order,
-        updatedAt: new Date()
-      });
-
-      await batch.commit();
+      await Promise.all([
+        supabase.from('departments').update({ order: targetDept.order, updated_at: new Date().toISOString() }).eq('id', currentDept.id),
+        supabase.from('departments').update({ order: currentDept.order, updated_at: new Date().toISOString() }).eq('id', targetDept.id)
+      ]);
     } catch (error) {
       console.error('Error reordering departments:', error);
       toast.error('Erreur lors du réordonnancement');

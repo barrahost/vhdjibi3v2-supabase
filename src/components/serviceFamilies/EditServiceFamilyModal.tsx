@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { Modal } from '../ui/Modal';
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';

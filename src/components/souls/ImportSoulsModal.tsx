@@ -69,14 +69,16 @@ export default function ImportSoulsModal({ isOpen, onClose, onImported }: Props)
   };
 
   const handleImport = async () => {
-    if (!user?.uid) {
+    const storedUser = localStorage.getItem('user');
+    const userId = storedUser ? JSON.parse(storedUser).id : (user?.id || null);
+    if (!userId) {
       toast.error('Utilisateur non identifié.');
       return;
     }
     setStep('importing');
     setProgress({ done: 0, total: importable });
     try {
-      const res = await importSouls(rows, user.uid, (done, total) =>
+      const res = await importSouls(rows, userId, (done, total) =>
         setProgress({ done, total })
       );
       setResult(res);

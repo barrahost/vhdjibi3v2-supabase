@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { SMSService } from '../../services/sms.service';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -20,16 +20,12 @@ export function SMSTest() {
       if (!user) return;
       
       try {
-        // Get user info from Firestore
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid))
-        const userData = await getDocs(userQuery);
-        
-        if (!userData.empty) {
-          const userData = userData?.[0];
-          setUserInfo({
-            fullName: userData.fullName || '',
-            phone: userData.phone || ''
-          });
+        const storedUser = localStorage.getItem('user');
+        const userId = storedUser ? JSON.parse(storedUser).id : null;
+        if (!userId) return;
+        const { data } = await supabase.from('users').select('full_name, phone').eq('id', userId).single();
+        if (data) {
+          setUserInfo({ fullName: data.full_name || '', phone: data.phone || '' });
         }
       } catch (error) {
         console.error('Error loading user info:', error);

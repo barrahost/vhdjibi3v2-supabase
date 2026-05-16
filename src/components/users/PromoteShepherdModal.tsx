@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
+
 import { ShepherdPromotionService } from '../../services/shepherdPromotion.service';
 import { Modal } from '../ui/Modal';
 import { UserCircle, Building2 } from 'lucide-react';
@@ -37,13 +37,9 @@ export default function PromoteShepherdModal({
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const q = query(collection(db, 'departments'), where('status', '==', 'active'))
-        const snapshot = await getDocs(q);
-const deptData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Department));
-        setDepartments(deptData);
+        const { data: deptData, error: deptErr } = await supabase.from('departments').select('*').eq('status', 'active').order('order', { ascending: true });
+        if (deptErr) throw deptErr;
+        setDepartments((deptData ?? []) as Department[]);
       } catch (error) {
         console.error('Error loading departments:', error);
         toast.error('Erreur lors du chargement des départements');

@@ -195,12 +195,6 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
         // Supprimer l'utilisateur de Firestore
         const { error: _deleteErr } = await supabase.from('users').delete().eq('id', userId);
         
-        // Supprimer l'utilisateur de Firebase Auth
-        const user = auth.currentUser;
-        if (user && user.uid === userUid) {
-          await deleteUser(user);
-        }
-        
         toast.success('Utilisateur supprimé avec succès');
       } catch (error) {
         console.error('Error deleting user:', error);

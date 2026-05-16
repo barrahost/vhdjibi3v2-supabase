@@ -36,7 +36,7 @@ export default function SMSManagement() {
         const { data: usersData } = await supabase
           .from('users')
           .select('*')
-          .eq('uid', user.uid)
+          .eq('id', (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })())
           .eq('status', 'active');
 
         if (usersError) throw usersError;
@@ -58,7 +58,7 @@ export default function SMSManagement() {
 
           setAssignedSouls((soulsData ?? []).map(soul => ({
             id: soul.id,
-            fullName: soul.fullName,
+            fullName: soul.full_name || soul.fullName || '',
             nickname: soul.nickname,
             phone: soul.phone.replace('+225', '')
           })));

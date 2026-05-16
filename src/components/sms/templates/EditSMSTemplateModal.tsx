@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../../lib/firebase';
+
 import { Modal } from '../../ui/Modal';
 import { MessageSquare } from 'lucide-react';
 import { SMS_VARIABLES } from '../../../types/sms.types';
@@ -58,12 +58,8 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', '==', 'active'))
-        const snapshot = await getDocs(categoriesQuery);
-        setCategories(snapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name
-        })));
+        const { data: snapshot } = await supabase.from('sms_categories').select('id, name').eq('status', 'active').order('name', { ascending: true });
+        setCategories((snapshot ?? []).map((r: any) => ({ id: r.id, name: r.name })));
       } catch (error) {
         console.error('Error loading categories:', error);
         toast.error('Erreur lors du chargement des catégories');

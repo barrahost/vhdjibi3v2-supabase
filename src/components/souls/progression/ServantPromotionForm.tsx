@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, query, where } from '../../../lib/firebase';
+
 import { Soul } from '../../../types/database.types';
 import { ServantFormData } from '../../../types/servant.types';
 import { SoulPromotionService } from '../../../services/soulPromotion.service';
@@ -47,16 +47,8 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
 
   // Charger les départements disponibles
   useEffect(() => {
-    const q = query(collection(db, 'departments'), where('status', '==', 'active'))
-    const unsubscribe = onData(q, (snapshot) => {
-      const deptData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Department[];
-      setDepartments(deptData);
-    });
-
-    return () => unsubscribe();
+    supabase.from('departments').select('*').eq('status', 'active').order('order', { ascending: true })
+      .then(({ data }) => setDepartments((data ?? []) as Department[]));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

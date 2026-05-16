@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { useDepartments } from '../../hooks/useDepartments';
@@ -33,22 +33,18 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     let cancelled = false;
     const check = async () => {
       try {
-        const q = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber),
-          where('status', '==', 'active'))
-        const snap = await getDocs(q);
+        const { data: snap } = await supabase.from('servants').select('full_name, department_id').eq('phone', phoneValidation.formattedNumber).eq('status', 'active');
         if (cancelled) return;
-        const others = snap.docs
-          .map(d => d.data() as any)
-          .filter(d => !formData.departmentId || d.departmentId !== formData.departmentId);
+        const others = (snap ?? []).filter((d: any) => !formData.departmentId || d.department_id !== formData.departmentId);
         if (others.length === 0) {
           setDuplicateWarning(null);
           return;
         }
-        const deptNames = others.map(d => {
-          const dep = departments.find(x => x.id === d.departmentId);
+        const deptNames = others.map((d: any) => {
+          const dep = departments.find(x => x.id === d.department_id);
           return dep ? dep.name : 'département inconnu';
         });
-        setDuplicateWarning({ name: others[0].fullName || 'Inconnu', deptNames });
+        setDuplicateWarning({ name: others[0].full_name || 'Inconnu', deptNames });
       } catch (e) {
         if (!cancelled) setDuplicateWarning(null);
       }

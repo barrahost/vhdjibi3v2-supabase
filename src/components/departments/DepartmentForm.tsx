@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getDocs,  collection, db, limit, orderBy, query, where  } from '../../lib/firebase';
+
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 
@@ -22,19 +22,15 @@ export default function DepartmentForm() {
       }
 
       // Vérifier si le nom existe déjà
-      const nameQuery = query(collection(db, 'departments'), where('name', '==', formData.name.trim()))
-      const nameData = await getDocs(nameQuery);
-      
-      if (!nameData.empty) {
+      const { data: nameData } = await supabase.from('departments').select('id').eq('name', formData.name.trim()).limit(1);
+      if (nameData && nameData.length > 0) {
         toast.error('Un département avec ce nom existe déjà');
         return;
       }
 
       // Récupérer l'ordre le plus élevé
-      const orderQuery = query(collection(db, 'departments'), orderBy('order', 'desc'),
-        limit(1))
-      const orderData = await getDocs(orderQuery);
-const lastOrder = orderData.empty ? 0 : orderData?.[0].order;
+      const { data: orderData } = await supabase.from('departments').select('order').order('order', { ascending: false }).limit(1);
+      const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
       const { error: _insertErr } = await supabase.from('departments').insert({
         ...formData,

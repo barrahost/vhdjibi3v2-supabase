@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
+
 import { Search, Save } from 'lucide-react';
 import { MenuAssignment } from '../users/MenuAssignment';
 import { isShepherdUser, isInternUser } from '../../utils/roleHelpers';
@@ -19,18 +19,17 @@ export default function UserMenuManagement() {
     const fetchUsers = async () => {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
-        // pour inclure les bergers/stagiaires multi-casquettes
-        const usersQuery = query(collection(db, 'users'), where('status', '==', 'active'))
-        
-        const snapshot = await getDocs(usersQuery);
-const usersData = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            additionalMenus: doc.data().additionalMenus || []
-          }))
-          .filter((u: any) => isShepherdUser(u));
-        
+        const { data, error } = await supabase.from('users').select('*').eq('status', 'active');
+        if (error) throw error;
+        const usersData = (data ?? []).map((r: any) => ({
+          id: r.id,
+          fullName: r.full_name || '',
+          email: r.email || '',
+          role: r.role,
+          status: r.status,
+          additionalMenus: r.additional_menus || [],
+          businessProfiles: r.business_profiles || []
+        })).filter((u: any) => isShepherdUser(u));
         setUsers(usersData);
         setFilteredUsers(usersData);
       } catch (error) {

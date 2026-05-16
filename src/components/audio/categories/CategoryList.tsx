@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, orderBy, query } from '../../../lib/firebase';
+
 import { Search, Pencil, Trash2 } from 'lucide-react';
 import { EditCategoryModal } from './EditCategoryModal';
 import toast from 'react-hot-toast';
@@ -21,25 +21,29 @@ export function CategoryList() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'audio_categories'), orderBy('createdAt', 'desc'))
-    
-    const unsubscribe = onData(q, (snapshot) => {
-      const categoriesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate()
-      })) as Category[];
-      
-      setCategories(categoriesData);
+    const loadCategories = async () => {
+      const { data, error } = await supabase.from('audio_categories').select('*').order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading categories:', error);
+        toast.error('Erreur lors du chargement des catégories');
+      } else {
+        setCategories((data ?? []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description || '',
+          status: r.status,
+          createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+          updatedAt: r.updated_at ? new Date(r.updated_at) : new Date()
+        })));
+      }
       setLoading(false);
-    }, (error) => {
-      console.error('Error loading categories:', error);
-      toast.error('Erreur lors du chargement des catégories');
-      setLoading(false);
-    });
+    };
+    loadCategories();
 
-    return () => unsubscribe();
+    const channel = supabase.channel('audio_categories_list')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'audio_categories' }, () => loadCategories())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleDelete = async (category: Category) => {

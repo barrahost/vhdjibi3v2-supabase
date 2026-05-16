@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { ServantService } from '../../services/servant.service';
 import toast from 'react-hot-toast';
 import { PhotoUpload } from '../ui/PhotoUpload';
@@ -61,9 +61,8 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       }
 
       // Vérifier si le numéro existe déjà
-      const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneValidation.formattedNumber))
-      const phoneData = await getDocs(phoneQuery);
-      if (!phoneData.empty) {
+      const { data: phoneData } = await supabase.from('users').select('id').eq('phone', phoneValidation.formattedNumber).limit(1);
+      if (phoneData && phoneData.length > 0) {
         toast.error('Ce numéro de téléphone est déjà utilisé');
         return;
       }
@@ -71,9 +70,8 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       // Vérifier si l'email existe déjà — uniquement s'il est renseigné
       const trimmedEmail = formData.email.trim();
       if (trimmedEmail) {
-        const emailQuery = query(collection(db, 'users'), where('email', '==', trimmedEmail))
-        const emailData = await getDocs(emailQuery);
-        if (!emailData.empty) {
+        const { data: emailData } = await supabase.from('users').select('id').eq('email', trimmedEmail).limit(1);
+        if (emailData && emailData.length > 0) {
           toast.error('Cet email est déjà utilisé');
           return;
         }
@@ -101,19 +99,19 @@ export default function UserForm({ onSuccess }: UserFormProps) {
 
       // Créer l'utilisateur dans Firestore
       const { data: insertedUser, error: _insertErr } = await supabase.from('users').insert({
-        uid,
-        fullName: formData.fullName.trim(),
+        id: uid,
+        full_name: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,
         email: trimmedEmail || null,
         role: primaryRole,
-        businessProfiles: formData.businessProfiles,
+        business_profiles: formData.businessProfiles,
         password: formData.password,
         phone: phoneValidation.formattedNumber,
         location: formData.location?.trim() || null,
         coordinates: formData.coordinates,
-        photoURL,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        photo_url: photoURL,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         status: 'active'
       }).select('id').single();
       docRef = { id: insertedUser?.id ?? '' };

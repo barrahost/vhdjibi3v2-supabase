@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, db, doc, onData, orderBy, query, where } from '../../lib/firebase';
+
 import { Servant } from '../../types/servant.types';
 import { Search, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import ServantListItem from './ServantListItem';
@@ -98,70 +98,40 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
 
   // Charger les serviteurs
   useEffect(() => {
-    let baseQuery;
-    
-    if (selectedDepartmentId) {
-      baseQuery = query(
-        collection(db, 'servants'),
-        where('departmentId', '==', selectedDepartmentId),
-        orderBy('createdAt', 'desc')
-      );
-    } else {
-      baseQuery = query(
-        collection(db, 'servants'),
-        orderBy('createdAt', 'desc')
-      );
-    }
-
-    // Add status filter if not 'all'
-    if (statusFilter !== 'all') {
-      if (selectedDepartmentId) {
-        baseQuery = query(
-          collection(db, 'servants'),
-          where('departmentId', '==', selectedDepartmentId),
-          where('status', '==', statusFilter),
-          orderBy('createdAt', 'desc')
-        );
-      } else {
-        baseQuery = query(
-          collection(db, 'servants'),
-          where('status', '==', statusFilter),
-          orderBy('createdAt', 'desc')
-        );
+    const loadServants = async () => {
+      let q = supabase.from('servants').select('*').order('created_at', { ascending: false });
+      if (selectedDepartmentId) q = q.eq('department_id', selectedDepartmentId);
+      if (statusFilter !== 'all') q = q.eq('status', statusFilter);
+      const { data, error } = await q;
+      if (error) {
+        console.error('Error loading servants:', error);
+        toast.error('Erreur lors du chargement des serviteurs');
+        setLoading(false);
+        return;
       }
-    }
-    
-    const unsubscribe = onData(baseQuery, (snapshot) => {
-      const servantsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate()
-      } as Servant));
-      
-      console.log('🔍 [ServantList] Serviteurs chargés:', {
-        total: servantsData.length,
-        statusFilter,
-        selectedDepartmentId,
-        servants: servantsData.map(s => ({
-          id: s.id,
-          fullName: s.fullName,
-          status: s.status,
-          departmentId: s.departmentId,
-          isHead: s.isHead,
-          originalSoulId: s.originalSoulId
-        }))
-      });
-      
-      setServants(servantsData);
+      setServants((data ?? []).map((r: any) => ({
+        id: r.id,
+        fullName: r.full_name || '',
+        nickname: r.nickname || '',
+        gender: r.gender,
+        phone: r.phone || '',
+        email: r.email || '',
+        departmentId: r.department_id || '',
+        isHead: r.is_head || false,
+        isShepherd: r.is_shepherd || false,
+        originalSoulId: r.original_soul_id || null,
+        status: r.status || 'active',
+        shepherdId: r.shepherd_id || null,
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        updatedAt: r.updated_at ? new Date(r.updated_at) : new Date()
+      } as Servant)));
       setLoading(false);
-    }, (error) => {
-      console.error('Error loading servants:', error);
-      toast.error('Erreur lors du chargement des serviteurs');
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    loadServants();
+    const channel = supabase.channel('servants_list_' + statusFilter + '_' + selectedDepartmentId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servants' }, () => loadServants())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [selectedDepartmentId, statusFilter]);
 
   // Réinitialiser la page quand la recherche change

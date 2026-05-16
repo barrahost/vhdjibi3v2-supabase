@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
+
 import mapboxgl from 'mapbox-gl';
 import * as GeoJSON from 'geojson';
 import type { Soul } from '../../types/database.types';
@@ -96,41 +96,35 @@ export function SoulMap({ className = '' }: SoulMapProps) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Charger tous les utilisateurs actifs puis filtrer côté client
-        // pour inclure les bergers multi-casquettes
-        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active'))
-
-        const shepherdsSnap = await getDocs(shepherdsQuery);
-        const shepherdsData = shepherdsSnap.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as User))
-          .filter(u => isShepherdUser(u));
+        // Charger les bergers actifs
+        const { data: usersData } = await supabase.from('users').select('*').eq('status', 'active');
+        const shepherdsData = ((usersData ?? []).map((r: any) => ({
+          id: r.id,
+          fullName: r.full_name || '',
+          role: r.role,
+          status: r.status,
+          coordinates: r.coordinates,
+          businessProfiles: r.business_profiles || []
+        } as unknown as User))).filter(u => isShepherdUser(u));
         setUsers(shepherdsData);
 
         // Charger les âmes
-        let baseQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', 'active')
-        );
-
+        let soulsQ = supabase.from('souls').select('*').eq('status', 'active');
         if (selectedShepherdId === 'unassigned') {
-          baseQuery = query(
-            collection(db, 'souls'),
-            where('status', '==', 'active'),
-            where('shepherdId', '==', null)
-          );
+          soulsQ = soulsQ.is('shepherd_id', null);
         } else if (selectedShepherdId) {
-          baseQuery = query(
-            collection(db, 'souls'),
-            where('status', '==', 'active'),
-            where('shepherdId', '==', selectedShepherdId)
-          );
+          soulsQ = soulsQ.eq('shepherd_id', selectedShepherdId);
         }
-
-        const soulsSnap = await getDocs(baseQuery);
-        const soulsData = soulsSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Soul[];
+        const { data: soulsRaw } = await soulsQ;
+        const soulsData = (soulsRaw ?? []).map((r: any) => ({
+          id: r.id,
+          fullName: r.full_name || '',
+          phone: r.phone || '',
+          status: r.status,
+          coordinates: r.coordinates,
+          shepherdId: r.shepherd_id || null,
+          location: r.location || ''
+        } as unknown as Soul));
         setSouls(soulsData);
         
         // Update stats

@@ -121,7 +121,7 @@ export default function AnnouncementManagement() {
     const { data } = await supabase
       .from('admins')
       .select('full_name')
-      .eq('id', user.uid)
+      .eq('id', (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })())
       .single();
     return data?.full_name || 'Unknown';
   };
@@ -135,11 +135,11 @@ export default function AnnouncementManagement() {
 
       const { error } = await supabase
         .from('announcements')
-        .update({ is_active: newStatus, updated_at: now, updated_by: user.uid })
+        .update({ is_active: newStatus, updated_at: now, updated_by: (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })() })
         .eq('id', 'default');
       if (error) throw error;
 
-      setAnnouncement(prev => prev ? { ...prev, isActive: newStatus, updatedAt: new Date(), updatedBy: user.uid } : null);
+      setAnnouncement(prev => prev ? { ...prev, isActive: newStatus, updatedAt: new Date(), updatedBy: (user as any)?.id || '' } : null);
 
       const userFullName = await getUserFullName();
       await supabase.from('announcement_logs').insert({
@@ -149,7 +149,7 @@ export default function AnnouncementManagement() {
         previous_status: announcement.isActive,
         new_status: newStatus,
         timestamp: now,
-        user_id: user.uid,
+        user_id: (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })(),
         user_full_name: userFullName,
       });
 
@@ -174,11 +174,11 @@ export default function AnnouncementManagement() {
 
       const { error } = await supabase
         .from('announcements')
-        .update({ content: editedContent.trim(), updated_at: now, updated_by: user.uid })
+        .update({ content: editedContent.trim(), updated_at: now, updated_by: (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })() })
         .eq('id', 'default');
       if (error) throw error;
 
-      setAnnouncement(prev => prev ? { ...prev, content: editedContent.trim(), updatedAt: new Date(), updatedBy: user.uid } : null);
+      setAnnouncement(prev => prev ? { ...prev, content: editedContent.trim(), updatedAt: new Date(), updatedBy: (user as any)?.id || '' } : null);
 
       const userFullName = await getUserFullName();
       await supabase.from('announcement_logs').insert({
@@ -188,7 +188,7 @@ export default function AnnouncementManagement() {
         previous_content: previousContent,
         new_content: editedContent.trim(),
         timestamp: now,
-        user_id: user.uid,
+        user_id: (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })(),
         user_full_name: userFullName,
       });
 

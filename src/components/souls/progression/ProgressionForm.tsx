@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, orderBy, query, where  } from '../../../lib/firebase';
+
 import { SpiritualProfile, Soul } from '../../../types/database.types';
 import { formatDate } from '../../../utils/dateUtils';
 import { SpiritualCheckbox } from './SpiritualCheckbox';
@@ -29,21 +29,12 @@ export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: Progres
     const loadData = async () => {
       try {
         // Charger les départements actifs
-        const deptQuery = query(collection(db, 'departments'), orderBy('order', 'asc'))
-        const deptData = await getDocs(deptQuery);
-        setDepartments(deptData.map(doc => ({
-          id: doc.id,
-          name: doc.data().name
-        })));
+        const { data: deptData } = await supabase.from('departments').select('id, name').order('order', { ascending: true });
+        setDepartments((deptData ?? []).map((r: any) => ({ id: r.id, name: r.name })));
 
         // Charger les familles de service actives
-        const familiesQuery = query(collection(db, 'serviceFamilies'), where('status', '==', 'active'),
-          orderBy('order', 'asc'))
-        const familiesData = await getDocs(familiesQuery);
-        setServiceFamilies(familiesData.map(doc => ({
-          id: doc.id,
-          name: doc.data().name
-        })));
+        const { data: familiesData } = await supabase.from('service_families').select('id, name').eq('status', 'active').order('order', { ascending: true });
+        setServiceFamilies((familiesData ?? []).map((r: any) => ({ id: r.id, name: r.name })));
 
       } catch (error) {
         console.error('Error loading data:', error);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../../lib/firebase';
+
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 
@@ -22,10 +22,8 @@ export function CategoryForm() {
       }
 
       // Check if category already exists
-      const existingQuery = query(collection(db, 'audio_categories'), where('name', '==', formData.name.trim()))
-      const existingDocs = await getDocs(existingQuery);
-      
-      if (!existingDocs.empty) {
+      const { data: existingDocs } = await supabase.from('audio_categories').select('id').eq('name', formData.name.trim()).limit(1);
+      if (existingDocs && existingDocs.length > 0) {
         toast.error('Une catégorie avec ce nom existe déjà');
         return;
       }

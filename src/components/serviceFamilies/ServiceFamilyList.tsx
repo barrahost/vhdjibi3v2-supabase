@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, orderBy, query, writeBatch } from '../../lib/firebase';
+
 import ServiceFamilyListItem from './ServiceFamilyListItem';
 import EditServiceFamilyModal from './EditServiceFamilyModal';
 import { Search, MoveUp, MoveDown } from 'lucide-react';
@@ -23,16 +23,15 @@ export default function ServiceFamilyList() {
   const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'serviceFamilies'), orderBy('order', 'asc'))
-    
-    const unsubscribe = onData(q, (snapshot) => {
-      setFamilies(snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as ServiceFamily)));
-    });
-
-    return () => unsubscribe();
+    const loadFamilies = async () => {
+      const { data } = await supabase.from('service_families').select('*').order('order', { ascending: true });
+      setFamilies((data ?? []) as any[]);
+    };
+    loadFamilies();
+    const channel = supabase.channel('service_families_list')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_families' }, () => loadFamilies())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleMove = async (familyId: string, direction: 'up' | 'down') => {
@@ -44,21 +43,13 @@ export default function ServiceFamilyList() {
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
       if (newIndex < 0 || newIndex >= families.length) return;
 
-      const batch = writeBatch(db);
+
       const currentFamily = families[currentIndex];
       const targetFamily = families[newIndex];
-
-      batch.update(doc(db, 'serviceFamilies', currentFamily.id), {
-        order: targetFamily.order,
-        updatedAt: new Date()
-      });
-
-      batch.update(doc(db, 'serviceFamilies', targetFamily.id), {
-        order: currentFamily.order,
-        updatedAt: new Date()
-      });
-
-      await batch.commit();
+      await Promise.all([
+        supabase.from('service_families').update({ order: targetFamily.order, updated_at: new Date().toISOString() }).eq('id', currentFamily.id),
+        supabase.from('service_families').update({ order: currentFamily.order, updated_at: new Date().toISOString() }).eq('id', targetFamily.id)
+      ]);
     } catch (error) {
       console.error('Error reordering families:', error);
       toast.error('Erreur lors du réordonnancement');

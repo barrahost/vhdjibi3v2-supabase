@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../../lib/firebase';
+
 import { SMS_VARIABLES } from '../../../types/sms.types';
 import { MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,13 +22,8 @@ export default function SMSTemplateForm() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive']))
-        const snapshot = await getDocs(categoriesQuery);
-        setCategories(snapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-          status: doc.data().status
-        })));
+        const { data: snapshot } = await supabase.from('sms_categories').select('id, name, status').in('status', ['active', 'inactive']).order('name', { ascending: true });
+        setCategories((snapshot ?? []).map((r: any) => ({ id: r.id, name: r.name, status: r.status })));
       } catch (error) {
         console.error('Error loading categories:', error);
         toast.error('Erreur lors du chargement des catégories');

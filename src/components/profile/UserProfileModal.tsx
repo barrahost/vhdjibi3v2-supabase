@@ -54,7 +54,7 @@ export function UserProfileModal() {
         const { data: usersRows } = await supabase
           .from('users')
           .select('*')
-          .eq('uid', user.uid)
+          .eq('id', (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })())
           .limit(1);
 
         if (usersRows && usersRows.length > 0) {
@@ -68,7 +68,7 @@ export function UserProfileModal() {
             photoURL: data.photo_url,
             createdAt: data.created_at ? new Date(data.created_at) : new Date(),
             lastLoginAt: data.last_login_at ? new Date(data.last_login_at) : undefined,
-            uid: user.uid
+            uid: data.id
           };
           setUserData(loaded);
           setFormData({
@@ -86,7 +86,7 @@ export function UserProfileModal() {
         const { data: adminRows } = await supabase
           .from('admins')
           .select('*')
-          .eq('uid', user.uid)
+          .eq('id', (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })())
           .limit(1);
 
         if (adminRows && adminRows.length > 0) {
@@ -100,7 +100,7 @@ export function UserProfileModal() {
             photoURL: data.photo_url,
             createdAt: data.created_at ? new Date(data.created_at) : new Date(),
             lastLoginAt: data.last_login_at ? new Date(data.last_login_at) : undefined,
-            uid: user.uid
+            uid: data.id
           };
           setUserData(loaded);
           setFormData({
