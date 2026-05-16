@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, db, onData, query, where } from '../../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { StatCard } from './stats/StatCard';
 import InteractionModal from '../interactions/InteractionModal';
 import {
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EvangelizedSoul } from '../../types/evangelized.types';
-import { supabase } from '../../lib/supabase';
 
 interface InteractionLite {
   id: string;
@@ -39,24 +38,37 @@ export default function EvangelistDashboard() {
 
     (async () => {
       try {
-        const usersQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active'))
-        const snap = await getDocs(usersQuery);
-        if (snap.empty) {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          toast.error('Session expirée. Veuillez vous reconnecter.');
+          setLoading(false);
+          return;
+        }
+        const localUser = JSON.parse(userStr);
+        const userId = localUser.id;
+
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .eq('status', 'active')
+          .single();
+
+        if (error || !userData) {
           if (!cancelled) {
             toast.error('Utilisateur non trouvé');
             setLoading(false);
           }
           return;
         }
-        const data: any = snap.docs[0].data();
-        const id = snap.docs[0].id;
+
         const hasProfile =
-          data.role === 'evangelist' ||
-          (Array.isArray(data.businessProfiles) &&
-            data.businessProfiles.some(
+          userData.role === 'evangelist' ||
+          (Array.isArray(userData.business_profiles) &&
+            userData.business_profiles.some(
               (p: any) => p?.type === 'evangelist' && p?.isActive !== false
             ));
+
         if (!hasProfile) {
           if (!cancelled) {
             toast.error("Vous devez avoir un profil Évangéliste pour accéder à ce tableau de bord");
@@ -64,7 +76,7 @@ export default function EvangelistDashboard() {
           }
           return;
         }
-        if (!cancelled) setEvangelistId(id);
+        if (!cancelled) setEvangelistId(userId);
       } catch (e) {
         console.error('Error loading evangelist identity:', e);
         if (!cancelled) {
@@ -77,56 +89,92 @@ export default function EvangelistDashboard() {
     return () => { cancelled = true; };
   }, [user]);
 
-  // 2) Écoute temps réel : toutes les âmes (importées + actives) + interactions
+  // 2) Charger âmes + interactions depuis Supabase
   useEffect(() => {
     if (!evangelistId) return;
+    let cancelled = false;
 
-    const soulsQuery = query(collection(db, 'evangelized_souls'), where('evangelistId', '==', evangelistId))
-    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', evangelistId))
+    const loadData = async () => {
+      try {
+        const [soulsRes, interRes] = await Promise.all([
+          supabase
+            .from('evangelized_souls')
+            .select('*')
+            .eq('evangelist_id', evangelistId),
+          supabase
+            .from('interactions')
+            .select('id, soul_id, date')
+            .eq('shepherd_id', evangelistId),
+        ]);
 
-    const soulsUnsub = onData(
-      soulsQuery,
-      (snap) => {
-        const data = snap.docs.map((d) => {
-          const v: any = d.data();
-          return {
-            id: d.id,
-            ...v,
-            evangelizationDate: v.evangelizationDate?.toDate?.() ?? v.evangelizationDate,
-            createdAt: v.createdAt?.toDate?.() ?? v.createdAt,
-            updatedAt: v.updatedAt?.toDate?.() ?? v.updatedAt,
-            importedAt: v.importedAt?.toDate?.() ?? v.importedAt,
-          } as EvangelizedSoul;
-        });
-        setAllSouls(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error listening to evangelized souls:', err);
-        toast.error('Erreur de synchronisation');
-        setLoading(false);
+        if (!cancelled) {
+          const souls = (soulsRes.data ?? []).map((row: any) => ({
+            id: row.id,
+            fullName: row.full_name,
+            nickname: row.nickname,
+            gender: row.gender,
+            phone: row.phone,
+            location: row.location,
+            evangelizationDate: row.evangelization_date
+              ? new Date(row.evangelization_date)
+              : new Date(),
+            evangelizationLocation: row.evangelization_location,
+            notes: row.notes,
+            evangelistId: row.evangelist_id,
+            importedFromEvangelistId: row.imported_from_evangelist_id,
+            createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+            updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+            status: (row.status ?? 'active') as 'active' | 'inactive' | 'imported',
+            photoURL: row.photo_url,
+            importedToSoulId: row.imported_to_soul_id,
+            importedAt: row.imported_at ? new Date(row.imported_at) : null,
+            importedBy: row.imported_by,
+            attendedCommunity: row.attended_community,
+            gaveLifeToJesus: row.gave_life_to_jesus,
+            plannedService: row.planned_service,
+            prayerTopics: row.prayer_topics,
+            interviewerName: row.interviewer_name,
+          } as EvangelizedSoul));
+
+          const inters = (interRes.data ?? []).map((row: any) => ({
+            id: row.id,
+            soulId: row.soul_id,
+            date: row.date ? new Date(row.date) : new Date(),
+          } as InteractionLite));
+
+          setAllSouls(souls);
+          setInteractions(inters);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error('Error loading evangelist data:', e);
+        if (!cancelled) {
+          toast.error('Erreur de chargement');
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    const interUnsub = onData(
-      interactionsQuery,
-      (snap) => {
-        const data = snap.docs.map((d) => {
-          const v: any = d.data();
-          return {
-            id: d.id,
-            soulId: v.soulId,
-            date: v.date?.toDate ? v.date.toDate() : new Date(v.date),
-          } as InteractionLite;
-        });
-        setInteractions(data);
-      },
-      (err) => console.error('Error listening to interactions:', err)
-    );
+    loadData();
+
+    // Souscription temps réel pour les âmes
+    const channel = supabase
+      .channel('evangelist-souls-' + evangelistId)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'evangelized_souls',
+          filter: 'evangelist_id=eq.' + evangelistId,
+        },
+        () => loadData()
+      )
+      .subscribe();
 
     return () => {
-      soulsUnsub();
-      interUnsub();
+      cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [evangelistId]);
 
