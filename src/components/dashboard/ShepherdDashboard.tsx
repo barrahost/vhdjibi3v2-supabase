@@ -80,16 +80,16 @@ export function ShepherdDashboard() {
 
     const loadData = async () => {
       try {
-        const [{ data: soulsRows, error: soulsErr }, { data: interactionsRows, error: intErr }] = await Promise.all([
+        const [soulsResult, interactionsResult] = await Promise.all([
           supabase.from('souls').select('id, full_name, phone, spiritual_status, origin_source, status').eq('shepherd_id', shepherdId).eq('status', 'active'),
-          supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes').eq('shepherd_id', shepherdId),
+          supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes, created_at').eq('shepherd_id', shepherdId).order('created_at', { ascending: false }).limit(50),
         ]);
 
-        if (soulsErr) throw soulsErr;
-        if (intErr) throw intErr;
+        if (soulsResult.error) console.error('[ShepherdDashboard] souls error:', soulsResult.error);
+        if (interactionsResult.error) console.error('[ShepherdDashboard] interactions error:', interactionsResult.error);
 
         if (!cancelled) {
-          setSouls((soulsRows ?? []).map((r: any) => ({
+          setSouls((soulsResult.data ?? []).map((r: any) => ({
             id: r.id,
             fullName: r.full_name || '',
             phone: r.phone,
@@ -98,21 +98,20 @@ export function ShepherdDashboard() {
             status: r.status,
           } as unknown as Soul)));
 
-          const mapped = (interactionsRows ?? []).map((r: any) => ({
+          const mapped = (interactionsResult.data ?? []).map((r: any) => ({
             id: r.id,
             soulId: r.soul_id,
             shepherdId: r.shepherd_id,
-            date: r.date ? new Date(r.date) : new Date(),
+            date: r.date ? new Date(r.date) : (r.created_at ? new Date(r.created_at) : new Date()),
             type: r.type,
             notes: r.notes,
           } as unknown as Interaction));
-          setRecentInteractions(mapped.sort((a, b) => b.date.getTime() - a.date.getTime()));
+          setRecentInteractions(mapped);
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error('[ShepherdDashboard] Error loading dashboard data:', error);
         if (!cancelled) {
-          toast.error('Erreur lors du chargement des données');
           setLoading(false);
         }
       }
