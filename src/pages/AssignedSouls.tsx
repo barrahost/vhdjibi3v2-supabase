@@ -132,7 +132,7 @@ export default function AssignedSouls() {
         const hasShepherdProfile = userData.businessProfiles?.some((profile: any) =>
           profile.type === 'shepherd' && profile.isActive
         );
-        const hasOldShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
+        const hasOldShepherdRole = userData.role === 'shepherd' || userData.role === 'intern' || userData.role === 'adn';
 
         if (hasShepherdProfile || hasOldShepherdRole) {
           setShepherdId(currentUserId);
