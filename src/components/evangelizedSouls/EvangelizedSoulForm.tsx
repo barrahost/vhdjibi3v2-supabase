@@ -59,6 +59,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
     try {
       setSubmitting(true);
       const { error: insertError } = await supabase.from('evangelized_souls').insert({
+        id: crypto.randomUUID(),
         full_name: data.fullName.trim(),
         nickname: data.nickname.trim() || null,
         gender: data.gender,
