@@ -140,7 +140,7 @@ export default function AssignedSouls() {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
-            .eq('shepherdId', currentUserId)
+            .eq('shepherd_id', currentUserId)
             .eq('status', 'active');
 
           if (soulsError) throw soulsError;
