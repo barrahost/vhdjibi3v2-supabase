@@ -203,7 +203,7 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
           {selectedUser ? (
             <div>
               <div className="font-medium text-gray-900">{selectedUser.fullName}</div>
-              <div className="text-sm text-gray-500">{selectedUser.displayPhone}</div>
+
             </div>
           ) : (
             <span className="text-gray-500">Sélectionner un utilisateur</span>
