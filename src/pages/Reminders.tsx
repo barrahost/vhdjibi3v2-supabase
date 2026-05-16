@@ -21,10 +21,14 @@ export default function Reminders() {
     const loadData = async () => {
       try {
         // Récupérer l'ID de l'utilisateur (berger ou multi-casquettes incluant berger)
-        const { data: usersData } = await supabase
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (!currentUserId) { setLoading(false); return; }
+
+        const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('*')
-          .eq('uid', user.uid)
+          .eq('id', currentUserId)
           .eq('status', 'active');
 
         if (usersError) throw usersError;
@@ -35,17 +39,22 @@ export default function Reminders() {
           const shepherdId = matched.id;
 
           // Récupérer les âmes assignées
-          const { data: soulsData } = await supabase
+          const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
             .eq('shepherd_id', shepherdId)
             .eq('status', 'active');
 
           if (soulsError) throw soulsError;
-          setSouls((soulsData ?? []) as Soul[]);
+          setSouls((soulsData ?? []).map((row: any) => ({
+            ...row,
+            fullName: row.full_name || row.fullName || '',
+            shepherdId: row.shepherd_id || row.shepherdId,
+            firstVisitDate: row.first_visit_date ? new Date(row.first_visit_date) : new Date(),
+          } as Soul)));
 
           // Récupérer les interactions
-          const { data: interactionsData } = await supabase
+          const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*')
             .eq('shepherd_id', shepherdId);
