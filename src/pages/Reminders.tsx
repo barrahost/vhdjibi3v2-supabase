@@ -38,7 +38,7 @@ export default function Reminders() {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
-            .eq('shepherdId', shepherdId)
+            .eq('shepherd_id', shepherdId)
             .eq('status', 'active');
 
           if (soulsError) throw soulsError;
@@ -48,7 +48,7 @@ export default function Reminders() {
           const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*')
-            .eq('shepherdId', shepherdId);
+            .eq('shepherd_id', shepherdId);
 
           if (interactionsError) throw interactionsError;
           setInteractions((interactionsData ?? []).map(row => ({
