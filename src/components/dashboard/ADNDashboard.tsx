@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, db, doc, onData } from '../../lib/firebase';
+
 import { useNavigate } from 'react-router-dom';
 import { StatCard } from './stats/StatCard';
 import { Users, UserCheck, UserX, User, AlertTriangle } from 'lucide-react';
@@ -40,42 +40,56 @@ export function ADNDashboard() {
 
   useEffect(() => {
     setLoading(true);
-    const soulsRef = collection(db, 'souls');
 
-    const unsubscribe = onData(
-      soulsRef,
-      (snapshot) => {
-        try {
-          const data: SoulLite[] = snapshot.docs.map(doc => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              createdAt: d.createdAt?.toDate() || new Date(),
-              shepherdId: d.shepherdId as string | undefined,
-              isUndecided: d.isUndecided as boolean,
-              gender: d.gender as string,
-              status: d.status as string,
-              serviceFamilyId: d.serviceFamilyId as string | undefined,
-            };
-          });
-          setSouls(data);
-          setError(null);
-        } catch (err) {
-          console.error('Error processing ADN snapshot:', err);
-          setError("Erreur lors du traitement des statistiques");
-        } finally {
-          setLoading(false);
-        }
-      },
-      (error) => {
-        console.error('Error listening to souls:', error);
-        setError("Erreur de synchronisation des statistiques");
+    const loadSouls = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('souls')
+          .select('id, created_at, shepherd_id, is_undecided, gender, status, service_family_id');
+
+        if (error) throw error;
+
+        const mapped: SoulLite[] = (data ?? []).map((r: any) => ({
+          id: r.id,
+          createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+          shepherdId: r.shepherd_id,
+          isUndecided: r.is_undecided,
+          gender: r.gender,
+          status: r.status,
+          serviceFamilyId: r.service_family_id,
+        }));
+        setSouls(mapped);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading souls:', err);
+        setError("Erreur lors du traitement des statistiques");
         toast.error("Erreur de synchronisation");
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    loadSouls();
+
+    const channel = supabase
+      .channel('adn-souls')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'souls' }, async () => {
+        const { data } = await supabase
+          .from('souls')
+          .select('id, created_at, shepherd_id, is_undecided, gender, status, service_family_id');
+        setSouls((data ?? []).map((r: any) => ({
+          id: r.id,
+          createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+          shepherdId: r.shepherd_id,
+          isUndecided: r.is_undecided,
+          gender: r.gender,
+          status: r.status,
+          serviceFamilyId: r.service_family_id,
+        })));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const cutoff = useMemo(() => {

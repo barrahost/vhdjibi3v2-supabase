@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
 import { supabase } from '../../lib/supabase';
 
 interface EvangelistOption {
@@ -19,22 +18,20 @@ function Options() {
   useEffect(() => {
     const load = async () => {
       try {
-        const q = query(collection(db, 'users'), where('status', '==', 'active'))
-        const snapshot = await getDocs(q);
-const data = snapshot.docs
-          .map(d => {
-            const u: any = d.data();
-            const profiles: any[] = Array.isArray(u.businessProfiles) ? u.businessProfiles : [];
-            const fromRole = u.role === 'evangelist';
-            const fromProfiles = profiles.some(
-              (p: any) => p?.type === 'evangelist' && p?.isActive !== false
-            );
-            if (!fromRole && !fromProfiles) return null;
-            return { id: d.id, fullName: u.fullName || '' } as EvangelistOption;
-          })
-          .filter((e): e is EvangelistOption => e !== null && !!e.fullName)
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name, role')
+          .eq('status', 'active')
+          .eq('role', 'evangelist');
+
+        if (error) throw error;
+
+        const list = (data ?? [])
+          .map((r: any) => ({ id: r.id, fullName: r.full_name || '' }))
+          .filter(e => !!e.fullName)
           .sort((a, b) => a.fullName.localeCompare(b.fullName));
-        setEvangelists(data);
+
+        setEvangelists(list);
       } catch (error) {
         console.error('Error loading evangelists:', error);
       }

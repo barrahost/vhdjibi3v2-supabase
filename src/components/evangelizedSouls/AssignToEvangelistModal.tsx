@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, db, doc, onData, query, where, writeBatch } from '../../lib/firebase';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
@@ -37,25 +37,18 @@ export default function AssignToEvangelistModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('status', '==', 'active'))
-    const unsubscribe = onData(q, (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => {
-          const d: any = doc.data();
-          const profiles: any[] = Array.isArray(d.businessProfiles) ? d.businessProfiles : [];
-          const fromRole = d.role === 'evangelist';
-          const fromProfiles = profiles.some(
-            (p: any) => p?.type === 'evangelist' && p?.isActive !== false
-          );
-          if (!fromRole && !fromProfiles) return null;
-          return { id: doc.id, fullName: (d.fullName || '') as string };
-        })
-        .filter((e): e is EvangelistOption => e !== null && !!e.fullName)
-        .sort((a, b) => a.fullName.localeCompare(b.fullName));
-      setEvangelists(data);
-    });
-
-    return () => unsubscribe();
+    supabase
+      .from('users')
+      .select('id, full_name, role')
+      .eq('status', 'active')
+      .eq('role', 'evangelist')
+      .then(({ data }) => {
+        const list = (data ?? [])
+          .map((r: any) => ({ id: r.id, fullName: r.full_name || '' }))
+          .filter((e: EvangelistOption) => !!e.fullName)
+          .sort((a: EvangelistOption, b: EvangelistOption) => a.fullName.localeCompare(b.fullName));
+        setEvangelists(list);
+      });
   }, [isOpen]);
 
   const handleClose = () => {
@@ -75,15 +68,13 @@ export default function AssignToEvangelistModal({
 
     setLoading(true);
     try {
-      const batch = writeBatch(db);
-      const now = new Date();
-      soulIds.forEach(id => {
-        batch.update(doc(db, 'evangelized_souls', id), {
-          evangelistId: selectedEvangelist,
-          updatedAt: now,
-        });
-      });
-      await batch.commit();
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('evangelized_souls')
+        .update({ evangelist_id: selectedEvangelist, updated_at: now })
+        .in('id', soulIds);
+
+      if (error) throw error;
 
       const name = evangelists.find(e => e.id === selectedEvangelist)?.fullName || "l'évangéliste";
       toast.success(`${soulIds.length} âme(s) assignée(s) à ${name} avec succès !`);

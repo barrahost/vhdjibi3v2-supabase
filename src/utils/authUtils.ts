@@ -1,5 +1,4 @@
-
-import { getDocs,  collection, db, query, where  } from '../lib/firebase';import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 interface UserRole {
   isAdmin: boolean;
@@ -8,32 +7,38 @@ interface UserRole {
   adminRole?: string;
 }
 
-export async function getUserRole(uid: string): Promise<UserRole> {
+export async function getUserRole(userId: string): Promise<UserRole> {
   try {
-    // Vérifier dans la collection users
-    const userQuery = query(collection(db, 'users'), where('uid', '==', uid),
-      where('status', '==', 'active'))
-    const userDocs = await getDocs(userQuery);
-    
+    // Check in users table
+    const { data: userRows } = await supabase
+      .from('users')
+      .select('role, status')
+      .eq('id', userId)
+      .eq('status', 'active')
+      .limit(1);
+
     let isAdmin = false;
     let isShepherd = false;
     let isADN = false;
-    let adminRole = null;
-    
-    if (!userDocs.empty) {
-      const userData = userDocs.docs[0].data();
-      isAdmin = userData.role === 'admin' || userData.role === 'pasteur';
-      isShepherd = userData.role === 'shepherd' || userData.role === 'intern';
-      isADN = userData.role === 'adn';
+    let adminRole: string | null = null;
+
+    if (userRows && userRows.length > 0) {
+      const role = userRows[0].role;
+      isAdmin = role === 'admin' || role === 'pasteur';
+      isShepherd = role === 'shepherd' || role === 'intern';
+      isADN = role === 'adn';
     }
 
-    // Check if user is a super admin
+    // Check admins table for super_admin
     if (!isAdmin) {
-      const adminQuery = query(collection(db, 'admins'), where('uid', '==', uid),
-        where('role', '==', 'super_admin'))
-      const adminDocs = await getDocs(adminQuery);
-      
-      if (!adminDocs.empty) {
+      const { data: adminRows } = await supabase
+        .from('admins')
+        .select('role')
+        .eq('id', userId)
+        .eq('role', 'super_admin')
+        .limit(1);
+
+      if (adminRows && adminRows.length > 0) {
         isAdmin = true;
         adminRole = 'super_admin';
       }

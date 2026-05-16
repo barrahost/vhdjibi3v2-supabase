@@ -26,7 +26,10 @@ export default function Layout() {
     if (!user) return;
 
     const checkUserRole = async () => {
-      const { isAdmin: adminRole, isShepherd: shepherdRole, isADN: adnRole } = await getUserRole(user.uid);
+      const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = localUser.id;
+      if (!userId) return;
+      const { isAdmin: adminRole, isShepherd: shepherdRole, isADN: adnRole } = await getUserRole(userId);
       setIsAdmin(adminRole);
       setIsShepherd(shepherdRole);
       setIsADN(adnRole);

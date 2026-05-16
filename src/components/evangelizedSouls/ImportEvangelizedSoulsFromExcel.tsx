@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { collection, db, doc, writeBatch } from '../../lib/firebase';
+
 import * as XLSX from 'xlsx';
 import { Modal } from '../ui/Modal';
 import { Upload, AlertTriangle, CheckCircle2, Loader2, UserX, Copy } from 'lucide-react';
@@ -365,32 +365,30 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
 
     setImporting(true);
     try {
-      const now = new Date();
+      const now = new Date().toISOString();
       for (let i = 0; i < validRows.length; i += 500) {
         const chunk = validRows.slice(i, i + 500);
-        const batch = writeBatch(db);
-        chunk.forEach(r => {
-          // Priorité : sélecteur global > colonne du fichier > null (Non attribué)
+        const rows = chunk.map(r => {
           const resolvedEvangelistId = globalEvangelistId
             ? globalEvangelistId
             : (r.evangelistId || null);
-
-          const ref = doc(collection(db, 'evangelized_souls'));
-          batch.set(ref, {
-            fullName: r.fullName, nickname: r.nickname, gender: r.gender,
+          return {
+            id: crypto.randomUUID(),
+            full_name: r.fullName, nickname: r.nickname, gender: r.gender,
             phone: r.phone, location: r.location,
-            evangelizationDate: r.evangelizationDate,
-            evangelizationLocation: r.evangelizationLocation,
-            notes: r.notes, attendedCommunity: r.attendedCommunity,
-            gaveLifeToJesus: r.gaveLifeToJesus, plannedService: r.plannedService,
-            prayerTopics: r.prayerTopics, interviewerName: r.interviewerName,
-            evangelistId: resolvedEvangelistId,
-            createdBy: currentUser.id,
+            evangelization_date: r.evangelizationDate,
+            evangelization_location: r.evangelizationLocation,
+            notes: r.notes, attended_community: r.attendedCommunity,
+            gave_life_to_jesus: r.gaveLifeToJesus, planned_service: r.plannedService,
+            prayer_topics: r.prayerTopics, interviewer_name: r.interviewerName,
+            evangelist_id: resolvedEvangelistId,
+            created_by: currentUser.id,
             status: 'active',
-            createdAt: now, updatedAt: now,
-          });
+            created_at: now, updated_at: now,
+          };
         });
-        await batch.commit();
+        const { error } = await supabase.from('evangelized_souls').insert(rows);
+        if (error) throw error;
       }
       toast.success(`${validRows.length} âme(s) évangélisée(s) importée(s) avec succès`);
       onImported?.();

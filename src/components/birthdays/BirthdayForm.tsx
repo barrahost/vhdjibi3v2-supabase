@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getDocs,  collection, db, query, where  } from '../../lib/firebase';
+
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Cake, User } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -41,10 +41,13 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       }
 
       // Vérifier si le numéro existe déjà
-      const phoneQuery = query(collection(db, 'birthdays'), where('phone', '==', formData.phone))
-      const phoneData = await getDocs(phoneQuery);
-      
-      if (!phoneData.empty) {
+      const { data: existingPhone } = await supabase
+        .from('birthdays')
+        .select('id')
+        .eq('phone', formData.phone)
+        .limit(1);
+
+      if (existingPhone && existingPhone.length > 0) {
         toast.error('Ce numéro de téléphone est déjà enregistré');
         return;
       }
