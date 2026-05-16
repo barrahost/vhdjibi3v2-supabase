@@ -39,22 +39,19 @@ export default function ServiceFamilyForm() {
         return;
       }
 
-      const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()))
-      const nameData = await getDocs(nameQuery);
-      if (!nameData.empty) {
+      const { data: nameData } = await supabase.from('service_families').select('id').eq('name', formData.name.trim()).limit(1);
+      if (nameData && nameData.length > 0) {
         toast.error('Une famille avec ce nom existe déjà');
         return;
       }
 
-      const orderQuery = query(collection(db, 'serviceFamilies'), orderBy('order', 'desc'),
-        limit(1))
-      const orderData = await getDocs(orderQuery);
-const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
+      const { data: orderData } = await supabase.from('service_families').select('order').order('order', { ascending: false }).limit(1);
+      const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
       // Récupérer le nom du responsable pour le champ legacy `leader`
       const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
 
-      const { error: _insertErr } = await supabase.from('serviceFamilies').insert({
+      const { error: _insertErr } = await supabase.from('service_families').insert({
         name: formData.name.trim(),
         description: formData.description.trim(),
         leader: leaderUser?.fullName || '', // legacy compat

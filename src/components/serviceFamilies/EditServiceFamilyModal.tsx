@@ -67,9 +67,8 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
       }
 
       if (formData.name.trim() !== family.name) {
-        const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()))
-        const nameData = await getDocs(nameQuery);
-        if (!nameData.empty) {
+        const { data: nameData } = await supabase.from('service_families').select('id').eq('name', formData.name.trim()).limit(1);
+        if (nameData && nameData.length > 0) {
           toast.error('Une famille avec ce nom existe déjà');
           return;
         }
