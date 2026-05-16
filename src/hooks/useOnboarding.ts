@@ -22,8 +22,11 @@ export function useOnboarding() {
 
     const userId = (user as any).id || (user as any).uid || 'anon';
     const key = storageKey(role as TourRole, userId);
+
     if (!localStorage.getItem(key)) {
-      // Légère temporisation pour laisser le DOM se stabiliser
+      // Mark as seen IMMEDIATELY so it won't show again even if user closes tab
+      localStorage.setItem(key, 'true');
+
       const t = setTimeout(() => {
         setTourRole(role as TourRole);
         setCurrentStep(0);
@@ -36,17 +39,18 @@ export function useOnboarding() {
   const advance = () => setCurrentStep(s => s + 1);
 
   const complete = () => {
-    if (!user || !tourRole) return;
-    const userId = (user as any).id || (user as any).uid || 'anon';
-    localStorage.setItem(storageKey(tourRole, userId), 'true');
     setIsActive(false);
     setCurrentStep(0);
   };
 
   const restart = () => {
-    if (!user || !tourRole) return;
+    if (!user || !activeRole) return;
+    const role = activeRole as string;
+    if (!TOUR_ROLES.includes(role)) return;
     const userId = (user as any).id || (user as any).uid || 'anon';
-    localStorage.removeItem(storageKey(tourRole, userId));
+    // Remove key so it can be shown again, then re-show
+    localStorage.removeItem(storageKey(role as TourRole, userId));
+    setTourRole(role as TourRole);
     setCurrentStep(0);
     setIsActive(true);
   };

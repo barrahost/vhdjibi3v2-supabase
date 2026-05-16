@@ -2,16 +2,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { X, ArrowRight, CheckCircle, Megaphone, Heart, BookOpen } from 'lucide-react';
 import type { TourRole } from '../../hooks/useOnboarding';
 
-/* ─── Définition d'une étape ───────────────────────────────────── */
+/* ─── Step definition ───────────────────────────────────────────── */
 interface TourStep {
-  target?: string;          // sélecteur CSS data-tour="…" ou querySelector
+  target?: string;
   title: string;
   body: string;
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   icon?: React.ReactNode;
+  /** ID of an accordion item to open before highlighting the target */
+  openAccordion?: string;
 }
 
-/* ─── Étapes par rôle ───────────────────────────────────────────── */
+/* ─── Steps per role ────────────────────────────────────────────── */
 const STEPS: Record<TourRole, TourStep[]> = {
   evangelist: [
     {
@@ -64,18 +66,21 @@ const STEPS: Record<TourRole, TourStep[]> = {
       title: 'Mes Âmes',
       body: 'Voici la liste des âmes qui vous sont confiées. Vous pouvez voir leur profil, leurs interactions passées et leur progression spirituelle.',
       position: 'right',
+      openAccordion: 'monitoring',
     },
     {
       target: '[data-tour="nav-interactions-shepherd"]',
       title: 'Vos interactions',
       body: 'Enregistrez ici chaque appel, visite ou message. Un suivi régulier (au moins une fois par semaine) est la clé d\'un bon berger.',
       position: 'right',
+      openAccordion: 'monitoring',
     },
     {
       target: '[data-tour="nav-reminders"]',
       title: 'Rappels',
       body: 'L\'application vous alertera automatiquement quand une âme n\'a pas eu d\'interaction depuis plus de 5 jours. Ne laissez personne sans nouvelles.',
       position: 'right',
+      openAccordion: 'monitoring',
     },
     {
       target: '[data-tour="notification-bell"]',
@@ -99,12 +104,14 @@ const STEPS: Record<TourRole, TourStep[]> = {
 };
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
-const PADDING = 10;
+const PADDING = 12;
 
 function getTargetRect(selector: string) {
   const el = document.querySelector(selector);
   if (!el) return null;
   const r = el.getBoundingClientRect();
+  // If element has zero dimensions it's hidden (accordion closed)
+  if (r.width === 0 && r.height === 0) return null;
   return {
     x: r.left - PADDING,
     y: r.top - PADDING,
@@ -115,12 +122,66 @@ function getTargetRect(selector: string) {
   };
 }
 
+/**
+ * Open the accordion that contains the target element.
+ * Finds the closest [aria-expanded="false"] button ancestor or sibling button
+ * and clicks it to expand.
+ */
+function openAccordionForTarget(selector: string): Promise<void> {
+  return new Promise(resolve => {
+    const el = document.querySelector(selector);
+    if (!el) { resolve(); return; }
+
+    // Walk up DOM to find a hidden accordion container (max-h-0)
+    let node: Element | null = el.parentElement;
+    while (node) {
+      if (node.getAttribute('aria-hidden') === 'true') {
+        // Found the hidden panel — find its toggle button via aria-controls
+        const panelId = node.id;
+        if (panelId) {
+          const btn = document.querySelector(`[aria-controls="${panelId}"]`);
+          if (btn instanceof HTMLElement) {
+            btn.click();
+            // Wait for CSS transition (300ms) + a bit of buffer
+            setTimeout(resolve, 400);
+            return;
+          }
+        }
+        break;
+      }
+      node = node.parentElement;
+    }
+    resolve();
+  });
+}
+
+/**
+ * If an accordionId is provided, open the accordion button whose
+ * aria-controls matches `submenu-${accordionId}`.
+ */
+function openAccordionById(accordionId: string): Promise<void> {
+  return new Promise(resolve => {
+    const panelId = `submenu-${accordionId}`;
+    const panel = document.getElementById(panelId);
+    // Already open?
+    if (panel && panel.getAttribute('aria-hidden') !== 'true') { resolve(); return; }
+
+    const btn = document.querySelector(`[aria-controls="${panelId}"]`);
+    if (btn instanceof HTMLElement) {
+      btn.click();
+      setTimeout(resolve, 400);
+    } else {
+      resolve();
+    }
+  });
+}
+
 function scrollIntoViewIfNeeded(selector: string) {
   const el = document.querySelector(selector);
   el?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 }
 
-/* ─── Composant principal ───────────────────────────────────────── */
+/* ─── Main component ────────────────────────────────────────────── */
 interface OnboardingTourProps {
   role: TourRole;
   step: number;
@@ -135,11 +196,21 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
   const [rect, setRect] = useState<ReturnType<typeof getTargetRect>>(null);
   const [, forceUpdate] = useState(0);
 
-  // Recalculer la position de la cible
-  const recalc = useCallback(() => {
+  const recalc = useCallback(async () => {
     if (!current?.target) { setRect(null); return; }
+
+    // 1. Open accordion if needed
+    if (current.openAccordion) {
+      await openAccordionById(current.openAccordion);
+    } else {
+      // Try to auto-detect hidden ancestor
+      await openAccordionForTarget(current.target);
+    }
+
+    // 2. Scroll into view
     scrollIntoViewIfNeeded(current.target);
-    // Attendre que le scroll + DOM soient stables
+
+    // 3. Recalculate position after scroll + animation
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setRect(getTargetRect(current.target!));
@@ -150,36 +221,40 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
 
   useEffect(() => {
     recalc();
-    window.addEventListener('resize', recalc);
-    window.addEventListener('scroll', recalc, true);
-    return () => {
-      window.removeEventListener('resize', recalc);
-      window.removeEventListener('scroll', recalc, true);
+
+    const onResize = () => {
+      if (!current?.target) return;
+      setRect(getTargetRect(current.target));
     };
-  }, [recalc]);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onResize, true);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onResize, true);
+    };
+  }, [recalc, current]);
 
   const isCenter = current?.position === 'center' || !current?.target || !rect;
 
-  /* ── Positionnement de la bulle ─────────────────────────────── */
+  /* ── Bubble positioning ─────────────────────────────────────── */
   function bubbleStyle(): React.CSSProperties {
     if (isCenter || !rect) {
       return {
         position: 'fixed',
         top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: 360,
+        width: 380,
         maxWidth: 'calc(100vw - 32px)',
       };
     }
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const BUBBLE_W = 300;
-    const BUBBLE_H = 180; // estimation
-    const GAP = 16;
+    const BUBBLE_W = 320;
+    const BUBBLE_H = 200;
+    const GAP = 18;
 
     const pos = current.position ?? 'bottom';
-
     let top = 0, left = 0;
 
     if (pos === 'right') {
@@ -191,7 +266,7 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
     } else if (pos === 'top') {
       top = Math.max(8, rect.y - BUBBLE_H - GAP);
       left = Math.max(8, Math.min(rect.cx - BUBBLE_W / 2, vw - BUBBLE_W - 8));
-    } else { // bottom
+    } else {
       top = Math.min(rect.y + rect.h + GAP, vh - BUBBLE_H - 8);
       left = Math.max(8, Math.min(rect.cx - BUBBLE_W / 2, vw - BUBBLE_W - 8));
     }
@@ -201,7 +276,7 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
 
   return (
     <>
-      {/* ── Overlay sombre avec trou (SVG mask) ── */}
+      {/* Dark overlay with spotlight cutout */}
       <svg
         style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 9998, pointerEvents: 'none' }}
         xmlns="http://www.w3.org/2000/svg"
@@ -210,40 +285,23 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
           <mask id="tour-spotlight">
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
             {rect && !isCenter && (
-              <rect
-                x={rect.x} y={rect.y}
-                width={rect.w} height={rect.h}
-                rx="8" fill="black"
-              />
+              <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx="8" fill="black" />
             )}
           </mask>
         </defs>
-        <rect
-          x="0" y="0" width="100%" height="100%"
-          fill="rgba(0,0,0,0.65)"
-          mask="url(#tour-spotlight)"
-        />
-        {/* Bordure lumineuse autour de la cible */}
+        <rect x="0" y="0" width="100%" height="100%" fill="rgba(0,0,0,0.60)" mask="url(#tour-spotlight)" />
         {rect && !isCenter && (
           <rect
-            x={rect.x} y={rect.y}
-            width={rect.w} height={rect.h}
-            rx="8"
-            fill="none"
-            stroke="#F2B636"
-            strokeWidth="2"
-            opacity="0.8"
+            x={rect.x} y={rect.y} width={rect.w} height={rect.h}
+            rx="8" fill="none" stroke="#F2B636" strokeWidth="2.5" opacity="0.9"
           />
         )}
       </svg>
 
-      {/* Couche d'interaction (clic dehors = passer) */}
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
-        aria-hidden
-      />
+      {/* Click capture layer */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} aria-hidden />
 
-      {/* ── Bulle tooltip ── */}
+      {/* Tooltip bubble */}
       <div
         style={{ ...bubbleStyle(), zIndex: 9999 }}
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
@@ -251,11 +309,11 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
         aria-modal="true"
         aria-label={current.title}
       >
-        {/* En-tête coloré */}
-        <div className="bg-gradient-to-r from-[#00665C] to-[#00665C]/80 px-5 py-4 flex items-start justify-between">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#00665C] to-[#00865C] px-5 py-4 flex items-start justify-between">
           <div className="flex items-center gap-3">
             {current.icon && (
-              <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+              <span className="flex-shrink-0 flex items-center justify-center">
                 {current.icon}
               </span>
             )}
@@ -266,20 +324,19 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
           <button
             onClick={onSkip}
             className="flex-shrink-0 ml-3 text-white/60 hover:text-white transition-colors"
-            title="Passer le tutoriel"
+            title="Fermer le tutoriel"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Corps */}
+        {/* Body */}
         <div className="px-5 py-4">
           <p className="text-sm text-gray-600 leading-relaxed">{current.body}</p>
         </div>
 
-        {/* Pied : progression + boutons */}
-        <div className="px-5 pb-4 flex items-center justify-between">
-          {/* Points de progression */}
+        {/* Footer: progress dots + buttons */}
+        <div className="px-5 pb-5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             {steps.map((_, i) => (
               <div
@@ -295,7 +352,6 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
             ))}
           </div>
 
-          {/* Boutons */}
           <div className="flex items-center gap-2">
             {!isLast && (
               <button
