@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, db, doc, orderBy, query, where } from '../../lib/firebase';
+
 import { ChevronDown, Search } from 'lucide-react';
 import { UserType } from '../../types/user.types';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
@@ -74,68 +74,46 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      
-      // Charger les utilisateurs réguliers
-      const usersQuery = query(collection(db, 'users'), where('status', '==', 'active'),
-        orderBy('fullName'))
-      const usersSnap = await getDocs(usersQuery);
-      const usersData = usersSnap.docs.flatMap(doc => {
-        const data = doc.data();
-        const phoneValidation = validatePhoneNumber(data.phone as string);
-        
-        if (!phoneValidation.isValid) {
-          return []; // Exclure les numéros invalides
-        }
-        
-        return [{
-          id: doc.id,
-          email: data.email as string,
-          fullName: data.fullName as string,
-          role: data.role as string,
-          phone: phoneValidation.cleanNumber as string, // Utiliser le numéro nettoyé (10 chiffres)
-          displayPhone: phoneValidation.formattedNumber as string, // Utiliser le numéro formaté pour l'affichage
-        }];
-      });
 
-      // Charger les administrateurs
-      const adminsQuery = query(collection(db, 'admins'), where('status', '==', 'active'),
-        orderBy('fullName'))
-      const adminsSnap = await getDocs(adminsQuery);
-      const adminsData = adminsSnap.docs.flatMap(doc => {
-        const data = doc.data();
-        const phoneValidation = validatePhoneNumber(data.phone as string);
-        
-        if (!phoneValidation.isValid) {
-          return []; // Exclure les numéros invalides
-        }
-        
-        return [{
-          id: doc.id,
-          email: data.email as string,
-          fullName: data.fullName as string,
-          role: data.role as string,
-          phone: phoneValidation.cleanNumber as string, // Utiliser le numéro nettoyé (10 chiffres)
-          displayPhone: phoneValidation.formattedNumber as string, // Utiliser le numéro formaté pour l'affichage
-        }];
-      });
+      // Charger les utilisateurs réguliers depuis Supabase
+      const { data: usersRaw } = await supabase
+        .from('users')
+        .select('id, full_name, phone, role, email, status')
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
 
-      // Déduplication des utilisateurs basée sur le numéro de téléphone
+      // Charger les administrateurs depuis Supabase
+      const { data: adminsRaw } = await supabase
+        .from('admins')
+        .select('id, full_name, phone, role, email, status')
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
+
+      const mapRow = (row: any): User | null => {
+        const phoneValidation = validatePhoneNumber(row.phone as string);
+        if (!phoneValidation.isValid) return null;
+        return {
+          id: row.id,
+          email: row.email as string,
+          fullName: (row.full_name || row.fullName) as string,
+          role: row.role as string,
+          phone: phoneValidation.cleanNumber as string,
+          displayPhone: phoneValidation.formattedNumber as string,
+        };
+      };
+
+      const usersData: User[] = (usersRaw ?? []).map(mapRow).filter(Boolean) as User[];
+      const adminsData: User[] = (adminsRaw ?? []).map(mapRow).filter(Boolean) as User[];
+
+      // Déduplication par téléphone — admins prioritaires
       const userMap = new Map<string, User>();
-      
-      // Ajouter d'abord les utilisateurs réguliers
-      usersData.forEach(user => {
-        userMap.set(user.phone, user);
-      });
-      
-      // Ajouter les admins (remplacera les doublons avec priorité aux admins)
-      adminsData.forEach(user => {
-        userMap.set(user.phone, user);
-      });
-      
-      const allUsers = Array.from(userMap.values()).sort((a, b) => 
+      usersData.forEach(u => userMap.set(u.phone, u));
+      adminsData.forEach(u => userMap.set(u.phone, u));
+
+      const allUsers = Array.from(userMap.values()).sort((a, b) =>
         a.fullName.localeCompare(b.fullName)
       );
-      
+
       setUsers(allUsers);
     } catch (error) {
       console.error('Erreur lors du chargement des utilisateurs:', error);
