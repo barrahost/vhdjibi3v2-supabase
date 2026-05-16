@@ -38,15 +38,15 @@ export default function BirthdayList() {
     const today = new Date();
     const currentYear = today.getFullYear();
     
-    // CrÃ©er la date d'anniversaire pour cette annÃ©e
+    // Créer la date d'anniversaire pour cette année
     let birthdayThisYear = new Date(currentYear, month - 1, day);
     
-    // Si l'anniversaire est dÃ©jÃ  passÃ© cette annÃ©e, utiliser l'annÃ©e prochaine
+    // Si l'anniversaire est déjà passé cette année, utiliser l'année prochaine
     if (today > birthdayThisYear) {
       birthdayThisYear = new Date(currentYear + 1, month - 1, day);
     }
     
-    // Calculer la diffÃ©rence en jours
+    // Calculer la différence en jours
     const diffTime = birthdayThisYear.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -86,7 +86,7 @@ export default function BirthdayList() {
       return;
     }
 
-    if (window.confirm('Ãtes-vous sÃ»r de vouloir supprimer cet anniversaire ?')) {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet anniversaire ?')) {
       try {
         const { error } = await supabase
           .from('birthdays')
@@ -94,7 +94,7 @@ export default function BirthdayList() {
           .eq('id', birthdayId);
 
         if (error) throw error;
-        toast.success('Anniversaire supprimÃ© avec succÃ¨s');
+        toast.success('Anniversaire supprimé avec succès');
       } catch (error) {
         console.error('Error deleting birthday:', error);
         toast.error('Erreur lors de la suppression');
@@ -105,7 +105,7 @@ export default function BirthdayList() {
   const columns = [
     {
       key: 'fullName',
-      title: 'Nom et PrÃ©noms',
+      title: 'Nom et Prénoms',
       render: (value: string, birthday: any) => (
         <div>
           <span className="font-medium text-gray-900">{value}</span>
@@ -136,7 +136,7 @@ export default function BirthdayList() {
     },
     {
       key: 'phone',
-      title: 'TÃ©lÃ©phone',
+      title: 'Téléphone',
       render: (value: string) => value
     },
     ...(canManageBirthdays ? [{
@@ -226,10 +226,10 @@ export default function BirthdayList() {
         .eq('id', birthdayId);
 
       if (error) throw error;
-      toast.success(`Anniversaire ${status === 'approved' ? 'approuvÃ©' : 'rejetÃ©'} avec succÃ¨s`);
+      toast.success(`Anniversaire ${status === 'approved' ? 'approuvé' : 'rejeté'} avec succès`);
     } catch (error) {
       console.error('Error updating birthday status:', error);
-      toast.error('Erreur lors de la mise Ã  jour du statut');
+      toast.error('Erreur lors de la mise à jour du statut');
     }
   };
 
@@ -410,23 +410,23 @@ export default function BirthdayList() {
         )}
       </div>
 
-      {/* Message si aucun rÃ©sultat */}
+      {/* Message si aucun résultat */}
       {filteredBirthdays.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg border">
           <Gift className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Aucun anniversaire trouvÃ©</p>
+          <p className="text-gray-500">Aucun anniversaire trouvé</p>
         </div>
       )}
 
-      {/* LÃ©gende des jours restants */}
+      {/* Légende des jours restants */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <Calendar className="w-5 h-5 text-blue-500 mt-0.5" />
           <div>
-            <h3 className="text-sm font-medium text-blue-900">Ã propos des jours restants</h3>
+            <h3 className="text-sm font-medium text-blue-900">À propos des jours restants</h3>
             <p className="mt-1 text-sm text-blue-700">
-              Le nombre de jours restants est calculÃ© jusqu'au prochain anniversaire. 
-              Pour les anniversaires dÃ©jÃ  passÃ©s cette annÃ©e, le calcul se fait pour l'annÃ©e prochaine.
+              Le nombre de jours restants est calculé jusqu'au prochain anniversaire. 
+              Pour les anniversaires déjà passés cette année, le calcul se fait pour l'année prochaine.
             </p>
           </div>
         </div>
@@ -442,7 +442,7 @@ export default function BirthdayList() {
           <BirthdayForm
             onSuccess={() => {
               setShowAddModal(false);
-              toast.success('Anniversaire ajoutÃ© avec succÃ¨s !');
+              toast.success('Anniversaire ajouté avec succès !');
             }}
             onClose={() => setShowAddModal(false)}
             isModal={true}

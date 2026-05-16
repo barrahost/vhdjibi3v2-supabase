@@ -60,7 +60,7 @@ export default function SpiritualProgression() {
 
       if (error) {
         console.error('Error loading souls:', error);
-        toast.error('Erreur lors du chargement des Ã¢mes');
+        toast.error('Erreur lors du chargement des âmes');
         return;
       }
 
@@ -111,7 +111,7 @@ export default function SpiritualProgression() {
     };
   }, [selectedShepherdId]);
 
-  // Filtrer les Ã¢mes par recherche
+  // Filtrer les âmes par recherche
   const filteredSouls = souls.filter(soul =>
     soul.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -123,7 +123,7 @@ export default function SpiritualProgression() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // RÃ©initialiser la page quand les filtres changent
+  // Réinitialiser la page quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
     setExpandedSoulId(null);
@@ -153,43 +153,43 @@ export default function SpiritualProgression() {
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
         <StatCard
-          title="Total des Ã¢mes"
+          title="Total des âmes"
           value={stats.totalSouls}
           icon={TrendingUp}
           trend={`${stats.totalSouls}`}
-          trendLabel="Ã¢mes au total"
+          trendLabel="âmes au total"
           iconClassName="text-[#00665C]"
         />
         <StatCard
-          title="NÃ©s de nouveau"
+          title="Nés de nouveau"
           value={stats.bornAgain}
           icon={Heart}
           trend={`${stats.bornAgainPercent.toFixed(1)}%`}
-          trendLabel="des Ã¢mes"
+          trendLabel="des âmes"
           iconClassName="text-red-600"
           details={[
-            { label: 'NÃ©s de nouveau', value: stats.bornAgain },
+            { label: 'Nés de nouveau', value: stats.bornAgain },
             { label: 'En attente', value: stats.totalSouls - stats.bornAgain }
           ]}
         />
         <StatCard
-          title="BaptisÃ©s"
+          title="Baptisés"
           value={stats.baptized}
           icon={Droplets}
           trend={`${stats.baptizedPercent.toFixed(1)}%`}
-          trendLabel="des Ã¢mes"
+          trendLabel="des âmes"
           iconClassName="text-blue-600"
           details={[
-            { label: 'BaptisÃ©s', value: stats.baptized },
-            { label: 'Non baptisÃ©s', value: stats.totalSouls - stats.baptized }
+            { label: 'Baptisés', value: stats.baptized },
+            { label: 'Non baptisés', value: stats.totalSouls - stats.baptized }
           ]}
         />
         <StatCard
-          title="AcadÃ©mie VDH"
+          title="Académie VDH"
           value={stats.academy}
           icon={BookOpen}
           trend={`${stats.academyPercent.toFixed(1)}%`}
-          trendLabel="des Ã¢mes"
+          trendLabel="des âmes"
           iconClassName="text-amber-600"
           details={[
             { label: 'Inscrits', value: stats.academy },
@@ -197,11 +197,11 @@ export default function SpiritualProgression() {
           ]}
         />
         <StatCard
-          title="Ãcole PDV"
+          title="École PDV"
           value={stats.lifeBearers}
           icon={Users2}
           trend={`${stats.lifeBearersPercent.toFixed(1)}%`}
-          trendLabel="des Ã¢mes"
+          trendLabel="des âmes"
           iconClassName="text-emerald-600"
           details={[
             { label: 'Inscrits', value: stats.lifeBearers },
@@ -213,7 +213,7 @@ export default function SpiritualProgression() {
           value={stats.serving}
           icon={Briefcase}
           trend={`${stats.servingPercent.toFixed(1)}%`}
-          trendLabel="des Ã¢mes"
+          trendLabel="des âmes"
           iconClassName="text-purple-600"
           details={[
             { label: 'En service', value: stats.serving },
@@ -237,26 +237,26 @@ export default function SpiritualProgression() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Rechercher une Ã¢me par nom..."
+                placeholder="Rechercher une âme par nom..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
               />
             </div>
             <p className="mt-1 text-sm text-gray-500">
-              {filteredSouls.length} rÃ©sultat{filteredSouls.length !== 1 ? 's' : ''} trouvÃ©{filteredSouls.length !== 1 ? 's' : ''}
+              {filteredSouls.length} résultat{filteredSouls.length !== 1 ? 's' : ''} trouvé{filteredSouls.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
       )}
 
-      {/* Liste des Ã¢mes avec accordÃ©on */}
+      {/* Liste des âmes avec accordéon */}
       <div className="bg-white rounded-lg border divide-y">
         {paginatedSouls.length === 0 ? (
           <div className="p-8 text-center">
             <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">
-              Aucune Ã¢me trouvÃ©e
+              Aucune âme trouvée
             </p>
           </div>
         ) : (
@@ -277,7 +277,7 @@ export default function SpiritualProgression() {
                 )}
               </button>
 
-              {/* Contenu de l'accordÃ©on */}
+              {/* Contenu de l'accordéon */}
               <div className={`transition-all duration-500 ease-in-out ${
                 expandedSoulId === soul.id
                   ? 'max-h-[1000px] opacity-100'

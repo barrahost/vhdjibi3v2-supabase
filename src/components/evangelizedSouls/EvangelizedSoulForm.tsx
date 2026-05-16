@@ -50,10 +50,10 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
     if (!data.fullName.trim()) return toast.error('Le nom est obligatoire');
     if (!data.gender) return toast.error('Le genre est obligatoire');
     if (!data.location.trim()) return toast.error("Le lieu d'habitation est obligatoire");
-    if (!data.evangelizationDate) return toast.error("La date d'Ã©vangÃ©lisation est obligatoire");
+    if (!data.evangelizationDate) return toast.error("La date d'évangélisation est obligatoire");
 
     const userStr = localStorage.getItem('user');
-    if (!userStr) return toast.error('Session expirÃ©e. Veuillez vous reconnecter.');
+    if (!userStr) return toast.error('Session expirée. Veuillez vous reconnecter.');
     const user = JSON.parse(userStr);
 
     try {
@@ -80,7 +80,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
       });
       if (insertError) throw insertError;
 
-      toast.success('Ãme Ã©vangÃ©lisÃ©e enregistrÃ©e');
+      toast.success('Âme évangélisée enregistrée');
       setSuccess(data);
       setData(initial);
       onCreated?.();
@@ -98,9 +98,9 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
           <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h2 className="text-lg font-semibold text-green-900">Ãme Ã©vangÃ©lisÃ©e enregistrÃ©e</h2>
+            <h2 className="text-lg font-semibold text-green-900">Âme évangélisée enregistrée</h2>
             <p className="text-sm text-green-800 mt-0.5">
-              <strong>{success.fullName}</strong> a bien Ã©tÃ© ajoutÃ©(e) Ã  votre liste.
+              <strong>{success.fullName}</strong> a bien été ajouté(e) à votre liste.
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
             onClick={() => setSuccess(null)}
             className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
           >
-            <Plus className="w-4 h-4" /> Enregistrer une autre Ã¢me
+            <Plus className="w-4 h-4" /> Enregistrer une autre âme
           </button>
           <button
             type="button"
@@ -128,7 +128,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nom et PrÃ©noms *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nom et Prénoms *</label>
           <input
             type="text"
             required
@@ -158,7 +158,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">TÃ©lÃ©phone</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
           <input
             type="tel"
             value={data.phone}
@@ -181,7 +181,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date d'Ã©vangÃ©lisation *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date d'évangélisation *</label>
           <input
             type="date"
             required
@@ -191,7 +191,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Lieu d'Ã©vangÃ©lisation</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Lieu d'évangélisation</label>
           <input
             type="text"
             value={data.evangelizationLocation}
@@ -203,18 +203,18 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">CommunautÃ© frÃ©quentÃ©e</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Communauté fréquentée</label>
         <input
           type="text"
           value={data.attendedCommunity}
           onChange={(e) => setData({ ...data, attendedCommunity: e.target.value })}
-          placeholder="Ãglise ou communautÃ© actuelle (optionnel)"
+          placeholder="Église ou communauté actuelle (optionnel)"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">L'Ã¢me a donnÃ© sa vie Ã  JÃ©sus ?</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">L'âme a donné sa vie à Jésus ?</label>
         <div className="flex flex-wrap gap-4">
           {GAVE_LIFE_OPTIONS.map((opt) => (
             <label key={opt.value} className="inline-flex items-center gap-2 text-sm">
@@ -233,13 +233,13 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Ã quel culte pensez-vous venir ?</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">À quel culte pensez-vous venir ?</label>
         <select
           value={data.plannedService}
           onChange={(e) => setData({ ...data, plannedService: e.target.value as PlannedService | '' })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
         >
-          <option value="">â SÃ©lectionner â</option>
+          <option value="">— Sélectionner —</option>
           {PLANNED_SERVICE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -247,23 +247,23 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Ãtudiant ayant conduit l'entretien</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Étudiant ayant conduit l'entretien</label>
         <input
           type="text"
           value={data.interviewerName}
           onChange={(e) => setData({ ...data, interviewerName: e.target.value })}
-          placeholder="Nom de l'Ã©tudiant (optionnel)"
+          placeholder="Nom de l'étudiant (optionnel)"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Sujets de priÃ¨re</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Sujets de prière</label>
         <textarea
           rows={3}
           value={data.prayerTopics}
           onChange={(e) => setData({ ...data, prayerTopics: e.target.value })}
-          placeholder="Sujets de priÃ¨re partagÃ©s par l'Ã¢me"
+          placeholder="Sujets de prière partagés par l'âme"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
         />
       </div>
@@ -280,12 +280,12 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
 
       {(isAdmin || isADN) && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ÃvangÃ©liste responsable</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Évangéliste responsable</label>
           <EvangelistSelect
             value={data.evangelistId}
             onChange={(id) => setData({ ...data, evangelistId: id })}
           />
-          <p className="text-xs text-gray-500 mt-1">Si aucun n'est sÃ©lectionnÃ©, vous serez assignÃ©(e) par dÃ©faut.</p>
+          <p className="text-xs text-gray-500 mt-1">Si aucun n'est sélectionné, vous serez assigné(e) par défaut.</p>
         </div>
       )}
 
@@ -294,7 +294,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
         disabled={submitting}
         className="w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 disabled:opacity-60"
       >
-        {submitting ? 'Enregistrement...' : 'Enregistrer l\'Ã¢me Ã©vangÃ©lisÃ©e'}
+        {submitting ? 'Enregistrement...' : 'Enregistrer l\'âme évangélisée'}
       </button>
     </form>
   );

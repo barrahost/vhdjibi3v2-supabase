@@ -35,7 +35,7 @@ export default function ShepherdReminders() {
   useEffect(() => {
     const loadReminders = async () => {
       try {
-        // Charger tous les utilisateurs actifs puis filtrer cÃ´tÃ© client
+        // Charger tous les utilisateurs actifs puis filtrer côté client
         // afin d'inclure les bergers multi-casquettes (businessProfiles)
         const { data: usersData, error: usersError } = await supabase
           .from('users')
@@ -55,7 +55,7 @@ export default function ShepherdReminders() {
         let totalDays = 0;
         let totalSoulsWithInteractions = 0;
 
-        // Charger les donnÃ©es en parallÃ¨le pour chaque berger
+        // Charger les données en parallèle pour chaque berger
         await Promise.all(shepherds.map(async (shepherd) => {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
@@ -93,7 +93,7 @@ export default function ShepherdReminders() {
             date: row.date ? new Date(row.date) : new Date()
           }));
 
-          // Calculer les jours sans interaction pour chaque Ã¢me
+          // Calculer les jours sans interaction pour chaque âme
           const soulsWithInteractions = souls.map(soul => {
             const soulInteractions = interactions.filter((i: any) => i.soulId === soul.id);
             const lastInteraction = soulInteractions.length > 0
@@ -116,7 +116,7 @@ export default function ShepherdReminders() {
             };
           });
 
-          // Filtrer pour ne garder que les Ã¢mes nÃ©cessitant attention (5 jours ou plus)
+          // Filtrer pour ne garder que les âmes nécessitant attention (5 jours ou plus)
           const soulsNeedingAttention = soulsWithInteractions.filter(
             s => s.daysWithoutInteraction >= 5
           );
@@ -187,15 +187,15 @@ export default function ShepherdReminders() {
           iconClassName="text-blue-600"
         />
         <StatCard
-          title="Ãmes nÃ©cessitant attention"
+          title="Âmes nécessitant attention"
           value={stats.needingAttention}
           icon={AlertTriangle}
           trend={`${((stats.needingAttention / stats.totalSouls) * 100).toFixed(1)}%`}
-          trendLabel="des Ã¢mes"
+          trendLabel="des âmes"
           iconClassName="text-amber-600"
         />
         <StatCard
-          title="DÃ©lai moyen"
+          title="Délai moyen"
           value={stats.averageDays}
           icon={Clock}
           trend="jours"
@@ -216,11 +216,11 @@ export default function ShepherdReminders() {
                 <div className="flex items-center space-x-2">
                   <h3 className="font-medium text-gray-900">{shepherd.fullName}</h3>
                   <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                    {souls.length} Ã¢me{souls.length > 1 ? 's' : ''} Ã  suivre
+                    {souls.length} âme{souls.length > 1 ? 's' : ''} à suivre
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {shepherd.phone} â¢ {shepherd.email}
+                  {shepherd.phone} • {shepherd.email}
                 </p>
               </div>
               {expandedShepherds.includes(shepherd.id) ? (
@@ -262,10 +262,10 @@ export default function ShepherdReminders() {
                       }`} />
                       {lastInteraction ? (
                         <>
-                          DerniÃ¨re interaction le {formatDate(lastInteraction)}
+                          Dernière interaction le {formatDate(lastInteraction)}
                         </>
                       ) : (
-                        "Aucune interaction enregistrÃ©e"
+                        "Aucune interaction enregistrée"
                       )}
                     </div>
                   </div>
@@ -279,7 +279,7 @@ export default function ShepherdReminders() {
           <div className="bg-gray-50 rounded-lg border p-8 text-center">
             <AlertTriangle className="w-8 h-8 text-green-600 mx-auto mb-2" />
             <p className="text-gray-600">
-              Aucun rappel pour le moment. Tous les bergers sont Ã  jour dans leurs interactions.
+              Aucun rappel pour le moment. Tous les bergers sont à jour dans leurs interactions.
             </p>
           </div>
         )}
