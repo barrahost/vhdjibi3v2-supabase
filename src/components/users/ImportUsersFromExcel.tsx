@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet, X, Loader2, Copy } from 'lucide-react';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { BusinessProfileType } from '../../types/businessProfile.types';
 import { ServantService } from '../../services/servant.service';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Types ─────────────────────────────────────────────── */
 type RowStatus = 'valid' | 'error' | 'db_duplicate' | 'file_duplicate';
@@ -89,7 +88,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
     const checkDB = async () => {
       setCheckingDuplicates(true);
       try {
-        const snap = await getDocs(collection(db, 'users'));
+        const snap = await supabase.from('users').select('*');
         const existingPhones = new Set(snap.docs.map(d => d.data().phone as string));
 
         setRows(prev => prev.map(row => {
@@ -208,7 +207,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
 
     try {
       // Re-vérification finale avant écriture
-      const snap = await getDocs(collection(db, 'users'));
+      const snap = await supabase.from('users').select('*');
       const existingPhones = new Set(snap.docs.map(d => d.data().phone as string));
 
       for (const row of validRows) {
@@ -217,7 +216,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
         const profileType = row.profileType!;
         const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-        const docRef = await addDoc(collection(db, 'users'), {
+        const docRef = const { error: _insertErr } = await supabase.from('users').insert({
           uid,
           fullName: row.fullName,
           nickname: row.nickname || null,

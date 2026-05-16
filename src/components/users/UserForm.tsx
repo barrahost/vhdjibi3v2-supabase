@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { ServantService } from '../../services/servant.service';
 import toast from 'react-hot-toast';
 import { PhotoUpload } from '../ui/PhotoUpload';
@@ -9,6 +8,7 @@ import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { LocationField } from '../souls/form/LocationField';
 import { StorageService } from '../../services/storage.service';
 import { BusinessProfile } from '../../types/businessProfile.types';
+import { supabase } from '../../lib/supabase';
 
 const DEFAULT_PASSWORDS = {
   ADMIN: '@123456',
@@ -61,12 +61,9 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       }
 
       // Vérifier si le numéro existe déjà
-      const phoneQuery = query(
-        collection(db, 'users'),
-        where('phone', '==', phoneValidation.formattedNumber)
-      );
-      const phoneSnapshot = await getDocs(phoneQuery);
-      if (!phoneSnapshot.empty) {
+      const phoneQuery = query(collection(db, 'users'), where('phone', '==', phoneValidation.formattedNumber)
+      const { data: phoneData } = await phoneQuery;
+      if (!phoneData.empty) {
         toast.error('Ce numéro de téléphone est déjà utilisé');
         return;
       }
@@ -74,12 +71,9 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       // Vérifier si l'email existe déjà — uniquement s'il est renseigné
       const trimmedEmail = formData.email.trim();
       if (trimmedEmail) {
-        const emailQuery = query(
-          collection(db, 'users'),
-          where('email', '==', trimmedEmail)
-        );
-        const emailSnapshot = await getDocs(emailQuery);
-        if (!emailSnapshot.empty) {
+        const emailQuery = query(collection(db, 'users'), where('email', '==', trimmedEmail)
+        const { data: emailData } = await emailQuery;
+        if (!emailData.empty) {
           toast.error('Cet email est déjà utilisé');
           return;
         }
@@ -106,7 +100,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
                           'shepherd';
 
       // Créer l'utilisateur dans Firestore
-      docRef = await addDoc(collection(db, 'users'), {
+      docRef = const { error: _insertErr } = await supabase.from('users').insert({
         uid,
         fullName: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,

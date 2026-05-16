@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, query, where } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -10,6 +9,7 @@ import { Badge } from '../ui/badge';
 import { Users, UserCheck, UserPlus, Crown, Download } from 'lucide-react';
 import { ImportServantsModal } from './ImportServantsModal';
 import { toast } from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface Department {
   id: string;
@@ -54,16 +54,13 @@ export default function DepartmentLeaderDashboard() {
         }
         
         // Get department details
-        const deptQuery = query(
-          collection(db, 'departments'),
-          where('__name__', '==', deptLeaderProfile.departmentId)
-        );
+        const deptQuery = query(collection(db, 'departments'), where('__name__', '==', deptLeaderProfile.departmentId)
         
-        const deptSnapshot = await getDocs(deptQuery);
-        if (!deptSnapshot.empty) {
-          const deptData = deptSnapshot.docs[0].data() as Department;
+        const { data: deptData } = await deptQuery;
+        if (!deptData.empty) {
+          const deptData = deptData?.[0] as Department;
           setDepartment({
-            id: deptSnapshot.docs[0].id,
+            id: deptData[0].id,
             name: deptData.name,
             description: deptData.description
           });
@@ -81,13 +78,10 @@ export default function DepartmentLeaderDashboard() {
   useEffect(() => {
     if (!department?.id) return;
 
-    const q = query(
-      collection(db, 'servants'),
-      where('departmentId', '==', department.id),
+    const q = query(collection(db, 'servants'), where('departmentId', '==', department.id),
       where('status', '==', 'active')
-    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onData(q, (snapshot) => {
       const servantsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),

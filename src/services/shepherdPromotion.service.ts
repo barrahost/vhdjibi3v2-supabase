@@ -1,8 +1,8 @@
-import { db, writeBatch } from '../lib/firebase';
-import { collection, doc, getDoc, updateDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import { collection, db, doc, query, where, writeBatch } from '../lib/firebase';
 import { ServantService } from './servant.service';
 import { BusinessProfile } from '../types/businessProfile.types';
+import { supabase } from '../lib/supabase';
 
 export class ShepherdPromotionService {
   /**
@@ -17,18 +17,15 @@ export class ShepherdPromotionService {
       console.log('🔄 [ShepherdPromotion] Début de la promotion:', { userId, departmentId });
 
       // Récupérer les données de l'utilisateur
-      const userQuery = query(
-        collection(db, 'users'),
-        where('uid', '==', userId)
-      );
-      const userSnapshot = await getDocs(userQuery);
+      const userQuery = query(collection(db, 'users'), where('uid', '==', userId)
+      const { data: userData } = await userQuery;
 
-      if (userSnapshot.empty) {
+      if (userData.empty) {
         throw new Error('Utilisateur non trouvé');
       }
 
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
+      const userDoc = userData[0];
+      const userData = userDocData;
 
       console.log('📋 [ShepherdPromotion] Données utilisateur:', {
         fullName: userData.fullName,
@@ -87,24 +84,21 @@ export class ShepherdPromotionService {
       console.log('📝 [ShepherdPromotion] Profils mis à jour:', updatedProfiles);
 
       // Vérifier si un serviteur existe déjà pour cet utilisateur
-      const servantQuery = query(
-        collection(db, 'servants'),
-        where('email', '==', userData.email)
-      );
-      const servantSnapshot = await getDocs(servantQuery);
+      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email)
+      const { data: servantData } = await servantQuery;
 
       const batch = writeBatch(db);
       const now = new Date();
 
-      if (!servantSnapshot.empty) {
+      if (!servantData.empty) {
         // Mettre à jour le serviteur existant
-        const servantDoc = servantSnapshot.docs[0];
-        console.log('🔄 [ShepherdPromotion] Mise à jour serviteur existant:', servantDoc.id);
+        const servantDoc = servantData[0];
+        console.log('🔄 [ShepherdPromotion] Mise à jour serviteur existant:', servantDocData.id);
         
-        batch.update(doc(db, 'servants', servantDoc.id), {
+        batch.update(doc(db, 'servants', servantDocData.id), {
           departmentId,
           isHead: true,
-          updatedAt: Timestamp.fromDate(now)
+          updatedAt: now.toISOString()
         });
       } else {
         // Créer un nouveau serviteur
@@ -122,17 +116,17 @@ export class ShepherdPromotionService {
           isHead: true,
           isShepherd: userData.businessProfiles?.some((p: any) => p.type === 'shepherd') || false,
           status: 'active',
-          createdAt: Timestamp.fromDate(now),
-          updatedAt: Timestamp.fromDate(now)
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString()
         };
 
         batch.set(doc(db, 'servants', servantId), servantData);
       }
 
       // Mettre à jour l'utilisateur avec les nouveaux profils business
-      batch.update(doc(db, 'users', userDoc.id), {
+      batch.update(doc(db, 'users', userDocData.id), {
         businessProfiles: updatedProfiles,
-        updatedAt: Timestamp.fromDate(now)
+        updatedAt: now.toISOString()
       });
 
       // Exécuter la transaction
@@ -157,18 +151,15 @@ export class ShepherdPromotionService {
       console.log('🔄 [ShepherdPromotion] Début de la rétrogradation:', { userId });
 
       // Récupérer les données de l'utilisateur
-      const userQuery = query(
-        collection(db, 'users'),
-        where('uid', '==', userId)
-      );
-      const userSnapshot = await getDocs(userQuery);
+      const userQuery = query(collection(db, 'users'), where('uid', '==', userId)
+      const { data: userData } = await userQuery;
 
-      if (userSnapshot.empty) {
+      if (userData.empty) {
         throw new Error('Utilisateur non trouvé');
       }
 
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
+      const userDoc = userData[0];
+      const userData = userDocData;
 
       // Retirer le profil department_leader
       const updatedProfiles = (userData.businessProfiles || []).filter(
@@ -176,27 +167,24 @@ export class ShepherdPromotionService {
       );
 
       // Mettre à jour le serviteur s'il existe
-      const servantQuery = query(
-        collection(db, 'servants'),
-        where('email', '==', userData.email)
-      );
-      const servantSnapshot = await getDocs(servantQuery);
+      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email)
+      const { data: servantData } = await servantQuery;
 
       const batch = writeBatch(db);
       const now = new Date();
 
-      if (!servantSnapshot.empty) {
-        const servantDoc = servantSnapshot.docs[0];
-        batch.update(doc(db, 'servants', servantDoc.id), {
+      if (!servantData.empty) {
+        const servantDoc = servantData[0];
+        batch.update(doc(db, 'servants', servantDocData.id), {
           isHead: false,
-          updatedAt: Timestamp.fromDate(now)
+          updatedAt: now.toISOString()
         });
       }
 
       // Mettre à jour l'utilisateur
-      batch.update(doc(db, 'users', userDoc.id), {
+      batch.update(doc(db, 'users', userDocData.id), {
         businessProfiles: updatedProfiles,
-        updatedAt: Timestamp.fromDate(now)
+        updatedAt: now.toISOString()
       });
 
       await batch.commit();

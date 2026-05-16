@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { Soul } from '../../types/database.types';
 import { Modal } from '../ui/Modal';
 import { EditSoulTabs } from './tabs/EditSoulTabs';
@@ -13,6 +12,7 @@ import { PhotoUpload } from '../ui/PhotoUpload';
 import { StorageService } from '../../services/storage.service';
 import { isShepherdUser } from '../../utils/roleHelpers';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface EditSoulModalProps {
   soul: Soul;
@@ -51,13 +51,10 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       if (!user || userRole !== 'shepherd') return;
 
       try {
-        const shepherdsQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
+        const shepherdsQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
           where('status', '==', 'active')
-        );
-        const shepherdDoc = await getDocs(shepherdsQuery);
-        const matched = shepherdDoc.docs.find(d => isShepherdUser(d.data() as any));
+        const { data: shepherdDoc } = await shepherdsQuery;
+const matched = shepherdDocData.docs.find(d => isShepherdUser(d.data() as any));
 
         if (matched) {
           setCurrentShepherdId(matched.id);
@@ -181,8 +178,9 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       updateData.isUndecided = formData.general.isUndecided;
 
       // Mise à jour dans Firestore
-      const soulRef = doc(db, 'souls', soul.id);
-      await updateDoc(soulRef, updateData);
+      
+      const { error: _updateErr } = await supabase.from('souls').update(updateData).eq('id', soul.id);
+      if (_updateErr) throw _updateErr;
       
       toast.success('Modifications enregistrées avec succès');
       if (onUpdate) {

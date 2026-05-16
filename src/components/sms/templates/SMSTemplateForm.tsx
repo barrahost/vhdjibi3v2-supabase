@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, query, where } from '../../../lib/firebase';
 import { SMS_VARIABLES } from '../../../types/sms.types';
 import { MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 const MAX_LENGTH = 125; // Reduced to 125 to allow for appending user info
 
@@ -22,11 +22,8 @@ export default function SMSTemplateForm() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoriesQuery = query(
-          collection(db, 'smsCategories'),
-          where('status', 'in', ['active', 'inactive'])
-        );
-        const snapshot = await getDocs(categoriesQuery);
+        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive'])
+        const { data: snapshot } = await categoriesQuery;
         setCategories(snapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name,
@@ -64,7 +61,7 @@ export default function SMSTemplateForm() {
         return;
       }
 
-      await addDoc(collection(db, 'smsTemplates'), {
+      const { error: _insertErr } = await supabase.from('smsTemplates').insert({
         ...formData,
         createdAt: new Date(),
         updatedAt: new Date()

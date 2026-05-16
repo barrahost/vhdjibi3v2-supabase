@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, doc, writeBatch } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface OrphanedServantsModalProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
     if (!window.confirm('Supprimer définitivement ce serviteur orphelin ?')) return;
     try {
       setDeleting(id);
-      await deleteDoc(doc(db, 'servants', id));
+      const { error: _deleteErr } = await supabase.from('servants').delete().eq('id', id);
       toast.success('Serviteur orphelin supprimé');
     } catch (e) {
       console.error(e);
@@ -37,7 +37,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
     try {
       setDeletingAll(true);
       const batch = writeBatch(db);
-      orphans.forEach(o => batch.delete(doc(db, 'servants', o.id)));
+      orphans.forEach(o => batch.delete(o.id /* was doc in servants */));
       await batch.commit();
       toast.success(`${orphans.length} serviteur(s) orphelin(s) supprimé(s)`);
       onClose();

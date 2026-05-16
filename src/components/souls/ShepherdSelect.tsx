@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import { ShepherdOption } from '../../types/database.types';
+import { supabase } from '../../lib/supabase';
 
 interface ShepherdSelectProps {
   value: string | undefined;
@@ -18,13 +18,10 @@ function Options() {
       try {
         // Récupérer tous les utilisateurs actifs puis filtrer côté client
         // pour combiner le champ legacy `role` ET le système `businessProfiles`.
-        const q = query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        );
+        const q = query(collection(db, 'users'), where('status', '==', 'active')
 
-        const snapshot = await getDocs(q);
-        const shepherdsData = snapshot.docs
+        const { data: snapshot } = await q;
+const shepherdsData = snapshot.docs
           .map(doc => {
             const data: any = doc.data();
             const profiles: any[] = Array.isArray(data.businessProfiles) ? data.businessProfiles : [];

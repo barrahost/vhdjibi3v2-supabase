@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { doc, deleteDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Pencil, Trash2, Users, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface ServiceFamily {
   id: string;
@@ -28,7 +27,7 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
         return;
       }
       try {
-        const snap = await getDoc(doc(db, 'users', family.leaderId));
+        const snap = await supabase.from('users').select('*').eq('id', family.leaderId).single();
         if (snap.exists()) {
           setLeaderName(snap.data().fullName || null);
         }
@@ -42,7 +41,7 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
   const handleDelete = async () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette famille ?')) {
       try {
-        await deleteDoc(doc(db, 'serviceFamilies', family.id));
+        const { error: _deleteErr } = await supabase.from('serviceFamilies').delete().eq('id', family.id);
         toast.success('Famille supprimée avec succès');
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');

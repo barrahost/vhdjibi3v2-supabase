@@ -409,3 +409,6 @@ export class Timestamp {
 // Misc helpers
 // ============================================================
 export function increment(n: number) { return { _increment: n }; }
+
+// Alias for backward compatibility
+export const onData = onSnapshot;

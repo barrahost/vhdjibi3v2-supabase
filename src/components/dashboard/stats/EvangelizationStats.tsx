@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, db, onData, query, where } from '../../../lib/firebase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Users, UserCheck, Clock, TrendingUp } from 'lucide-react';
-import { db } from '../../../lib/firebase';
 import { StatCard } from './StatCard';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface EvangelizedSoul {
   id: string;
@@ -24,7 +24,7 @@ export function EvangelizationStats() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub1 = onSnapshot(
+    const unsub1 = onData(
       collection(db, 'evangelized_souls'),
       (snap) => {
         setEvangelizedSouls(snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
@@ -37,7 +37,7 @@ export function EvangelizationStats() {
       }
     );
 
-    const unsub2 = onSnapshot(
+    const unsub2 = onData(
       query(collection(db, 'users'), where('status', '==', 'active')),
       (snap) => {
         setUsers(snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));

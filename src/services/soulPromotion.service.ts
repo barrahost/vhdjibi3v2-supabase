@@ -1,8 +1,8 @@
-import { db, writeBatch } from '../lib/firebase';
-import { collection, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { Soul } from '../types/database.types';
+import { collection, db, doc, writeBatch } from '../lib/firebase';
 import { ServantFormData } from '../types/servant.types';
 import { toast } from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 
 export class SoulPromotionService {
   /**
@@ -12,12 +12,12 @@ export class SoulPromotionService {
   static async promoteToServant(soulId: string, servantData: ServantFormData): Promise<string> {
     try {
       // Récupérer les données actuelles de l'âme
-      const soulDoc = await getDoc(doc(db, 'souls', soulId));
-      if (!soulDoc.exists()) {
+      const soulDoc = await supabase.from('souls').select('*').eq('id', soulId).single();
+      if (!!!soulDocData) {
         throw new Error('Âme non trouvée');
       }
 
-      const soulDataCurrent = soulDoc.data() as Soul;
+      const soulDataCurrent = soulDocData as Soul;
       
       // Vérifier si l'âme est déjà promue
       if (soulDataCurrent.isServant) {
@@ -45,9 +45,9 @@ export class SoulPromotionService {
         shepherdId: servantData.shepherdId,
         status: servantData.status || 'active',
         originalSoulId: soulId, // Lien vers l'âme d'origine
-        promotionDate: Timestamp.fromDate(now),
-        createdAt: Timestamp.fromDate(now),
-        updatedAt: Timestamp.fromDate(now)
+        promotionDate: now.toISOString(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString()
       };
 
       // Ajouter le serviteur à la collection
@@ -57,8 +57,8 @@ export class SoulPromotionService {
       batch.update(doc(db, 'souls', soulId), {
         isServant: true,
         servantId: servantId,
-        promotionToServantDate: Timestamp.fromDate(now),
-        updatedAt: Timestamp.fromDate(now)
+        promotionToServantDate: now.toISOString(),
+        updatedAt: now.toISOString()
       });
 
       // Exécuter la transaction

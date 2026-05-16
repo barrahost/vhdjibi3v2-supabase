@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { StatCard } from '../dashboard/stats/StatCard';
 import { Users, UserCheck, UserX } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function AttendanceStats() {
   const { user } = useAuth();
@@ -22,20 +22,17 @@ export default function AttendanceStats() {
 
       try {
         // Récupérer l'ID du berger depuis la collection users
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
           where('status', '==', 'active')
-        );
-        const userDoc = await getDocs(userQuery);
+        const { data: userDoc } = await userQuery;
         
-        if (userDoc.empty) {
+        if (userDocData.empty) {
           toast.error('Utilisateur non trouvé');
           return;
         }
 
         // Vérifier si l'utilisateur a un profil berger actif
-        const userData = userDoc.docs[0].data();
+        const userData = userDocData.docs[0].data();
         const hasShepherdProfile = userData.businessProfiles?.some(
           (profile: any) => profile.type === 'shepherd' && profile.isActive
         ) || userData.role === 'shepherd' || userData.role === 'intern';
@@ -45,17 +42,13 @@ export default function AttendanceStats() {
           return;
         }
 
-        const shepherdId = userDoc.docs[0].id;
+        const shepherdId = userDocData.docs[0].id;
 
         // Récupérer toutes les présences
-        const attendancesQuery = query(
-          collection(db, 'attendances'),
-          where('shepherdId', '==', shepherdId)
-        );
-        const attendancesSnapshot = await getDocs(attendancesQuery);
-        
-        const totalAttendances = attendancesSnapshot.size;
-        const presentCount = attendancesSnapshot.docs.filter(
+        const attendancesQuery = query(collection(db, 'attendances'), where('shepherdId', '==', shepherdId)
+        const { data: attendancesData } = await attendancesQuery;
+const totalAttendances = attendancesData.size;
+        const presentCount = attendancesData.filter(
           doc => doc.data().present
         ).length;
         const absentCount = totalAttendances - presentCount;

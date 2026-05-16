@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDoc, collection } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { EditSoulTabs } from './tabs/EditSoulTabs';
 import { SMSTemplate } from '../../types/sms.types';
 import { SMSService } from '../../services/sms.service';
@@ -10,6 +8,7 @@ import { StorageService } from '../../services/storage.service';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { CheckCircle2, Plus, List, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface LastAddedSoul {
   fullName: string;
@@ -152,7 +151,7 @@ export default function SoulForm() {
         );
       }
 
-      const docRef = await addDoc(collection(db, 'souls'), {
+      const docRef = const { error: _insertErr } = await supabase.from('souls').insert({
         ...soulData,
         createdBy: user.id,
         photoURL: photoURL || null,

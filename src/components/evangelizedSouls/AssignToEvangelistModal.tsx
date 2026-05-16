@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, writeBatch, doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, query, where, writeBatch } from '../../lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Megaphone, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePermissions } from '../../hooks/usePermissions';
+import { supabase } from '../../lib/supabase';
 
 interface EvangelistOption {
   id: string;
@@ -37,8 +37,8 @@ export default function AssignToEvangelistModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('status', '==', 'active'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const q = query(collection(db, 'users'), where('status', '==', 'active')
+    const unsubscribe = onData(q, (snapshot) => {
       const data = snapshot.docs
         .map(doc => {
           const d: any = doc.data();

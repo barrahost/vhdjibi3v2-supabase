@@ -1,7 +1,6 @@
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Pencil, Trash2, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface Department {
   id: string;
@@ -19,7 +18,7 @@ export default function DepartmentListItem({ department, onEdit }: DepartmentLis
   const handleDelete = async () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) {
       try {
-        await deleteDoc(doc(db, 'departments', department.id));
+        const { error: _deleteErr } = await supabase.from('departments').delete().eq('id', department.id);
         toast.success('Département supprimé avec succès');
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');

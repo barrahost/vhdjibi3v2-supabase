@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, doc, writeBatch } from '../../lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Users, CheckSquare, Square, Shuffle, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface EvangelistWithLoad {
   id: string;
@@ -103,36 +103,37 @@ export default function DistributeEvangelizedSoulsModal({
     setLoading(true);
     try {
       // Âmes non attribuées
-      const soulsSnap = await getDocs(
-        query(collection(db, 'evangelized_souls'), where('status', '==', 'active'))
-      );
-      const unassigned = soulsSnap.docs.filter(d => !d.data().evangelistId).map(d => d.id);
+      const { data: soulsData } = await supabase
+        .from('evangelized_souls')
+        .select('id, evangelist_id')
+        .eq('status', 'active');
+      const unassigned = (soulsData ?? []).filter((d: any) => !d.evangelist_id).map((d: any) => d.id);
       setUnassignedIds(unassigned);
       setUnassignedCount(unassigned.length);
 
       // Compter les âmes déjà attribuées à chaque évangéliste
       const countMap: Record<string, number> = {};
-      soulsSnap.forEach(d => {
-        const evId = d.data().evangelistId;
+      (soulsData ?? []).forEach((d: any) => {
+        const evId = d.evangelist_id;
         if (evId) countMap[evId] = (countMap[evId] || 0) + 1;
       });
 
       // Évangélistes actifs
-      const usersSnap = await getDocs(
-        query(collection(db, 'users'), where('status', '==', 'active'))
-      );
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, full_name, phone, role, business_profiles')
+        .eq('status', 'active');
       const evList: EvangelistWithLoad[] = [];
-      usersSnap.forEach(d => {
-        const data = d.data();
+      (usersData ?? []).forEach((d: any) => {
         const isEv =
-          data.role === 'evangelist' ||
-          (Array.isArray(data.businessProfiles) &&
-            data.businessProfiles.some((p: any) => p.type === 'evangelist'));
+          d.role === 'evangelist' ||
+          (Array.isArray(d.business_profiles) &&
+            d.business_profiles.some((p: any) => p.type === 'evangelist'));
         if (isEv) {
           evList.push({
             id: d.id,
-            fullName: data.fullName,
-            phone: data.phone,
+            fullName: d.full_name,
+            phone: d.phone,
             currentCount: countMap[d.id] || 0,
           });
         }

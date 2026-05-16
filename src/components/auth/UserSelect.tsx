@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, orderBy, query, where } from '../../lib/firebase';
 import { ChevronDown, Search } from 'lucide-react';
 import { UserType } from '../../types/user.types';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
+import { supabase } from '../../lib/supabase';
 
 
 /** Génère les initiales (1 ou 2 lettres) depuis un nom complet */
@@ -76,14 +76,10 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
       setLoading(true);
       
       // Charger les utilisateurs réguliers
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('status', '==', 'active'),
+      const usersQuery = query(collection(db, 'users'), where('status', '==', 'active'),
         orderBy('fullName')
-      );
-      const usersSnapshot = await getDocs(usersQuery);
-      
-      const usersData = usersSnapshot.docs.flatMap(doc => {
+      const { data: usersData } = await usersQuery;
+const usersData = usersData.flatMap(doc => {
         const data = doc.data();
         const phoneValidation = validatePhoneNumber(data.phone as string);
         
@@ -102,14 +98,10 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
       });
 
       // Charger les administrateurs
-      const adminsQuery = query(
-        collection(db, 'admins'),
-        where('status', '==', 'active'),
+      const adminsQuery = query(collection(db, 'admins'), where('status', '==', 'active'),
         orderBy('fullName')
-      );
-      const adminsSnapshot = await getDocs(adminsQuery);
-      
-      const adminsData = adminsSnapshot.docs.flatMap(doc => {
+      const { data: adminsData } = await adminsQuery;
+const adminsData = adminsData.flatMap(doc => {
         const data = doc.data();
         const phoneValidation = validatePhoneNumber(data.phone as string);
         

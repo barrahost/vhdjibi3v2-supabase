@@ -1,7 +1,6 @@
+import { supabase } from '../../lib/supabase';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { formatDate } from '../../utils/dateUtils';
 import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
 import {
@@ -30,30 +29,27 @@ export function AdminDashboard() {
     const load = async () => {
       try {
         // Charger toutes les données en parallèle
-        const [soulsSnap, evangelizedSnap, interactionsSnap, recentSoulsSnap, recentInterSnap] = await Promise.all([
-          getDocs(query(collection(db, 'souls'), where('status', '==', 'active'))),
-          getDocs(query(collection(db, 'evangelized_souls'), where('status', '!=', 'imported'))),
-          getDocs(query(collection(db, 'interactions'))),
-          getDocs(query(collection(db, 'souls'), orderBy('createdAt', 'desc'), limit(5))),
-          getDocs(query(collection(db, 'interactions'), orderBy('date', 'desc'), limit(5))),
+        const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0);
+
+        const [soulsRes, evangelizedRes, interactionsRes, recentSoulsRes, recentInterRes] = await Promise.all([
+          supabase.from('souls').select('id,shepherd_id,service_family_id,is_undecided').eq('status', 'active'),
+          supabase.from('evangelized_souls').select('id,imported_to_soul_id').neq('status', 'imported'),
+          supabase.from('interactions').select('id,date').gte('date', weekStart.toISOString()),
+          supabase.from('souls').select('id,full_name,location,shepherd_id,created_at').eq('status', 'active').order('created_at', { ascending: false }).limit(5),
+          supabase.from('interactions').select('id,type,date,soul_id').order('date', { ascending: false }).limit(5),
         ]);
 
         if (cancelled) return;
 
-        const souls = soulsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const noShepherd = souls.filter((s: any) => !s.shepherdId).length;
-        const undecided = souls.filter((s: any) => s.isUndecided).length;
-        const noFamily = souls.filter((s: any) => !s.serviceFamilyId && !s.isUndecided).length;
+        const souls = soulsRes.data || [];
+        const noShepherd = souls.filter((s: any) => !s.shepherd_id).length;
+        const undecided = souls.filter((s: any) => s.is_undecided).length;
+        const noFamily = souls.filter((s: any) => !s.service_family_id && !s.is_undecided).length;
 
-        const evangelized = evangelizedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const pendingEvang = evangelized.filter((s: any) => !s.importedToSoulId).length;
+        const evangelized = evangelizedRes.data || [];
+        const pendingEvang = evangelized.filter((s: any) => !s.imported_to_soul_id).length;
 
-        // Interactions cette semaine
-        const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0);
-        const weekInteractions = interactionsSnap.docs.filter(d => {
-          const date = d.data().date?.toDate?.() || new Date(d.data().date);
-          return date >= weekStart;
-        }).length;
+        const weekInteractions = (interactionsRes.data || []).length;
 
         setKpis([
           {
@@ -76,7 +72,7 @@ export function AdminDashboard() {
           {
             label: 'Interactions cette semaine',
             value: weekInteractions,
-            sub: `${interactionsSnap.size} au total`,
+            sub: `${interactionsSnapData.size} au total`,
             color: 'text-blue-600',
             icon: <MessageCircle className="w-5 h-5" />,
             href: '/interactions'
@@ -101,8 +97,8 @@ export function AdminDashboard() {
         setAlerts(newAlerts);
 
         // Activité récente
-        setRecentSouls(recentSoulsSnap.docs.map(d => ({ id: d.id, ...d.data() } as RecentSoul)));
-        setRecentInteractions(recentInterSnap.docs.map(d => ({
+        setRecentSouls(recentSoulsSnapData.map(d => ({ id: d.id, ...d.data() } as RecentSoul)));
+        setRecentInteractions(recentInterSnapData.map(d => ({
           id: d.id,
           type: d.data().type,
           date: d.data().date?.toDate?.() || new Date(d.data().date),

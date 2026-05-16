@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
 import { SMSTemplate } from '../../../types/sms.types';
 import { Search, Pencil, Trash2 } from 'lucide-react';
 import { formatDate } from '../../../utils/dateUtils';
 import EditSMSTemplateModal from './EditSMSTemplateModal';
 import { SMSTemplatePreview } from './SMSTemplatePreview';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 export default function SMSTemplateList() {
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
@@ -15,23 +14,27 @@ export default function SMSTemplateList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'smsTemplates'), orderBy('createdAt', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setTemplates(snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+    const fetchTemplates = async () => {
+      const { data } = await supabase
+        .from('sms_templates').select('*').order('created_at', { ascending: false });
+      setTemplates((data ?? []).map((row: any) => ({
+        id: row.id, title: row.title, content: row.content,
+        category: row.category, status: row.status,
+        createdAt: row.created_at, updatedAt: row.updated_at, createdBy: row.created_by,
       } as SMSTemplate)));
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    fetchTemplates();
+    const channel = supabase.channel('sms-templates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_templates' }, fetchTemplates)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
   }, []);
 
   const handleDelete = async (templateId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce modèle ? Cette action est irréversible.')) {
       try {
-        await deleteDoc(doc(db, 'smsTemplates', templateId));
+        const { error: _deleteErr } = await supabase.from('sms_templates').delete().eq('id', templateId);
         toast.success('Modèle supprimé avec succès');
       } catch (error) {
         console.error('Error deleting template:', error);

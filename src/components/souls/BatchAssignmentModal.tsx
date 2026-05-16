@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, writeBatch, doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, query, where, writeBatch } from '../../lib/firebase';
 import { Soul, ShepherdOption } from '../../types/database.types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -12,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { Users, UserCheck, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface BatchAssignmentModalProps {
   isOpen: boolean;
@@ -33,13 +33,10 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(
-      collection(db, 'souls'),
-      where('status', '==', 'active'),
+    const q = query(collection(db, 'souls'), where('status', '==', 'active'),
       where('shepherdId', '==', null)
-    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onData(q, (snapshot) => {
       const soulsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -58,8 +55,8 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('status', '==', 'active'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const q = query(collection(db, 'users'), where('status', '==', 'active')
+    const unsubscribe = onData(q, (snapshot) => {
       const shepherdData = snapshot.docs
         .map(doc => {
           const data: any = doc.data();

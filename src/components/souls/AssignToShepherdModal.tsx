@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, writeBatch, doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, query, where, writeBatch } from '../../lib/firebase';
 import { ShepherdOption } from '../../types/database.types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { UserCheck, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePermissions } from '../../hooks/usePermissions';
+import { supabase } from '../../lib/supabase';
 
 interface AssignToShepherdModalProps {
   isOpen: boolean;
@@ -33,8 +33,8 @@ export default function AssignToShepherdModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const q = query(collection(db, 'users'), where('status', '==', 'active'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const q = query(collection(db, 'users'), where('status', '==', 'active')
+    const unsubscribe = onData(q, (snapshot) => {
       const shepherdData = snapshot.docs
         .map(doc => {
           const data: any = doc.data();

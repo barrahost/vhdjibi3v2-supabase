@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDateForInput } from '../../utils/dateUtils';
 import { CheckSquare, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function BatchAttendanceForm() {
   const { user } = useAuth();
@@ -20,20 +20,17 @@ export default function BatchAttendanceForm() {
 
       try {
         // Récupérer l'ID du berger depuis la collection users
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
           where('status', '==', 'active')
-        );
-        const userDoc = await getDocs(userQuery);
+        const { data: userDoc } = await userQuery;
         
-        if (userDoc.empty) {
+        if (userDocData.empty) {
           toast.error('Utilisateur non trouvé');
           return;
         }
 
         // Vérifier si l'utilisateur a un profil berger actif
-        const userData = userDoc.docs[0].data();
+        const userData = userDocData.docs[0].data();
         const hasShepherdProfile = userData.businessProfiles?.some(
           (profile: any) => profile.type === 'shepherd' && profile.isActive
         ) || userData.role === 'shepherd' || userData.role === 'intern';
@@ -43,18 +40,15 @@ export default function BatchAttendanceForm() {
           return;
         }
 
-        const currentShepherdId = userDoc.docs[0].id;
+        const currentShepherdId = userDocData.docs[0].id;
         setShepherdId(currentShepherdId);
 
         // Récupérer les âmes assignées
-        const soulsQuery = query(
-          collection(db, 'souls'),
-          where('shepherdId', '==', currentShepherdId),
+        const soulsQuery = query(collection(db, 'souls'), where('shepherdId', '==', currentShepherdId),
           where('status', '==', 'active')
-        );
-        const soulsSnapshot = await getDocs(soulsQuery);
+        const { data: soulsData } = await soulsQuery;
         
-        setSouls(soulsSnapshot.docs.map(doc => ({
+        setSouls(soulsData.map(doc => ({
           id: doc.id,
           fullName: doc.data().fullName,
           present: false,
@@ -90,7 +84,7 @@ export default function BatchAttendanceForm() {
       const batch = [];
 
       for (const soul of selectedSouls) {
-        batch.push(addDoc(collection(db, 'attendances'), {
+        batch.push(supabase.from('attendances').insert({
           soulId: soul.id,
           shepherdId,
           date: selectedDate,

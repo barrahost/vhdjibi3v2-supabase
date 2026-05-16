@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface Department {
   id: string;
@@ -47,25 +46,30 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
 
       // Vérifier si le nom existe déjà (sauf pour le même département)
       if (formData.name.trim() !== department.name) {
-        const nameQuery = query(
-          collection(db, 'departments'),
-          where('name', '==', formData.name.trim())
-        );
-        const nameSnapshot = await getDocs(nameQuery);
+        const { data: nameData } = await supabase
+          .from('departments')
+          .select('id')
+          .eq('name', formData.name.trim())
+          .neq('id', department.id)
+          .limit(1);
         
-        if (!nameSnapshot.empty) {
+        if (nameData && nameData.length > 0) {
           toast.error('Un département avec ce nom existe déjà');
           return;
         }
       }
 
-      const departmentRef = doc(db, 'departments', department.id);
-      await updateDoc(departmentRef, {
-        ...formData,
-        name: formData.name.trim(),
-        leader: formData.leader.trim(),
-        updatedAt: new Date()
-      });
+      const { error: updateErr } = await supabase
+        .from('departments')
+        .update({
+          name: formData.name.trim(),
+          description: formData.description,
+          leader: formData.leader.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', department.id);
+      
+      if (updateErr) throw updateErr;
       
       toast.success('Département modifié avec succès');
       onClose();

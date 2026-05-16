@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut, Bell } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ProfileSwitcher } from './ProfileSwitcher';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export function Header() {
   const { user, userRole, activeRole, logout } = useAuth();
@@ -21,29 +21,23 @@ export function Header() {
 
       try {
         // Chercher dans la collection users
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid)
-        );
-        const userSnapshot = await getDocs(userQuery);
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
+        const { data: userData } = await userQuery;
 
-        if (!userSnapshot.empty) {
-          const userData = userSnapshot.docs[0].data();
-          setUserFullName(userSnapshot.docs[0].data().fullName);
+        if (!userData.empty) {
+          const userData = userData?.[0];
+          setUserFullName(userData?.[0].fullName);
           setUserPhotoURL(userData.photoURL || null);
           return;
         }
 
         // Si non trouvé, chercher dans admins
-        const adminQuery = query(
-          collection(db, 'admins'),
-          where('uid', '==', user.uid)
-        );
-        const adminSnapshot = await getDocs(adminQuery);
+        const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid)
+        const { data: adminData } = await adminQuery;
 
-        if (!adminSnapshot.empty) {
-          const userData = adminSnapshot.docs[0].data();
-          setUserFullName(adminSnapshot.docs[0].data().fullName);
+        if (!adminData.empty) {
+          const userData = adminData?.[0];
+          setUserFullName(adminData?.[0].fullName);
           setUserPhotoURL(userData.photoURL || null);
         }
       } catch (error) {

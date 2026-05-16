@@ -1,7 +1,7 @@
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { BusinessProfile } from '../types/businessProfile.types';
+import { collection, db, query, where } from '../lib/firebase';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 
 /**
  * Service de synchronisation automatique des profils business
@@ -26,20 +26,17 @@ export class AutomaticSyncService {
 
     try {
       // Trouver l'utilisateur correspondant
-      const userQuery = query(
-        collection(db, 'users'),
-        where('email', '==', servantData.email)
-      );
+      const userQuery = query(collection(db, 'users'), where('email', '==', servantData.email)
       
-      const userSnapshot = await getDocs(userQuery);
+      const { data: userData } = await userQuery;
       
-      if (userSnapshot.empty) {
+      if (userData.empty) {
         console.log(`Aucun utilisateur trouvé pour ${servantData.email}, synchronisation ignorée`);
         return;
       }
 
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
+      const userDoc = userData[0];
+      const userData = userDocData;
 
       // Vérifier si l'utilisateur a déjà les bons profils
       const hasProperProfiles = userData.businessProfiles && 
@@ -64,7 +61,7 @@ export class AutomaticSyncService {
         }
       ];
 
-      await updateDoc(doc(db, 'users', userDoc.id), {
+      const { error: _updateErr } = await supabase.from('users').update({
         businessProfiles,
         role: 'department_leader'
       });
@@ -109,20 +106,17 @@ export class AutomaticSyncService {
 
     try {
       // Trouver l'utilisateur
-      const userQuery = query(
-        collection(db, 'users'),
-        where('email', '==', emailToUse)
-      );
+      const userQuery = query(collection(db, 'users'), where('email', '==', emailToUse)
       
-      const userSnapshot = await getDocs(userQuery);
+      const { data: userData } = await userQuery;
       
-      if (userSnapshot.empty) {
+      if (userData.empty) {
         console.log(`Aucun utilisateur trouvé pour ${emailToUse}`);
         return;
       }
 
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
+      const userDoc = userData[0];
+      const userData = userDocData;
 
       if (isNowHead) {
         // Promotion: ajouter les profils department_leader et shepherd
@@ -138,7 +132,7 @@ export class AutomaticSyncService {
           }
         ];
 
-        await updateDoc(doc(db, 'users', userDoc.id), {
+        const { error: _updateErr } = await supabase.from('users').update({
           businessProfiles,
           role: 'department_leader'
         });
@@ -161,7 +155,7 @@ export class AutomaticSyncService {
           newRole = 'adn';
         }
 
-        await updateDoc(doc(db, 'users', userDoc.id), {
+        const { error: _updateErr } = await supabase.from('users').update({
           businessProfiles: filteredProfiles,
           role: newRole
         });
@@ -193,19 +187,16 @@ export class AutomaticSyncService {
 
     try {
       // Trouver l'utilisateur
-      const userQuery = query(
-        collection(db, 'users'),
-        where('email', '==', servantData.email)
-      );
+      const userQuery = query(collection(db, 'users'), where('email', '==', servantData.email)
       
-      const userSnapshot = await getDocs(userQuery);
+      const { data: userData } = await userQuery;
       
-      if (userSnapshot.empty) {
+      if (userData.empty) {
         return;
       }
 
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
+      const userDoc = userData[0];
+      const userData = userDocData;
 
       // Retirer le profil department_leader
       const existingProfiles = userData.businessProfiles || [];
@@ -221,7 +212,7 @@ export class AutomaticSyncService {
         newRole = 'adn';
       }
 
-      await updateDoc(doc(db, 'users', userDoc.id), {
+      const { error: _updateErr } = await supabase.from('users').update({
         businessProfiles: filteredProfiles,
         role: newRole
       });

@@ -1,7 +1,7 @@
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { BusinessProfile } from '../../types/businessProfile.types';
+import { collection, db, query, where } from '../../lib/firebase';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export class BusinessProfileMigration {
   /**
@@ -16,17 +16,14 @@ export class BusinessProfileMigration {
     
     try {
       // Find all users with department_leader role
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('role', '==', 'department_leader')
-      );
+      const usersQuery = query(collection(db, 'users'), where('role', '==', 'department_leader')
       
-      const snapshot = await getDocs(usersQuery);
+      const { data: snapshot } = await usersQuery;
       console.log(`Found ${snapshot.size} department leaders to migrate`);
       
       for (const userDoc of snapshot.docs) {
         try {
-          const userData = userDoc.data();
+          const userData = userDocData;
           
           // Skip if already has business profiles
           if (userData.businessProfiles && userData.businessProfiles.length > 0) {
@@ -46,7 +43,7 @@ export class BusinessProfileMigration {
             }
           ];
           
-          await updateDoc(doc(db, 'users', userDoc.id), {
+          const { error: _updateErr } = await supabase.from('users').update({
             businessProfiles,
             // Keep the old role for backward compatibility
             role: 'department_leader'
@@ -56,7 +53,7 @@ export class BusinessProfileMigration {
           console.log(`Migrated user: ${userData.fullName}`);
           
         } catch (error) {
-          const errorMsg = `Failed to migrate user ${userDoc.id}: ${error}`;
+          const errorMsg = `Failed to migrate user ${userDocData.id}: ${error}`;
           console.error(errorMsg);
           results.errors.push(errorMsg);
         }
@@ -79,7 +76,7 @@ export class BusinessProfileMigration {
     profiles: BusinessProfile[]
   ): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', userId), {
+      const { error: _updateErr } = await supabase.from('users').update({
         businessProfiles: profiles
       });
       

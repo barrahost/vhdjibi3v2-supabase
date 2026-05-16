@@ -1,18 +1,14 @@
-import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 /**
  * Service for password operations.
  *
- * The app uses a custom Firestore-based auth system: `AuthContext.login`
+ * The app uses a custom Supabase-based auth system: `AuthContext.login`
  * validates the typed password against the `password` field on each user
- * document. We therefore update that field directly from the client and
- * bypass the Firebase Cloud Function (which is not auto-deployed here).
+ * document. We therefore update that field directly from the client.
  *
- * IMPORTANT: when possible, callers should pass the Firestore document id
- * (`docId`) so that we update the EXACT same document that login reads.
- * Searching by `uid` alone can miss the right document when the `uid`
- * field is missing, was generated synthetically, or when duplicates exist.
+ * IMPORTANT: when possible, callers should pass the document id (`docId`)
+ * so that we update the EXACT same document that login reads.
  */
 export class CloudFunctionsService {
   static async resetUserPassword(
@@ -65,38 +61,50 @@ export class CloudFunctionsService {
     let collectionName: 'users' | 'admins' = 'users';
     let targetData: any = null;
 
-    // Strategy 1: direct lookup by docId (most reliable — matches login lookup)
+    // Strategy 1: direct lookup by docId
     if (docId) {
-      const usersDoc = await getDoc(doc(db, 'users', docId));
-      if (usersDoc.exists()) {
-        resolvedDocId = usersDoc.id;
-        targetData = usersDoc.data();
+      const { data: usersRow } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', docId)
+        .single();
+      if (usersRow) {
+        resolvedDocId = usersRow.id;
+        targetData = usersRow;
       } else {
-        const adminsDoc = await getDoc(doc(db, 'admins', docId));
-        if (adminsDoc.exists()) {
-          resolvedDocId = adminsDoc.id;
+        const { data: adminsRow } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('id', docId)
+          .single();
+        if (adminsRow) {
+          resolvedDocId = adminsRow.id;
           collectionName = 'admins';
-          targetData = adminsDoc.data();
+          targetData = adminsRow;
         }
       }
     }
 
     // Strategy 2: fallback — lookup by uid field
     if (!resolvedDocId && uid) {
-      const usersSnap = await getDocs(
-        query(collection(db, 'users'), where('uid', '==', uid))
-      );
-      if (!usersSnap.empty) {
-        resolvedDocId = usersSnap.docs[0].id;
-        targetData = usersSnap.docs[0].data();
+      const { data: usersRows } = await supabase
+        .from('users')
+        .select('*')
+        .eq('uid', uid)
+        .limit(1);
+      if (usersRows && usersRows.length > 0) {
+        resolvedDocId = usersRows[0].id;
+        targetData = usersRows[0];
       } else {
-        const adminsSnap = await getDocs(
-          query(collection(db, 'admins'), where('uid', '==', uid))
-        );
-        if (!adminsSnap.empty) {
-          resolvedDocId = adminsSnap.docs[0].id;
+        const { data: adminsRows } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('uid', uid)
+          .limit(1);
+        if (adminsRows && adminsRows.length > 0) {
+          resolvedDocId = adminsRows[0].id;
           collectionName = 'admins';
-          targetData = adminsSnap.docs[0].data();
+          targetData = adminsRows[0];
         }
       }
     }
@@ -116,10 +124,12 @@ export class CloudFunctionsService {
       hadPreviousPassword: !!targetData.password,
     });
 
-    await updateDoc(doc(db, collectionName, resolvedDocId), {
-      password: newPassword,
-      updatedAt: new Date(),
-    });
+    const { error } = await supabase
+      .from(collectionName)
+      .update({ password: newPassword, updated_at: new Date().toISOString() })
+      .eq('id', resolvedDocId);
+
+    if (error) throw error;
 
     return { success: true };
   }

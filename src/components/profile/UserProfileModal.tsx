@@ -4,13 +4,12 @@ import { User, Mail, Phone, Calendar, Shield, Save, X, Camera, Navigation, Alert
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { StorageService } from '../../services/storage.service';
-import { db } from '../../lib/firebase'; 
+import { supabase } from '../../lib/supabase';
+ 
 import { formatDate } from '../../utils/dateUtils';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import toast from 'react-hot-toast';
-import { getDoc } from 'firebase/firestore';
 import SelfPasswordResetModal from './SelfPasswordResetModal';
 
 interface UserData {
@@ -52,30 +51,30 @@ export function UserProfileModal() {
       try {
         setLoading(true);
         // Chercher dans la collection users
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid)
-        );
-        const userSnapshot = await getDocs(userQuery);
+        const { data: usersRows } = await supabase
+          .from('users')
+          .select('*')
+          .eq('uid', user.uid)
+          .limit(1);
 
-        if (!userSnapshot.empty) {
-          const data = userSnapshot.docs[0].data();
-          const userData = {
-            id: userSnapshot.docs[0].id,
-            fullName: data.fullName,
+        if (usersRows && usersRows.length > 0) {
+          const data = usersRows[0];
+          const loaded: UserData = {
+            id: data.id,
+            fullName: data.full_name,
             phone: data.phone?.replace('+225', '') || '',
             email: data.email,
             location: data.location,
-            photoURL: data.photoURL,
-            createdAt: data.createdAt?.toDate(),
-            lastLoginAt: data.lastLoginAt?.toDate(),
+            photoURL: data.photo_url,
+            createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+            lastLoginAt: data.last_login_at ? new Date(data.last_login_at) : undefined,
             uid: user.uid
           };
-          setUserData(userData);
+          setUserData(loaded);
           setFormData({
-            fullName: userData.fullName,
-            phone: userData.phone,
-            location: userData.location || '',
+            fullName: loaded.fullName,
+            phone: loaded.phone,
+            location: loaded.location || '',
             coordinates: data.coordinates,
             useGeolocation: !!data.coordinates,
             photo: null
@@ -84,30 +83,30 @@ export function UserProfileModal() {
         }
 
         // Si non trouvé, chercher dans admins
-        const adminQuery = query(
-          collection(db, 'admins'),
-          where('uid', '==', user.uid)
-        );
-        const adminSnapshot = await getDocs(adminQuery);
+        const { data: adminRows } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('uid', user.uid)
+          .limit(1);
 
-        if (!adminSnapshot.empty) {
-          const data = adminSnapshot.docs[0].data();
-          const userData = {
-            id: adminSnapshot.docs[0].id,
-            fullName: data.fullName,
+        if (adminRows && adminRows.length > 0) {
+          const data = adminRows[0];
+          const loaded: UserData = {
+            id: data.id,
+            fullName: data.full_name,
             phone: data.phone?.replace('+225', '') || '',
             email: data.email,
             location: data.location,
-            photoURL: data.photoURL,
-            createdAt: data.createdAt?.toDate(),
-            lastLoginAt: data.lastLoginAt?.toDate(),
+            photoURL: data.photo_url,
+            createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+            lastLoginAt: data.last_login_at ? new Date(data.last_login_at) : undefined,
             uid: user.uid
           };
-          setUserData(userData);
+          setUserData(loaded);
           setFormData({
-            fullName: userData.fullName,
-            phone: userData.phone,
-            location: userData.location || '',
+            fullName: loaded.fullName,
+            phone: loaded.phone,
+            location: loaded.location || '',
             coordinates: data.coordinates,
             useGeolocation: !!data.coordinates,
             photo: null
@@ -250,28 +249,19 @@ export function UserProfileModal() {
 
       // Vérifier si le numéro existe déjà
       try {
-        // Vérifier dans la collection users
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('phone', '==', phoneValidation.formattedNumber)
-        );
-        const usersSnapshot = await getDocs(usersQuery);
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, uid')
+          .eq('phone', phoneValidation.formattedNumber);
         
-        // Vérifier dans la collection admins
-        const adminsQuery = query(
-          collection(db, 'admins'),
-          where('phone', '==', phoneValidation.formattedNumber)
-        );
-        const adminsSnapshot = await getDocs(adminsQuery);
+        const { data: adminsData } = await supabase
+          .from('admins')
+          .select('id, uid')
+          .eq('phone', phoneValidation.formattedNumber);
         
-        // Vérifier si le numéro existe déjà (sauf pour l'utilisateur actuel)
-        const existingUser = [...usersSnapshot.docs, ...adminsSnapshot.docs]
-          .find(doc => {
-            const currentUser = localStorage.getItem('user');
-            if (!currentUser) return true;
-            const userData = JSON.parse(currentUser);
-            return doc.data().uid !== userData.uid;
-          });
+        const currentUid = user?.uid;
+        const existingUser = [...(usersData ?? []), ...(adminsData ?? [])]
+          .find(row => row.uid !== currentUid);
         
         if (existingUser) {
           toast.error('Ce numéro de téléphone est déjà utilisé');
@@ -283,26 +273,35 @@ export function UserProfileModal() {
         return;
       }
 
-      // Mise à jour dans Firestore
-      const docRef = doc(db, userRole === 'super_admin' ? 'admins' : 'users', userData.id);
+      // Mise à jour dans Supabase
+      const _table = userRole === 'super_admin' ? 'admins' : 'users';
       
       // Vérifier si le document existe avant de le mettre à jour
-      const docSnap = await getDoc(docRef);
+      const { data: existingDoc } = await supabase
+        .from(_table)
+        .select('id')
+        .eq('id', userData.id)
+        .single();
       
-      if (!docSnap.exists()) {
+      if (!existingDoc) {
         toast.error("Utilisateur non trouvé dans la base de données");
         setIsSubmitting(false);
         return;
       }
       
-      await updateDoc(docRef, {
-        fullName: formData.fullName.trim(),
-        phone: phoneValidation.formattedNumber,
-        location: formData.location.trim(),
-        coordinates: formData.useGeolocation ? formData.coordinates : null,
-        photoURL,
-        updatedAt: new Date()
-      });
+      const { error: updateErr } = await supabase
+        .from(_table)
+        .update({
+          full_name: formData.fullName.trim(),
+          phone: phoneValidation.formattedNumber,
+          location: formData.location.trim(),
+          coordinates: formData.useGeolocation ? formData.coordinates : null,
+          photo_url: photoURL,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userData.id);
+      
+      if (updateErr) throw updateErr;
 
       // Mettre à jour les données locales
       setUserData(prev => prev ? {

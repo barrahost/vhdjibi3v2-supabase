@@ -1,5 +1,5 @@
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+
+import { collection, db, query, where } from '../lib/firebase';import { supabase } from '../lib/supabase';
 
 interface UserRole {
   isAdmin: boolean;
@@ -11,12 +11,9 @@ interface UserRole {
 export async function getUserRole(uid: string): Promise<UserRole> {
   try {
     // Vérifier dans la collection users
-    const userQuery = query(
-      collection(db, 'users'),
-      where('uid', '==', uid),
+    const userQuery = query(collection(db, 'users'), where('uid', '==', uid),
       where('status', '==', 'active')
-    );
-    const userDocs = await getDocs(userQuery);
+    const { data: userDocs } = await userQuery;
     
     let isAdmin = false;
     let isShepherd = false;
@@ -32,12 +29,9 @@ export async function getUserRole(uid: string): Promise<UserRole> {
 
     // Check if user is a super admin
     if (!isAdmin) {
-      const adminQuery = query(
-        collection(db, 'admins'),
-        where('uid', '==', uid),
+      const adminQuery = query(collection(db, 'admins'), where('uid', '==', uid),
         where('role', '==', 'super_admin')
-      );
-      const adminDocs = await getDocs(adminQuery);
+      const { data: adminDocs } = await adminQuery;
       
       if (!adminDocs.empty) {
         isAdmin = true;

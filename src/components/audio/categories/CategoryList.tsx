@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, onData, orderBy, query } from '../../../lib/firebase';
 import { Search, Pencil, Trash2 } from 'lucide-react';
 import { EditCategoryModal } from './EditCategoryModal';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface Category {
   id: string;
@@ -21,9 +21,9 @@ export function CategoryList() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'audio_categories'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'audio_categories'), orderBy('createdAt', 'desc')
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onData(q, (snapshot) => {
       const categoriesData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -45,7 +45,7 @@ export function CategoryList() {
   const handleDelete = async (category: Category) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
       try {
-        await deleteDoc(doc(db, 'audio_categories', category.id));
+        const { error: _deleteErr } = await supabase.from('audio_categories').delete().eq('id', category.id);
         toast.success('Catégorie supprimée avec succès');
       } catch (error) {
         console.error('Error deleting category:', error);

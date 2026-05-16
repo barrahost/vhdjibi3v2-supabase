@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, db, query, where } from '../../lib/firebase';
 import { Send, X, Search } from 'lucide-react';
-import { db } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate, SMSRecipient, SMS_VARIABLES } from '../../types/sms.types';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface SMSFormProps {
   assignedSouls: SMSRecipient[];
@@ -30,14 +30,11 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
       
       try {
         // Get user info from Firestore
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid)
-        );
-        const userSnapshot = await getDocs(userQuery);
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
+        const { data: userData } = await userQuery;
         
-        if (!userSnapshot.empty) {
-          const userData = userSnapshot.docs[0].data();
+        if (!userData.empty) {
+          const userData = userData?.[0];
           setUserInfo({
             fullName: userData.fullName || '',
             phone: userData.phone || ''

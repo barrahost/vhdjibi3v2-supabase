@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
+import { collection, db, doc, writeBatch } from '../../lib/firebase';
 import * as XLSX from 'xlsx';
-import { writeBatch, doc, collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Upload, AlertTriangle, CheckCircle2, Loader2, UserX, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,6 +12,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser, isADNUser } from '../../utils/roleHelpers';
 import EvangelistSelect from './EvangelistSelect';
+import { supabase } from '../../lib/supabase';
 
 interface EvangelistOption {
   id: string;
@@ -176,7 +176,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
   useEffect(() => {
     const load = async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'users'), where('status', '==', 'active')));
+        const snap = await supabase.from('users').select('*').eq('status', 'active').then(r=>r);
         const data = snap.docs
           .map(d => {
             const u: any = d.data();
@@ -204,7 +204,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
     const checkDB = async () => {
       setCheckingDuplicates(true);
       try {
-        const snap = await getDocs(collection(db, 'evangelized_souls'));
+        const snap = await supabase.from('evangelized_souls').select('*');
         const existingPhones = new Set<string>();
         const existingNames = new Set<string>();
         snap.forEach(d => {

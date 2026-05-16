@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
 import { Modal } from '../ui/Modal';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
@@ -8,6 +7,7 @@ import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { useDepartments } from '../../hooks/useDepartments';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface EditServantModalProps {
   servant: Servant;
@@ -71,13 +71,10 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si le numéro existe déjà (sauf pour le même serviteur)
       if (phoneValidation.formattedNumber !== servant.phone) {
-        const phoneQuery = query(
-          collection(db, 'servants'),
-          where('phone', '==', phoneValidation.formattedNumber)
-        );
-        const phoneSnapshot = await getDocs(phoneQuery);
+        const phoneQuery = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber)
+        const { data: phoneData } = await phoneQuery;
         
-        if (!phoneSnapshot.empty) {
+        if (!phoneData.empty) {
           toast.error('Ce numéro de téléphone est déjà utilisé');
           return;
         }
@@ -85,13 +82,10 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si l'email existe déjà (sauf pour le même serviteur)
       if (formData.email && formData.email !== servant.email) {
-        const emailQuery = query(
-          collection(db, 'servants'),
-          where('email', '==', formData.email.trim())
-        );
-        const emailSnapshot = await getDocs(emailQuery);
+        const emailQuery = query(collection(db, 'servants'), where('email', '==', formData.email.trim()
+        const { data: emailData } = await emailQuery;
         
-        if (!emailSnapshot.empty) {
+        if (!emailData.empty) {
           toast.error('Cet email est déjà utilisé');
           return;
         }
@@ -99,15 +93,12 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Si le département a changé et que c'est un responsable, vérifier qu'il n'y a pas déjà un responsable
       if (formData.isHead && formData.departmentId !== servant.departmentId) {
-        const headQuery = query(
-          collection(db, 'servants'),
-          where('departmentId', '==', formData.departmentId),
+        const headQuery = query(collection(db, 'servants'), where('departmentId', '==', formData.departmentId),
           where('isHead', '==', true),
           where('status', '==', 'active')
-        );
-        const headSnapshot = await getDocs(headQuery);
+        const { data: headData } = await headQuery;
         
-        if (!headSnapshot.empty) {
+        if (!headData.empty) {
           toast.error('Ce département a déjà un responsable');
           return;
         }
@@ -120,33 +111,31 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Si le serviteur devient responsable
       if (formData.isHead && !servant.isHead) {
-        const headQuery = query(
-          collection(db, 'servants'),
-          where('departmentId', '==', formData.departmentId),
+        const headQuery = query(collection(db, 'servants'), where('departmentId', '==', formData.departmentId),
           where('isHead', '==', true),
           where('status', '==', 'active')
-        );
-        const headSnapshot = await getDocs(headQuery);
+        const { data: headData } = await headQuery;
         
-        if (!headSnapshot.empty) {
+        if (!headData.empty) {
           toast.error('Ce département a déjà un responsable');
           return;
         }
       }
 
       // Mise à jour dans Firestore
-      const servantRef = doc(db, 'servants', servant.id);
-      await updateDoc(servantRef, {
-        fullName: formData.fullName.trim(),
+      // Supabase: use id directly: const servantRefId = servant.id; // table: servants
+      const { error: updateErr } = await supabase.from('servants').update({
+        full_name: formData.fullName.trim(),
         nickname: formData.nickname.trim() || null,
         gender: formData.gender,
         phone: phoneValidation.formattedNumber,
         email: formData.email.trim() || null,
-        departmentId: formData.departmentId,
-        isHead: formData.isHead,
+        department_id: formData.departmentId,
+        is_head: formData.isHead,
         status: formData.status,
-        updatedAt: new Date()
-      });
+        updated_at: new Date().toISOString(),
+      }).eq('id', servant.id);
+      if (updateErr) throw updateErr;
 
       // Synchroniser les profils si le statut isHead a changé
       await AutomaticSyncService.syncOnServantUpdate(

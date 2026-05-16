@@ -1,6 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
@@ -11,6 +9,7 @@ import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface ImportServantsModalProps {
   isOpen: boolean;
@@ -80,17 +79,16 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
       setLoading(true);
       try {
         // Existing servants in this department to flag duplicates
-        const existingSnap = await getDocs(
-          query(collection(db, 'servants'), where('departmentId', '==', selectedDept))
-        );
+        const { data: existingServants } = await supabase
+          .from('servants')
+          .select('source_type, source_id, original_soul_id')
+          .eq('department_id', selectedDept);
         const existingSoulIds = new Set<string>();
         const existingUserIds = new Set<string>();
-        existingSnap.docs.forEach(d => {
-          const data: any = d.data();
-          if (data.sourceType === 'soul' && data.sourceId) existingSoulIds.add(data.sourceId);
-          if (data.sourceType === 'user' && data.sourceId) existingUserIds.add(data.sourceId);
-          // Legacy support
-          if (data.originalSoulId) existingSoulIds.add(data.originalSoulId);
+        (existingServants ?? []).forEach((d: any) => {
+          if (d.source_type === 'soul' && d.source_id) existingSoulIds.add(d.source_id);
+          if (d.source_type === 'user' && d.source_id) existingUserIds.add(d.source_id);
+          if (d.original_soul_id) existingSoulIds.add(d.original_soul_id);
         });
 
         const sortByName = <T extends { fullName: string }>(arr: T[]) =>
@@ -99,36 +97,31 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           );
 
         if (tab === 'souls') {
-          // Avoid composite-index requirement: filter on status only, sort client-side
-          const snap = await getDocs(
-            query(collection(db, 'souls'), where('status', '==', 'active'))
-          );
-          const rows: SoulRow[] = snap.docs.map(d => {
-            const data: any = d.data();
-            return {
-              id: d.id,
-              fullName: data.fullName || '',
-              phone: data.phone,
-              gender: data.gender,
-              alreadyServant: existingSoulIds.has(d.id),
-            };
-          });
+          const { data: soulsData } = await supabase
+            .from('souls')
+            .select('id, full_name, phone, gender')
+            .eq('status', 'active');
+          const rows: SoulRow[] = (soulsData ?? []).map((d: any) => ({
+            id: d.id,
+            fullName: d.full_name || '',
+            phone: d.phone,
+            gender: d.gender,
+            alreadyServant: existingSoulIds.has(d.id),
+          }));
           setSouls(sortByName(rows));
         } else {
-          const snap = await getDocs(
-            query(collection(db, 'users'), where('status', '==', 'active'))
-          );
-          const rows: UserRow[] = snap.docs.map(d => {
-            const data: any = d.data();
-            return {
-              id: d.id,
-              fullName: data.fullName || '',
-              phone: data.phone,
-              email: data.email,
-              role: data.role,
-              alreadyServant: existingUserIds.has(d.id),
-            };
-          });
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('id, full_name, phone, email, role')
+            .eq('status', 'active');
+          const rows: UserRow[] = (usersData ?? []).map((d: any) => ({
+            id: d.id,
+            fullName: d.full_name || '',
+            phone: d.phone,
+            email: d.email,
+            role: d.role,
+            alreadyServant: existingUserIds.has(d.id),
+          }));
           setUsers(sortByName(rows));
         }
       } catch (e) {

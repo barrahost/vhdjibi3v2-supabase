@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { collection, query, getDocs } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Soul } from '../../../types/database.types';
 import { TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface WeeklyData {
   week: string;
@@ -20,9 +19,9 @@ export function SoulEvolutionChart() {
     const fetchEvolutionData = async () => {
       try {
         // Récupérer toutes les âmes enregistrées (sans filtre de statut)
-        const soulsQuery = query(collection(db, 'souls'));
-        const soulsSnapshot = await getDocs(soulsQuery);
-        const allSouls = soulsSnapshot.docs.map(doc => ({
+        const soulsQuery = supabase.from('souls').select('*'));
+        const { data: soulsData } = await soulsQuery;
+const allSouls = soulsData.map(doc => ({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate() || new Date()

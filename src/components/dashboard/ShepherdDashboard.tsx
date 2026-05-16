@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, onData, query, where } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
@@ -8,6 +7,7 @@ import { Users, MessageSquare, AlertTriangle, Phone, Sparkles } from 'lucide-rea
 import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export function ShepherdDashboard() {
   const { user } = useAuth();
@@ -24,14 +24,11 @@ export function ShepherdDashboard() {
 
     (async () => {
       try {
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
+        const usersQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
           where('status', '==', 'active')
-        );
-        const userSnapshot = await getDocs(usersQuery);
+        const { data: userData } = await usersQuery;
 
-        if (userSnapshot.empty) {
+        if (userData.empty) {
           if (!cancelled) {
             toast.error('Utilisateur non trouvé');
             setLoading(false);
@@ -39,8 +36,8 @@ export function ShepherdDashboard() {
           return;
         }
 
-        const userData = userSnapshot.docs[0].data();
-        const currentShepherdId = userSnapshot.docs[0].id;
+        const userData = userData?.[0];
+        const currentShepherdId = userData[0].id;
 
         const hasShepherdProfile = userData.businessProfiles?.some(
           (profile: any) => profile.type === 'shepherd'
@@ -74,17 +71,11 @@ export function ShepherdDashboard() {
   useEffect(() => {
     if (!shepherdId) return;
 
-    const soulsQuery = query(
-      collection(db, 'souls'),
-      where('shepherdId', '==', shepherdId),
+    const soulsQuery = query(collection(db, 'souls'), where('shepherdId', '==', shepherdId),
       where('status', '==', 'active')
-    );
-    const interactionsQuery = query(
-      collection(db, 'interactions'),
-      where('shepherdId', '==', shepherdId)
-    );
+    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', shepherdId)
 
-    const soulsUnsub = onSnapshot(
+    const soulsUnsub = onData(
       soulsQuery,
       (snap) => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Soul[];
@@ -98,7 +89,7 @@ export function ShepherdDashboard() {
       }
     );
 
-    const interactionsUnsub = onSnapshot(
+    const interactionsUnsub = onData(
       interactionsQuery,
       (snap) => {
         const data = snap.docs.map(d => ({

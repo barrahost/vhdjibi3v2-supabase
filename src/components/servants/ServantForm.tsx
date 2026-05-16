@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { useDepartments } from '../../hooks/useDepartments';
@@ -8,6 +7,7 @@ import { AutomaticSyncService } from '../../services/automaticSync.service';
 import { ServantService } from '../../services/servant.service';
 import { AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const [formData, setFormData] = useState({
@@ -33,12 +33,9 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     let cancelled = false;
     const check = async () => {
       try {
-        const q = query(
-          collection(db, 'servants'),
-          where('phone', '==', phoneValidation.formattedNumber),
+        const q = query(collection(db, 'servants'), where('phone', '==', phoneValidation.formattedNumber),
           where('status', '==', 'active')
-        );
-        const snap = await getDocs(q);
+        const { data: snap } = await q;
         if (cancelled) return;
         const others = snap.docs
           .map(d => d.data() as any)

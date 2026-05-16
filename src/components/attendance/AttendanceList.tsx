@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Search } from 'lucide-react';
 import { AttendanceTableHeader } from './AttendanceTableHeader';
@@ -8,6 +6,7 @@ import { AttendanceTableRow } from './AttendanceTableRow';
 import EditAttendanceModal from './EditAttendanceModal';
 import { AttendanceRecord, Soul } from '../../types/attendance.types';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function AttendanceList() {
   const { user } = useAuth();
@@ -29,68 +28,101 @@ export default function AttendanceList() {
 
     const loadData = async () => {
       try {
-        // Récupérer l'ID du berger depuis la collection users
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
-          where('status', '==', 'active')
-        );
-        const userDoc = await getDocs(userQuery);
-        
-        if (!userDoc.empty) {
-          // Vérifier si l'utilisateur a un profil berger actif
-          const userData = userDoc.docs[0].data();
-          const hasShepherdProfile = userData.businessProfiles?.some(
-            (profile: any) => profile.type === 'shepherd' && profile.isActive
-          ) || userData.role === 'shepherd' || userData.role === 'intern';
+        // Récupérer le profil berger depuis users
+        const { data: userRows } = await supabase
+          .from('users')
+          .select('id, role, business_profiles')
+          .eq('uid', user.uid)
+          .eq('status', 'active')
+          .limit(1);
 
-          if (!hasShepherdProfile) {
-            toast.error('Accès non autorisé - profil berger requis');
-            setLoading(false);
-            return;
-          }
-
-          const shepherdId = userDoc.docs[0].id;
-
-          // Récupérer les présences
-          const attendancesQuery = query(
-            collection(db, 'attendances'),
-            where('shepherdId', '==', shepherdId),
-            orderBy('date', 'desc')
-          );
-
-          const unsubscribe = onSnapshot(attendancesQuery, async (snapshot) => {
-            const attendancesData: AttendanceRecord[] = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data() as Omit<AttendanceRecord, 'id' | 'date'>,
-              date: doc.data().date.toDate()
-            })) as AttendanceRecord[];
-
-            // Récupérer les informations des âmes
-            const soulsData: Record<string, Soul> = {};
-            for (const attendance of attendancesData) {
-              if (!soulsData[attendance.soulId]) {
-                // Utiliser getDoc au lieu de getDocs car nous cherchons un document spécifique
-                const soulDoc = await getDoc(doc(db, 'souls', attendance.soulId));
-                if (soulDoc.exists()) {
-                  soulsData[attendance.soulId] = {
-                    id: attendance.soulId,
-                    ...soulDoc.data()
-                  } as Soul;
-                }
-              }
-            }
-
-            setSouls(soulsData);
-            setAttendances(attendancesData);
-            setLoading(false);
-          });
-
-          return () => unsubscribe();
-        } else {
+        if (!userRows || userRows.length === 0) {
           toast.error('Berger non trouvé');
           setLoading(false);
+          return;
         }
+
+        const userData = userRows[0];
+        const hasShepherdProfile =
+          userData.business_profiles?.some(
+            (profile: any) => profile.type === 'shepherd' && profile.isActive
+          ) ||
+          userData.role === 'shepherd' ||
+          userData.role === 'intern';
+
+        if (!hasShepherdProfile) {
+          toast.error('Accès non autorisé - profil berger requis');
+          setLoading(false);
+          return;
+        }
+
+        const shepherdId = userData.id;
+
+        // Récupérer les présences
+        const { data: attendancesRows, error: attErr } = await supabase
+          .from('attendances')
+          .select('*')
+          .eq('shepherd_id', shepherdId)
+          .order('date', { ascending: false });
+
+        if (attErr) throw attErr;
+
+        const attendancesData: AttendanceRecord[] = (attendancesRows ?? []).map((doc: any) => ({
+          id: doc.id,
+          soulId: doc.soul_id,
+          shepherdId: doc.shepherd_id,
+          date: doc.date ? new Date(doc.date) : new Date(),
+          present: doc.present,
+          notes: doc.notes,
+        })) as AttendanceRecord[];
+
+        // Récupérer les informations des âmes
+        const soulsData: Record<string, Soul> = {};
+        const soulIds = [...new Set(attendancesData.map(a => a.soulId).filter(Boolean))];
+        if (soulIds.length > 0) {
+          const { data: soulsRows } = await supabase
+            .from('souls')
+            .select('id, full_name, phone, location, gender')
+            .in('id', soulIds);
+          (soulsRows ?? []).forEach((s: any) => {
+            soulsData[s.id] = {
+              id: s.id,
+              fullName: s.full_name,
+              phone: s.phone,
+              location: s.location,
+              gender: s.gender,
+            } as Soul;
+          });
+        }
+
+        setSouls(soulsData);
+        setAttendances(attendancesData);
+        setLoading(false);
+
+        // Real-time subscription for updates
+        const channel = supabase
+          .channel('attendances-list')
+          .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'attendances', filter: `shepherd_id=eq.${shepherdId}` },
+            async () => {
+              const { data: freshRows } = await supabase
+                .from('attendances')
+                .select('*')
+                .eq('shepherd_id', shepherdId)
+                .order('date', { ascending: false });
+              const fresh: AttendanceRecord[] = (freshRows ?? []).map((doc: any) => ({
+                id: doc.id,
+                soulId: doc.soul_id,
+                shepherdId: doc.shepherd_id,
+                date: doc.date ? new Date(doc.date) : new Date(),
+                present: doc.present,
+                notes: doc.notes,
+              })) as AttendanceRecord[];
+              setAttendances(fresh);
+            })
+          .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
       } catch (error) {
         console.error('Error loading attendances:', error);
         toast.error('Erreur lors du chargement des présences');

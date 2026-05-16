@@ -1,8 +1,7 @@
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { User } from '../../types/user.types';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface UserListItemProps {
   user: User;
@@ -13,7 +12,7 @@ export default function UserListItem({ user, onEdit }: UserListItemProps) {
   const handleDelete = async () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
-        await deleteDoc(doc(db, 'users', user.id));
+        const { error: _deleteErr } = await supabase.from('users').delete().eq('id', user.id);
         toast.success('Utilisateur supprimé avec succès');
       } catch (error) {
         console.error('Error deleting user:', error);

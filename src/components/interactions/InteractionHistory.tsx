@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, Timestamp, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { Timestamp, collection, db, doc, onData, orderBy, query, where } from '../../lib/firebase';
 import { Interaction } from '../../types/database.types';
 import { formatDate } from '../../utils/dateUtils';
 import { Phone, Users, MessageSquare, Trash2, MessageCircle, HelpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface InteractionHistoryProps {
   soulId: string;
@@ -30,13 +30,10 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
   const [interactions, setInteractions] = useState<Interaction[]>([]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'interactions'),
-      where('soulId', '==', soulId),
+    const q = query(collection(db, 'interactions'), where('soulId', '==', soulId),
       orderBy('date', 'desc')
-    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onData(q, (snapshot) => {
       setInteractions(snapshot.docs.map(doc => {
         const data = doc.data();
         // Convertir les timestamps Firestore en objets Date
@@ -56,7 +53,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
   const handleDelete = async (interactionId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette interaction ?')) {
       try {
-        await deleteDoc(doc(db, 'interactions', interactionId));
+        const { error: _deleteErr } = await supabase.from('interactions').delete().eq('id', interactionId);
         toast.success('Interaction supprimée avec succès');
       } catch (error) {
         console.error('Error deleting interaction:', error);

@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { PhotoUpload } from '../ui/PhotoUpload';
 import { LocationField } from '../souls/form/LocationField';
@@ -12,6 +10,7 @@ import { BusinessProfile } from '../../types/businessProfile.types';
 import { Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PasswordResetModal from './PasswordResetModal';
+import { supabase } from '../../lib/supabase';
 
 interface EditUserModalProps {
   user: User;
@@ -79,14 +78,15 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
       console.log('Starting user update process');
       
       // Determine which collection to update
-      const docRef = user.fromAdminsCollection 
-        ? doc(db, 'admins', user.id)
-        : doc(db, 'users', user.id);
+      const _table = user.fromAdminsCollection ? 'admins' : 'users';
 
       // Get current user data to ensure we have the latest photoURL
-      const currentUserDoc = await getDoc(docRef);
-      const currentUserData = currentUserDoc.data();
-      let photoURL = currentUserData?.photoURL;
+      const { data: currentUserDoc } = await supabase
+        .from(_table)
+        .select('photo_url')
+        .eq('id', user.id)
+        .single();
+      let photoURL: string | null = currentUserDoc?.photo_url ?? null;
 
       console.log('Current photoURL:', photoURL);
       console.log('Form photo state:', formData.photo === null ? 'explicitly null' : formData.photo ? 'new file' : 'undefined/unchanged');
@@ -156,29 +156,30 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
                           formData.businessProfiles.find(p => p.type === 'shepherd')?.type ||
                           'shepherd';
 
-      // Préparer les données pour la mise à jour
+      // Préparer les données pour la mise à jour (snake_case pour Supabase)
       const updateData: any = {
-        fullName: formData.fullName.trim(),
+        full_name: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,
         phone: phoneValidation.formattedNumber,
-        businessProfiles: formData.businessProfiles,
-        role: primaryRole, // Update the top-level role field for backward compatibility
+        business_profiles: formData.businessProfiles,
+        role: primaryRole,
         status: formData.status,
         location: formData.location?.trim() || null,
         coordinates: formData.useGeolocation ? formData.coordinates : null,
-        updatedAt: new Date()
+        updated_at: new Date().toISOString(),
       };
-      
-      // Only include photoURL in the update if it has changed
+
+      // Only include photo_url in the update if it has changed
       if (formData.photo || userExplicitlyRemovedPhoto) {
-        updateData.photoURL = photoURL;
-        console.log('Including photoURL in update:', photoURL);
+        updateData.photo_url = photoURL;
+        console.log('Including photo_url in update:', photoURL);
       } else {
-        console.log('Not updating photoURL field, keeping existing value');
+        console.log('Not updating photo_url field, keeping existing value');
       }
 
-      // Mise à jour dans Firestore
-      await updateDoc(docRef, updateData);
+      // Mise à jour dans Supabase
+      const { error: _updateErr } = await supabase.from(_table).update(updateData).eq('id', user.id);
+      if (_updateErr) throw _updateErr;
       
       // Log the updated data for debugging
       console.log('Updated user data:', updateData);

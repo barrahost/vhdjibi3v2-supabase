@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { addDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, limit, orderBy, query, where } from '../../lib/firebase';
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function ServiceFamilyForm() {
   const [formData, setFormData] = useState({
@@ -39,28 +39,22 @@ export default function ServiceFamilyForm() {
         return;
       }
 
-      const nameQuery = query(
-        collection(db, 'serviceFamilies'),
-        where('name', '==', formData.name.trim())
-      );
-      const nameSnapshot = await getDocs(nameQuery);
-      if (!nameSnapshot.empty) {
+      const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()
+      const { data: nameData } = await nameQuery;
+      if (!nameData.empty) {
         toast.error('Une famille avec ce nom existe déjà');
         return;
       }
 
-      const orderQuery = query(
-        collection(db, 'serviceFamilies'),
-        orderBy('order', 'desc'),
+      const orderQuery = query(collection(db, 'serviceFamilies'), orderBy('order', 'desc'),
         limit(1)
-      );
-      const orderSnapshot = await getDocs(orderQuery);
-      const lastOrder = orderSnapshot.empty ? 0 : orderSnapshot.docs[0].data().order;
+      const { data: orderData } = await orderQuery;
+const lastOrder = orderData.empty ? 0 : orderData?.[0].order;
 
       // Récupérer le nom du responsable pour le champ legacy `leader`
       const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
 
-      await addDoc(collection(db, 'serviceFamilies'), {
+      const { error: _insertErr } = await supabase.from('serviceFamilies').insert({
         name: formData.name.trim(),
         description: formData.description.trim(),
         leader: leaderUser?.fullName || '', // legacy compat

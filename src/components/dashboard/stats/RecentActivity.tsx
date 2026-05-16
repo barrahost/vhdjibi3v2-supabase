@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, limit, orderBy, query } from '../../../lib/firebase';
 import { formatDate } from '../../../utils/dateUtils';
 import { Soul, Interaction } from '../../../types/database.types';
+import { supabase } from '../../../lib/supabase';
 
 export function RecentActivity() {
   const [recentSouls, setRecentSouls] = useState<Soul[]>([]);
@@ -11,25 +11,19 @@ export function RecentActivity() {
   useEffect(() => {
     const fetchRecentActivity = async () => {
       // Récupérer les âmes récentes
-      const recentSoulsQuery = query(
-        collection(db, 'souls'),
-        orderBy('createdAt', 'desc'),
+      const recentSoulsQuery = query(collection(db, 'souls'), orderBy('createdAt', 'desc'),
         limit(5)
-      );
-      const recentSoulsSnapshot = await getDocs(recentSoulsQuery);
-      const soulsData = recentSoulsSnapshot.docs.map(doc => ({
+      const { data: recentSoulsData } = await recentSoulsQuery;
+const soulsData = recentSoulsData.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Soul[];
 
       // Récupérer les interactions récentes
-      const recentInteractionsQuery = query(
-        collection(db, 'interactions'),
-        orderBy('date', 'desc'),
+      const recentInteractionsQuery = query(collection(db, 'interactions'), orderBy('date', 'desc'),
         limit(5)
-      );
-      const recentInteractionsSnapshot = await getDocs(recentInteractionsQuery);
-      const interactionsData = recentInteractionsSnapshot.docs.map(doc => ({
+      const { data: recentInteractionsData } = await recentInteractionsQuery;
+const interactionsData = recentInteractionsData.map(doc => ({
         id: doc.id,
         ...doc.data(),
         date: doc.data().date.toDate()

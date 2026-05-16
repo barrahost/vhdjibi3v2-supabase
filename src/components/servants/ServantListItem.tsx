@@ -1,8 +1,7 @@
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface ServantListItemProps {
   servant: Servant;
@@ -18,14 +17,14 @@ export default function ServantListItem({ servant, departmentName, departmentNam
         // Si c'est un responsable, vérifier s'il y a des serviteurs dans son département
         if (servant.isHead) {
           // Mettre à jour le statut plutôt que de supprimer
-          await updateDoc(doc(db, 'servants', servant.id), {
+          const { error: _updateErr } = await supabase.from('servants').update({
             status: 'inactive',
             updatedAt: new Date()
           });
           toast.success('Serviteur désactivé avec succès');
         } else {
           // Supprimer le serviteur
-          await deleteDoc(doc(db, 'servants', servant.id));
+          const { error: _deleteErr } = await supabase.from('servants').delete().eq('id', servant.id);
           toast.success('Serviteur supprimé avec succès');
         }
       } catch (error) {

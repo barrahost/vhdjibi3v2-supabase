@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import mapboxgl from 'mapbox-gl';
 import * as GeoJSON from 'geojson';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import type { Soul } from '../../types/database.types';
 import type { User } from '../../types/user.types';
 import { Filter } from 'lucide-react';
@@ -10,6 +9,7 @@ import ShepherdSelect from '../souls/ShepherdSelect';
 import { isShepherdUser } from '../../utils/roleHelpers';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 // Configure Mapbox API key from environment variables
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_API_KEY;
@@ -98,13 +98,10 @@ export function SoulMap({ className = '' }: SoulMapProps) {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
         // pour inclure les bergers multi-casquettes
-        const shepherdsQuery = query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        );
+        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active')
 
-        const shepherdsSnapshot = await getDocs(shepherdsQuery);
-        const shepherdsData = shepherdsSnapshot.docs
+        const { data: shepherdsData } = await shepherdsQuery;
+        const shepherdsData = shepherdsData
           .map(doc => ({ id: doc.id, ...doc.data() } as User))
           .filter(u => isShepherdUser(u));
         setUsers(shepherdsData);
@@ -129,8 +126,8 @@ export function SoulMap({ className = '' }: SoulMapProps) {
           );
         }
 
-        const soulsSnapshot = await getDocs(baseQuery);
-        const soulsData = soulsSnapshot.docs.map(doc => ({
+        const { data: soulsData } = await baseQuery;
+const soulsData = soulsData.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Soul[];

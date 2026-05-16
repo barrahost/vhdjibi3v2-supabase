@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, orderBy, query, writeBatch } from '../../lib/firebase';
 import type { Department } from '../../types/department.types';
 import DepartmentListItem from './DepartmentListItem';
 import EditDepartmentModal from './EditDepartmentModal';
 import { Search, MoveUp, MoveDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function DepartmentList() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -14,9 +14,9 @@ export default function DepartmentList() {
   const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'departments'), orderBy('order', 'asc'));
+    const q = query(collection(db, 'departments'), orderBy('order', 'asc')
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onData(q, (snapshot) => {
       setDepartments(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

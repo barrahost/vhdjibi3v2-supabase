@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, onData, query, where } from '../../../lib/firebase';
 import { Soul } from '../../../types/database.types';
 import { StatCard } from './StatCard';
 import { Heart, BookOpen, Droplets, Users2, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 export function SpiritualStats() {
   const [stats, setStats] = useState({
@@ -21,7 +21,7 @@ export function SpiritualStats() {
   useEffect(() => {
     try {
       // Écouter les changements sur les âmes en temps réel
-      const unsubscribe = onSnapshot(
+      const unsubscribe = onData(
         query(
           collection(db, 'souls'),
           where('status', '==', 'active'),

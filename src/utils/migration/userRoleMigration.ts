@@ -1,7 +1,7 @@
-import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { BusinessProfile } from '../../types/businessProfile.types';
+import { db, doc, limit, writeBatch } from '../../lib/firebase';
 import { UserRoles } from '../../types/user.types';
+import { supabase } from '../../lib/supabase';
 
 export class UserRoleMigration {
   /**
@@ -34,7 +34,7 @@ export class UserRoleMigration {
     try {
       const businessProfiles = this.convertRoleToBusinessProfiles(currentRole);
       
-      await updateDoc(doc(db, 'users', userId), {
+      const { error: _updateErr } = await supabase.from('users').update({
         businessProfiles,
         // Keep the old role for backward compatibility
         role: currentRole
@@ -54,13 +54,13 @@ export class UserRoleMigration {
     const results = { migrated: 0, errors: [] as string[] };
     
     try {
-      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const usersData = await supabase.from('users').select('*');
       const batch = writeBatch(db);
       let batchCount = 0;
 
-      for (const userDoc of usersSnapshot.docs) {
+      for (const userDoc of usersData) {
         try {
-          const userData = userDoc.data();
+          const userData = userDocData;
           
           // Skip if already has business profiles
           if (userData.businessProfiles && userData.businessProfiles.length > 0) {
@@ -69,13 +69,13 @@ export class UserRoleMigration {
 
           // Skip if no role defined
           if (!userData.role) {
-            console.warn(`User ${userDoc.id} has no role, skipping`);
+            console.warn(`User ${userDocData.id} has no role, skipping`);
             continue;
           }
 
           const businessProfiles = this.convertRoleToBusinessProfiles(userData.role);
           
-          batch.update(doc(db, 'users', userDoc.id), {
+          batch.update(doc(db, 'users', userDocData.id), {
             businessProfiles,
             role: userData.role // Keep for backward compatibility
           });
@@ -90,7 +90,7 @@ export class UserRoleMigration {
           }
 
         } catch (error) {
-          const errorMsg = `Failed to migrate user ${userDoc.id}: ${error}`;
+          const errorMsg = `Failed to migrate user ${userDocData.id}: ${error}`;
           console.error(errorMsg);
           results.errors.push(errorMsg);
         }

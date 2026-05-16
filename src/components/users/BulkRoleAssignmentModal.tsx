@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Modal } from '../ui/Modal';
-import { collection, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Users, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface BulkRoleAssignmentModalProps {
   isOpen: boolean;
@@ -47,28 +46,24 @@ export default function BulkRoleAssignmentModal({
     try {
       setIsSubmitting(true);
       
-      // Use writeBatch for atomic operations
-      const batch = writeBatch(db);
       let successCount = 0;
       let errorCount = 0;
+      const now = new Date().toISOString();
 
       // Update each selected user
       for (const userId of selectedUserIds) {
         try {
-          const userRef = doc(db, 'users', userId);
-          batch.update(userRef, {
-            role: selectedRole,
-            updatedAt: new Date()
-          });
+          const { error } = await supabase
+            .from('users')
+            .update({ role: selectedRole, updated_at: now })
+            .eq('id', userId);
+          if (error) throw error;
           successCount++;
         } catch (error) {
-          console.error(`Error preparing update for user ${userId}:`, error);
+          console.error(`Error updating role for user ${userId}:`, error);
           errorCount++;
         }
       }
-
-      // Commit all updates at once
-      await batch.commit();
 
       if (successCount > 0) {
         toast.success(`Rôle assigné avec succès à ${successCount} utilisateur${successCount > 1 ? 's' : ''}`);

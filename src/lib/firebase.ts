@@ -10,6 +10,7 @@ export {
   addDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot,
   writeBatch,
+  onData,
   Timestamp,
   increment,
 } from './firebaseCompat';

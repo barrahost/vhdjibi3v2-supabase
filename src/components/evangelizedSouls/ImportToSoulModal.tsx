@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import ShepherdSelect from '../souls/ShepherdSelect';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
@@ -9,6 +7,7 @@ import { SMSService } from '../../services/sms.service';
 import { EvangelizedSoul } from '../../types/evangelized.types';
 import { Info } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface Props {
   soul: EvangelizedSoul;
@@ -107,10 +106,10 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
         importedFromEvangelistId: soul.evangelistId,
       };
 
-      const docRef = await addDoc(collection(db, 'souls'), soulData);
+      const docRef = const { error: _insertErr } = await supabase.from('souls').insert(soulData);
 
       // Marquer l'âme évangélisée comme importée
-      await updateDoc(doc(db, 'evangelized_souls', soul.id), {
+      const { error: _updateErr } = await supabase.from('evangelized_souls').update({
         status: 'imported',
         importedToSoulId: docRef.id,
         importedAt: new Date(),

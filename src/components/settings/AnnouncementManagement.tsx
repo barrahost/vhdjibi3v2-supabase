@@ -1,13 +1,40 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Announcement, AnnouncementLog } from '../../types/announcement.types';
 import { Megaphone, History, Save, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 const MAX_CONTENT_LENGTH = 500;
+
+function rowToAnnouncement(row: any): Announcement {
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    isActive: row.is_active,
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
+  } as Announcement;
+}
+
+function rowToLog(row: any): AnnouncementLog {
+  return {
+    id: row.id,
+    announcementId: row.announcement_id,
+    action: row.action,
+    previousStatus: row.previous_status,
+    newStatus: row.new_status,
+    previousContent: row.previous_content,
+    newContent: row.new_content,
+    timestamp: row.timestamp ? new Date(row.timestamp) : new Date(),
+    userId: row.user_id,
+    userFullName: row.user_full_name,
+  } as AnnouncementLog;
+}
 
 export default function AnnouncementManagement() {
   const { user, userRole } = useAuth();
@@ -23,115 +50,108 @@ export default function AnnouncementManagement() {
       toast.error('Accès non autorisé');
       return;
     }
-    
+
     const loadInitialData = async () => {
       try {
-        // Vérifier si une annonce existe déjà
-        const announcementsRef = collection(db, 'announcements');
-        const defaultDoc = doc(announcementsRef, 'default');
-        try {
-          const snapshot = await getDoc(defaultDoc);
-          
-          if (!snapshot.exists()) {
-          // Créer l'annonce par défaut si elle n'existe pas
+        // Load or create the default announcement
+        const { data: existing } = await supabase
+          .from('announcements')
+          .select('*')
+          .eq('id', 'default')
+          .single();
+
+        if (existing) {
+          const ann = rowToAnnouncement(existing);
+          setAnnouncement(ann);
+          setEditedContent(ann.content || '');
+        } else {
+          // Create default announcement
           const defaultAnnouncement = {
             id: 'default',
             title: 'Annonce par défaut',
             content: 'Bienvenue sur CHAD3',
-            isActive: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            createdBy: user?.uid || 'system',
-            updatedBy: user?.uid || 'system'
+            is_active: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            created_by: user?.uid || 'system',
+            updated_by: user?.uid || 'system',
           };
-
-          await setDoc(defaultDoc, defaultAnnouncement);
-          setAnnouncement(defaultAnnouncement);
-          setEditedContent(defaultAnnouncement.content);
-          } else {
-          const data = snapshot.data() as Announcement;
-          setAnnouncement({ ...data, id: snapshot.id });
-          setEditedContent(data.content || '');
+          const { error } = await supabase.from('announcements').upsert(defaultAnnouncement, { onConflict: 'id' });
+          if (!error) {
+            setAnnouncement(rowToAnnouncement(defaultAnnouncement));
+            setEditedContent(defaultAnnouncement.content);
           }
-        } catch (error) {
-          console.error('Error loading announcement:', error);
-          // Créer l'annonce par défaut en cas d'erreur
-          const defaultAnnouncement = {
-            id: 'default',
-            title: 'Annonce par défaut',
-            content: 'Bienvenue sur CHAD3',
-            isActive: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            createdBy: user?.uid || 'system',
-            updatedBy: user?.uid || 'system'
-          };
-
-          await setDoc(defaultDoc, defaultAnnouncement);
-          setAnnouncement(defaultAnnouncement);
-          setEditedContent(defaultAnnouncement.content);
         }
         setLoading(false);
       } catch (error) {
         console.error('Error loading announcement:', error);
-        toast.error('Erreur lors du chargement de l\'annonce');
+        toast.error("Erreur lors du chargement de l'annonce");
         setLoading(false);
       }
     };
 
     loadInitialData();
 
-    // Charger les logs
-    const unsubscribeLogs = onSnapshot(
-      query(collection(db, 'announcementLogs'), orderBy('timestamp', 'desc')),
-      (snapshot) => {
-        setLogs(snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as AnnouncementLog[]);
-      }
-    );
+    // Real-time logs subscription
+    const channel = supabase
+      .channel('announcement-logs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcement_logs' }, async () => {
+        const { data } = await supabase
+          .from('announcement_logs')
+          .select('*')
+          .order('timestamp', { ascending: false });
+        setLogs((data ?? []).map(rowToLog));
+      })
+      .subscribe();
+
+    // Initial load of logs
+    supabase
+      .from('announcement_logs')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .then(({ data }) => setLogs((data ?? []).map(rowToLog)));
 
     return () => {
-      unsubscribeLogs();
+      supabase.removeChannel(channel);
     };
   }, [userRole]);
+
+  const getUserFullName = async (): Promise<string> => {
+    if (!user?.uid) return 'Unknown';
+    const { data } = await supabase
+      .from('admins')
+      .select('full_name')
+      .eq('id', user.uid)
+      .single();
+    return data?.full_name || 'Unknown';
+  };
 
   const handleToggle = async () => {
     if (!announcement || !user) return;
 
-    const docRef = doc(db, 'announcements', 'default');
-
     try {
       const newStatus = !announcement.isActive;
+      const now = new Date().toISOString();
 
-      // Mettre à jour le statut de l'annonce
-      await updateDoc(docRef, {
-        isActive: newStatus,
-        updatedAt: new Date(),
-        updatedBy: user.uid
-      });
+      const { error } = await supabase
+        .from('announcements')
+        .update({ is_active: newStatus, updated_at: now, updated_by: user.uid })
+        .eq('id', 'default');
+      if (error) throw error;
 
-      // Mettre à jour l'état local
-      setAnnouncement(prev => prev ? {
-        ...prev,
-        isActive: newStatus,
-        updatedAt: new Date(),
-        updatedBy: user.uid
-      } : null);
+      setAnnouncement(prev => prev ? { ...prev, isActive: newStatus, updatedAt: new Date(), updatedBy: user.uid } : null);
 
-      // Créer un log
-      const logData = {
-        announcementId: announcement.id,
+      const userFullName = await getUserFullName();
+      await supabase.from('announcement_logs').insert({
+        id: crypto.randomUUID(),
+        announcement_id: announcement.id,
         action: 'toggle',
-        previousStatus: announcement.isActive,
-        newStatus,
-        timestamp: new Date(),
-        userId: user.uid,
-        userFullName: (await getDoc(doc(db, 'admins', user.uid))).data()?.fullName || 'Unknown'
-      };
-
-      await addDoc(collection(db, 'announcementLogs'), logData);
+        previous_status: announcement.isActive,
+        new_status: newStatus,
+        timestamp: now,
+        user_id: user.uid,
+        user_full_name: userFullName,
+      });
 
       toast.success(`Annonce ${newStatus ? 'activée' : 'désactivée'}`);
     } catch (error) {
@@ -143,8 +163,6 @@ export default function AnnouncementManagement() {
   const handleSave = async () => {
     if (!announcement || !user) return;
 
-    const docRef = doc(db, 'announcements', 'default');
-
     try {
       if (editedContent.length > MAX_CONTENT_LENGTH) {
         toast.error(`Le contenu ne doit pas dépasser ${MAX_CONTENT_LENGTH} caractères`);
@@ -152,34 +170,27 @@ export default function AnnouncementManagement() {
       }
 
       const previousContent = announcement.content;
+      const now = new Date().toISOString();
 
-      // Mettre à jour le contenu de l'annonce
-      await updateDoc(docRef, {
-        content: editedContent.trim(),
-        updatedAt: new Date(),
-        updatedBy: user.uid
-      });
+      const { error } = await supabase
+        .from('announcements')
+        .update({ content: editedContent.trim(), updated_at: now, updated_by: user.uid })
+        .eq('id', 'default');
+      if (error) throw error;
 
-      // Mettre à jour l'état local
-      setAnnouncement(prev => prev ? {
-        ...prev,
-        content: editedContent.trim(),
-        updatedAt: new Date(),
-        updatedBy: user.uid
-      } : null);
+      setAnnouncement(prev => prev ? { ...prev, content: editedContent.trim(), updatedAt: new Date(), updatedBy: user.uid } : null);
 
-      // Créer un log
-      const logData = {
-        announcementId: announcement.id,
+      const userFullName = await getUserFullName();
+      await supabase.from('announcement_logs').insert({
+        id: crypto.randomUUID(),
+        announcement_id: announcement.id,
         action: 'update',
-        previousContent,
-        newContent: editedContent.trim(),
-        timestamp: new Date(),
-        userId: user.uid,
-        userFullName: (await getDoc(doc(db, 'admins', user.uid))).data()?.fullName || 'Unknown'
-      };
-
-      await addDoc(collection(db, 'announcementLogs'), logData);
+        previous_content: previousContent,
+        new_content: editedContent.trim(),
+        timestamp: now,
+        user_id: user.uid,
+        user_full_name: userFullName,
+      });
 
       setIsEditing(false);
       toast.success('Annonce mise à jour avec succès');
@@ -211,9 +222,7 @@ export default function AnnouncementManagement() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <Megaphone className="w-5 h-5 text-[#00665C]" />
-            <h2 className="text-lg font-semibold text-[#00665C]">
-              Gestion des Annonces
-            </h2>
+            <h2 className="text-lg font-semibold text-[#00665C]">Gestion des Annonces</h2>
           </div>
           <div className="flex items-center space-x-4">
             <button
@@ -231,12 +240,8 @@ export default function AnnouncementManagement() {
                   checked={announcement?.isActive}
                   onChange={handleToggle}
                 />
-                <div className={`block w-14 h-8 rounded-full transition-colors ${
-                  announcement?.isActive ? 'bg-[#00665C]' : 'bg-gray-300'
-                }`} />
-                <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform transform ${
-                  announcement?.isActive ? 'translate-x-6' : 'translate-x-0'
-                }`} />
+                <div className={`block w-14 h-8 rounded-full transition-colors ${announcement?.isActive ? 'bg-[#00665C]' : 'bg-gray-300'}`} />
+                <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform transform ${announcement?.isActive ? 'translate-x-6' : 'translate-x-0'}`} />
               </div>
               <span className="ml-3 text-sm font-medium text-gray-700">
                 {announcement?.isActive ? 'Activée' : 'Désactivée'}
@@ -257,19 +262,12 @@ export default function AnnouncementManagement() {
                 placeholder="Contenu de l'annonce..."
               />
               <div className="flex justify-between items-center">
-                <span className={`text-sm ${
-                  editedContent.length > MAX_CONTENT_LENGTH 
-                    ? 'text-red-500' 
-                    : 'text-gray-500'
-                }`}>
+                <span className={`text-sm ${editedContent.length > MAX_CONTENT_LENGTH ? 'text-red-500' : 'text-gray-500'}`}>
                   {editedContent.length}/{MAX_CONTENT_LENGTH} caractères
                 </span>
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => {
-                      setEditedContent(announcement?.content ?? '');
-                      setIsEditing(false);
-                    }}
+                    onClick={() => { setEditedContent(announcement?.content ?? ''); setIsEditing(false); }}
                     className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                   >
                     <X className="w-4 h-4 mr-1.5" />
@@ -288,9 +286,7 @@ export default function AnnouncementManagement() {
           ) : (
             <div className="relative">
               <div className="p-4 bg-gray-50 rounded-lg border">
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {announcement?.content || 'Aucun contenu'}
-                </p>
+                <p className="text-gray-700 whitespace-pre-wrap">{announcement?.content || 'Aucun contenu'}</p>
               </div>
               <button
                 onClick={() => setIsEditing(true)}
@@ -305,42 +301,25 @@ export default function AnnouncementManagement() {
         </div>
       </div>
 
-      {/* Modal d'historique */}
-      <Modal
-        isOpen={showLogs}
-        onClose={() => setShowLogs(false)}
-        title="Historique des modifications"
-      >
+      <Modal isOpen={showLogs} onClose={() => setShowLogs(false)} title="Historique des modifications">
         <div className="p-6">
           <div className="space-y-4">
             {logs.length === 0 ? (
-              <p className="text-center text-gray-500">
-                Aucune modification enregistrée
-              </p>
+              <p className="text-center text-gray-500">Aucune modification enregistrée</p>
             ) : (
               logs.map((log) => (
                 <div key={log.id} className="border-b pb-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <span className="font-medium text-gray-900">
-                        {log.userFullName}
-                      </span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </span>
+                      <span className="font-medium text-gray-900">{log.userFullName}</span>
+                      <span className="text-sm text-gray-500 ml-2">{new Date(log.timestamp).toLocaleString()}</span>
                     </div>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      log.action === 'create'
-                        ? 'bg-green-100 text-green-800'
-                        : log.action === 'update'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-amber-100 text-amber-800'
+                      log.action === 'create' ? 'bg-green-100 text-green-800' :
+                      log.action === 'update' ? 'bg-blue-100 text-blue-800' :
+                      'bg-amber-100 text-amber-800'
                     }`}>
-                      {log.action === 'create'
-                        ? 'Création'
-                        : log.action === 'update'
-                        ? 'Modification'
-                        : 'Changement de statut'}
+                      {log.action === 'create' ? 'Création' : log.action === 'update' ? 'Modification' : 'Changement de statut'}
                     </span>
                   </div>
                   {log.action === 'update' && (

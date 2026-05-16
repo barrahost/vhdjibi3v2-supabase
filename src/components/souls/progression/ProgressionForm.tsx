@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, orderBy, query, where } from '../../../lib/firebase';
 import { SpiritualProfile, Soul } from '../../../types/database.types';
 import { formatDate } from '../../../utils/dateUtils';
 import { SpiritualCheckbox } from './SpiritualCheckbox';
@@ -9,6 +8,7 @@ import ServantPromotionForm from './ServantPromotionForm';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Separator } from '../../ui/separator';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface ProgressionFormProps {
   value: SpiritualProfile;
@@ -29,21 +29,18 @@ export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: Progres
     const loadData = async () => {
       try {
         // Charger les départements actifs
-        const deptQuery = query(collection(db, 'departments'), orderBy('order', 'asc'));
-        const deptSnapshot = await getDocs(deptQuery);
-        setDepartments(deptSnapshot.docs.map(doc => ({
+        const deptQuery = query(collection(db, 'departments'), orderBy('order', 'asc')
+        const { data: deptData } = await deptQuery;
+        setDepartments(deptData.map(doc => ({
           id: doc.id,
           name: doc.data().name
         })));
 
         // Charger les familles de service actives
-        const familiesQuery = query(
-          collection(db, 'serviceFamilies'),
-          where('status', '==', 'active'),
+        const familiesQuery = query(collection(db, 'serviceFamilies'), where('status', '==', 'active'),
           orderBy('order', 'asc')
-        );
-        const familiesSnapshot = await getDocs(familiesQuery);
-        setServiceFamilies(familiesSnapshot.docs.map(doc => ({
+        const { data: familiesData } = await familiesQuery;
+        setServiceFamilies(familiesData.map(doc => ({
           id: doc.id,
           name: doc.data().name
         })));

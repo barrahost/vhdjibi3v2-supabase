@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { Timestamp, collection, db, doc, query, where } from '../../../lib/firebase';
 import { StatCard } from './StatCard';
 import { Clock, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 export function RetentionStats() {
   const [stats, setStats] = useState({
@@ -19,13 +19,10 @@ export function RetentionStats() {
     const fetchRetentionStats = async () => {
       try {
         setLoading(true);
-        const soulsQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', 'active'),
+        const soulsQuery = query(collection(db, 'souls'), where('status', '==', 'active'),
           where('shepherdId', '!=', null)
-        );
-        const snapshot = await getDocs(soulsQuery);
-        const totalSouls = snapshot.size;
+        const { data: snapshot } = await soulsQuery;
+const totalSouls = snapshot.size;
         
         if (totalSouls === 0) {
           setStats({

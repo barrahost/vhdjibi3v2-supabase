@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import { ShepherdPromotionService } from '../../services/shepherdPromotion.service';
 import { Modal } from '../ui/Modal';
 import { UserCircle, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface Department {
   id: string;
@@ -37,12 +37,9 @@ export default function PromoteShepherdModal({
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const q = query(
-          collection(db, 'departments'),
-          where('status', '==', 'active')
-        );
-        const snapshot = await getDocs(q);
-        const deptData = snapshot.docs.map(doc => ({
+        const q = query(collection(db, 'departments'), where('status', '==', 'active')
+        const { data: snapshot } = await q;
+const deptData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         } as Department));

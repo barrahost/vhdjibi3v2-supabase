@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, orderBy, query, writeBatch } from '../../lib/firebase';
 import ServiceFamilyListItem from './ServiceFamilyListItem';
 import EditServiceFamilyModal from './EditServiceFamilyModal';
 import { Search, MoveUp, MoveDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface ServiceFamily {
   id: string;
@@ -23,9 +23,9 @@ export default function ServiceFamilyList() {
   const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'serviceFamilies'), orderBy('order', 'asc'));
+    const q = query(collection(db, 'serviceFamilies'), orderBy('order', 'asc')
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onData(q, (snapshot) => {
       setFamilies(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

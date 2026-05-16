@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, onData, orderBy, query, where } from '../../lib/firebase';
 import { Servant } from '../../types/servant.types';
 import { Search, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import ServantListItem from './ServantListItem';
@@ -12,6 +11,7 @@ import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -131,7 +131,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
       }
     }
     
-    const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
+    const unsubscribe = onData(baseQuery, (snapshot) => {
       const servantsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),

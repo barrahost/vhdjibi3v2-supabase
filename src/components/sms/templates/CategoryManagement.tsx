@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, query, where } from '../../../lib/firebase';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface Category {
   id: string;
@@ -34,11 +34,8 @@ export function CategoryManagement() {
 
   const loadCategories = async () => {
     try {
-      const categoriesQuery = query(
-        collection(db, 'smsCategories'),
-        where('status', 'in', ['active', 'inactive'])
-      );
-      const snapshot = await getDocs(categoriesQuery);
+      const categoriesQuery = query(collection(db, 'smsCategories'), where('status', 'in', ['active', 'inactive'])
+      const { data: snapshot } = await categoriesQuery;
       setCategories(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -64,11 +61,8 @@ export function CategoryManagement() {
       }
 
       // Vérifier si le nom existe déjà
-      const existingQuery = query(
-        collection(db, 'smsCategories'),
-        where('name', '==', formData.name.trim())
-      );
-      const existingDocs = await getDocs(existingQuery);
+      const existingQuery = query(collection(db, 'smsCategories'), where('name', '==', formData.name.trim()
+      const { data: existingDocs } = await existingQuery;
       
       if (!editingCategoryId && !existingDocs.empty) {
         toast.error('Une catégorie avec ce nom existe déjà');
@@ -77,14 +71,14 @@ export function CategoryManagement() {
 
       if (editingCategoryId) {
         // Mise à jour
-        await updateDoc(doc(db, 'smsCategories', editingCategoryId), {
+        const { error: _updateErr } = await supabase.from('smsCategories').update({
           ...formData,
           updatedAt: new Date()
         });
         toast.success('Catégorie modifiée avec succès');
       } else {
         // Création
-        await addDoc(collection(db, 'smsCategories'), {
+        const { error: _insertErr } = await supabase.from('smsCategories').insert({
           ...formData,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -104,18 +98,15 @@ export function CategoryManagement() {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
       try {
         // Vérifier si la catégorie est utilisée
-        const templatesQuery = query(
-          collection(db, 'smsTemplates'),
-          where('category', '==', category.name)
-        );
-        const templatesSnapshot = await getDocs(templatesQuery);
+        const templatesQuery = query(collection(db, 'smsTemplates'), where('category', '==', category.name)
+        const { data: templatesData } = await templatesQuery;
         
-        if (!templatesSnapshot.empty) {
+        if (!templatesData.empty) {
           toast.error('Cette catégorie est utilisée par des modèles et ne peut pas être supprimée');
           return;
         }
 
-        await deleteDoc(doc(db, 'smsCategories', category.id));
+        const { error: _deleteErr } = await supabase.from('smsCategories').delete().eq('id', category.id);
         toast.success('Catégorie supprimée avec succès');
         loadCategories();
       } catch (error) {

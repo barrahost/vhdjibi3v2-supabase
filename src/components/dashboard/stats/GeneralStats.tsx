@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, query, where } from '../../../lib/firebase';
 import { Soul } from '../../../types/database.types';
 import { Users, UserCheck, User, AlertTriangle } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { isShepherdUser } from '../../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 import { SoulEvolutionChart } from './SoulEvolutionChart';
+import { supabase } from '../../../lib/supabase';
 
 export function GeneralStats() {
   const [stats, setStats] = useState({
@@ -24,20 +24,17 @@ export function GeneralStats() {
     const fetchStats = async () => {
       try {
         // Récupérer toutes les âmes (actives et inactives)
-        const soulsQuery = query(collection(db, 'souls'));
-        const soulsSnapshot = await getDocs(soulsQuery);
-        const souls = soulsSnapshot.docs.map(doc => ({
+        const soulsQuery = supabase.from('souls').select('*'));
+        const { data: soulsData } = await soulsQuery;
+const souls = soulsData.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Soul[];
         
         // Récupérer les bergers actifs (incl. multi-casquettes)
-        const shepherdsQuery = query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        );
-        const shepherdsSnapshot = await getDocs(shepherdsQuery);
-        const activeShepherds = shepherdsSnapshot.docs
+        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active')
+        const { data: shepherdsData } = await shepherdsQuery;
+        const activeShepherds = shepherdsData
           .map(d => d.data() as any)
           .filter(u => isShepherdUser(u));
         

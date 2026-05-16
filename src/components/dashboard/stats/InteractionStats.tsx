@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, query, where } from '../../../lib/firebase';
 import { Phone, Users, MessageSquare, Calendar } from 'lucide-react';
 import { StatCard } from './StatCard';
+import { supabase } from '../../../lib/supabase';
 
 export function InteractionStats() {
   const [stats, setStats] = useState({
@@ -18,13 +18,10 @@ export function InteractionStats() {
     const fetchStats = async () => {
       try {
         // D'abord récupérer les âmes actives et assignées
-        const soulsQuery = query(
-          collection(db, 'souls'),
-          where('status', '==', 'active'),
+        const soulsQuery = query(collection(db, 'souls'), where('status', '==', 'active'),
           where('shepherdId', '!=', null)
-        );
-        const soulsSnapshot = await getDocs(soulsQuery);
-        const activeSoulIds = soulsSnapshot.docs.map(doc => doc.id);
+        const { data: soulsData } = await soulsQuery;
+const activeSoulIds = soulsData.map(doc => doc.id);
         
         if (activeSoulIds.length === 0) {
           setStats({
@@ -43,7 +40,7 @@ export function InteractionStats() {
         weekStart.setDate(now.getDate() - 7);
         
         const interactionsRef = collection(db, 'interactions');
-        const snapshot = await getDocs(interactionsRef);
+        const { data: snapshot } = await interactionsRef;
 
         const stats = {
           weekly: 0,

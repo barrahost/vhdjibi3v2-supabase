@@ -1,10 +1,8 @@
 
+import { collection, db, onData, orderBy, query, where } from '../../lib/firebase';
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
 import { User } from '../../types/user.types';
 import { Search, Pencil, Trash2, User as UserIcon, Building2 } from 'lucide-react';
-import { deleteUser } from 'firebase/auth';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../constants/roles';
 import UserListItem from './UserListItem';
@@ -17,6 +15,7 @@ import toast from 'react-hot-toast';
 import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
 import { useServantStatus } from '../../hooks/useServantStatus';
 import { isShepherdUser, isADNUser, isAdminUser, isDepartmentLeaderUser, isFamilyLeaderUser, isEvangelistUser } from '../../utils/roleHelpers';
+import { supabase } from '../../lib/supabase';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins' | 'department_leader' | 'family_leader' | 'evangelist';
@@ -194,7 +193,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
         // Supprimer l'utilisateur de Firestore
-        await deleteDoc(doc(db, 'users', userId));
+        const { error: _deleteErr } = await supabase.from('users').delete().eq('id', userId);
         
         // Supprimer l'utilisateur de Firebase Auth
         const user = auth.currentUser;
@@ -216,14 +215,11 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
     setLoading(true);
 
     // Écoute temps réel sur la collection users
-    const usersQuery = query(
-      collection(db, 'users'),
-      orderBy('createdAt', 'desc')
-    );
+    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc')
 
-    const unsubscribe = onSnapshot(usersQuery, async (usersSnapshot) => {
+    const unsubscribe = onData(usersQuery, async (usersData) => {
       try {
-        let allUsers = usersSnapshot.docs.map(d => ({
+        let allUsers = usersData.map(d => ({
           id: d.id,
           ...d.data(),
           fromAdminsCollection: false
@@ -231,12 +227,9 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
         // Super admins de la collection admins
         if (filter === 'all' || filter === 'admins') {
-          const superAdminQuery = query(
-            collection(db, 'admins'),
-            where('role', '==', 'super_admin')
-          );
-          const superAdminSnapshot = await getDocs(superAdminQuery);
-          const superAdmins = superAdminSnapshot.docs.map(d => ({
+          const superAdminQuery = query(collection(db, 'admins'), where('role', '==', 'super_admin')
+          const { data: superAdminData } = await superAdminQuery;
+const superAdmins = superAdminData.map(d => ({
             id: d.id,
             ...d.data(),
             fromAdminsCollection: true

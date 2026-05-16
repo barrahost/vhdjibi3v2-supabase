@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import { Search, Save } from 'lucide-react';
 import { MenuAssignment } from '../users/MenuAssignment';
 import { isShepherdUser, isInternUser } from '../../utils/roleHelpers';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function UserMenuManagement() {
   const [users, setUsers] = useState<any[]>([]);
@@ -20,13 +20,10 @@ export default function UserMenuManagement() {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
         // pour inclure les bergers/stagiaires multi-casquettes
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        );
+        const usersQuery = query(collection(db, 'users'), where('status', '==', 'active')
         
-        const snapshot = await getDocs(usersQuery);
-        const usersData = snapshot.docs
+        const { data: snapshot } = await usersQuery;
+const usersData = snapshot.docs
           .map(doc => ({
             id: doc.id,
             ...doc.data(),
@@ -72,11 +69,12 @@ export default function UserMenuManagement() {
       setSaving(true);
       
       // Update the user document
-      const userRef = doc(db, 'users', selectedUser.id);
-      await updateDoc(userRef, {
-        additionalMenus: selectedMenus,
-        updatedAt: new Date()
-      });
+      // Supabase: use id directly: const userRefId = selectedUser.id; // table: users
+      const { error: updateErr } = await supabase.from('users').update({
+        additional_menus: selectedMenus,
+        updated_at: new Date().toISOString(),
+      }).eq('id', selectedUser.id);
+      if (updateErr) throw updateErr;
       
       // Update local state
       setUsers(users.map(user => 

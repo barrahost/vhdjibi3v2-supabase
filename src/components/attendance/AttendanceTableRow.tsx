@@ -1,9 +1,8 @@
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { formatDate } from '../../utils/dateUtils';
 import AttendanceActions from './AttendanceActions';
 import { AttendanceRecord, Soul } from '../../types/attendance.types';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface AttendanceTableRowProps {
   attendance: AttendanceRecord;
@@ -17,7 +16,7 @@ export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTable
   const handleDelete = async () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette présence ?')) {
       try {
-        await deleteDoc(doc(db, 'attendances', attendance.id));
+        const { error: _deleteErr } = await supabase.from('attendances').delete().eq('id', attendance.id);
         toast.success('Présence supprimée avec succès');
       } catch (error) {
         console.error('Error deleting attendance:', error);

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { collection, db, doc, onData } from '../../lib/firebase';
 import { useNavigate } from 'react-router-dom';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { StatCard } from './stats/StatCard';
 import { Users, UserCheck, UserX, User, AlertTriangle } from 'lucide-react';
 import { RecentActivity } from './stats/RecentActivity';
@@ -9,6 +8,7 @@ import { SoulEvolutionChart } from './stats/SoulEvolutionChart';
 import PendingActionsWidget from './PendingActionsWidget';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 type Period = '7d' | '30d' | '90d' | '365d' | 'all';
 
@@ -42,7 +42,7 @@ export function ADNDashboard() {
     setLoading(true);
     const soulsRef = collection(db, 'souls');
 
-    const unsubscribe = onSnapshot(
+    const unsubscribe = onData(
       soulsRef,
       (snapshot) => {
         try {

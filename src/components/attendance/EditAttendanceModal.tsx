@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/input';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface EditAttendanceModalProps {
   attendance: {
@@ -51,14 +50,13 @@ export default function EditAttendanceModal({ attendance, isOpen, onClose }: Edi
         return;
       }
 
-      // Update in Firestore
-      const attendanceRef = doc(db, 'attendances', attendance.id);
-      await updateDoc(attendanceRef, {
-        date: selectedDate,
+      const { error: updateErr } = await supabase.from('attendances').update({
+        date: selectedDate instanceof Date ? selectedDate.toISOString() : selectedDate,
         present: formData.present,
         notes: formData.notes.trim(),
-        updatedAt: new Date()
-      });
+        updated_at: new Date().toISOString(),
+      }).eq('id', attendance.id);
+      if (updateErr) throw updateErr;
       
       toast.success('Présence modifiée avec succès');
       onClose();

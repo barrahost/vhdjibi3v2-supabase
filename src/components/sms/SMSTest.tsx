@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
 
@@ -21,14 +21,11 @@ export function SMSTest() {
       
       try {
         // Get user info from Firestore
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid)
-        );
-        const userSnapshot = await getDocs(userQuery);
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
+        const { data: userData } = await userQuery;
         
-        if (!userSnapshot.empty) {
-          const userData = userSnapshot.docs[0].data();
+        if (!userData.empty) {
+          const userData = userData?.[0];
           setUserInfo({
             fullName: userData.fullName || '',
             phone: userData.phone || ''

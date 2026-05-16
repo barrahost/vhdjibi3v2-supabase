@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, db, onData, query, where } from '../../lib/firebase';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { StatCard } from './stats/StatCard';
 import InteractionModal from '../interactions/InteractionModal';
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EvangelizedSoul } from '../../types/evangelized.types';
+import { supabase } from '../../lib/supabase';
 
 interface InteractionLite {
   id: string;
@@ -39,12 +39,9 @@ export default function EvangelistDashboard() {
 
     (async () => {
       try {
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid),
+        const usersQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
           where('status', '==', 'active')
-        );
-        const snap = await getDocs(usersQuery);
+        const { data: snap } = await usersQuery;
         if (snap.empty) {
           if (!cancelled) {
             toast.error('Utilisateur non trouvé');
@@ -84,16 +81,10 @@ export default function EvangelistDashboard() {
   useEffect(() => {
     if (!evangelistId) return;
 
-    const soulsQuery = query(
-      collection(db, 'evangelized_souls'),
-      where('evangelistId', '==', evangelistId)
-    );
-    const interactionsQuery = query(
-      collection(db, 'interactions'),
-      where('shepherdId', '==', evangelistId)
-    );
+    const soulsQuery = query(collection(db, 'evangelized_souls'), where('evangelistId', '==', evangelistId)
+    const interactionsQuery = query(collection(db, 'interactions'), where('shepherdId', '==', evangelistId)
 
-    const soulsUnsub = onSnapshot(
+    const soulsUnsub = onData(
       soulsQuery,
       (snap) => {
         const data = snap.docs.map((d) => {
@@ -117,7 +108,7 @@ export default function EvangelistDashboard() {
       }
     );
 
-    const interUnsub = onSnapshot(
+    const interUnsub = onData(
       interactionsQuery,
       (snap) => {
         const data = snap.docs.map((d) => {

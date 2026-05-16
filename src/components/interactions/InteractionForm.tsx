@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { addDoc, collection, doc, getDoc, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, getDoc, query, where } from '../../lib/firebase';
 import { Input } from '../ui/input';
 import { useAuth } from '../../contexts/AuthContext';
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate } from '../../types/sms.types';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user signature
 
@@ -53,14 +53,11 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
       
       try {
         // Get user info from Firestore
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid)
-        );
-        const userSnapshot = await getDocs(userQuery);
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
+        const { data: userData } = await userQuery;
         
-        if (!userSnapshot.empty) {
-          const userData = userSnapshot.docs[0].data();
+        if (!userData.empty) {
+          const userData = userData?.[0];
           setUserInfo({
             fullName: userData.fullName || '',
             phone: userData.phone || ''
@@ -115,7 +112,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
 
           // Récupérer le surnom de l'âme
           const soulDoc = await getDoc(doc(db, sourceCollection, soulId));
-          const soulData = soulDoc.data();
+          const soulData = soulDocData;
           if (!soulData) {
             throw new Error('Données de l\'âme non trouvées');
           }
@@ -144,7 +141,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           );
 
           // Créer l'interaction seulement si l'envoi du SMS a réussi
-          await addDoc(collection(db, 'interactions'), {
+          const { error: _insertErr } = await supabase.from('interactions').insert({
             type: formData.type,
             soulId,
             shepherdId,
@@ -173,7 +170,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
       }
 
       // Pour les autres types d'interactions
-      await addDoc(collection(db, 'interactions'), {
+      const { error: _insertErr } = await supabase.from('interactions').insert({
         ...formData,
         soulId,
         shepherdId,
@@ -204,11 +201,10 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
   // Fonction utilitaire pour récupérer le numéro de téléphone de l'âme
   const getSoulPhone = async (soulId: string): Promise<string | null> => {
     try {
-      const soulRef = doc(db, sourceCollection, soulId);
-      const soulDoc = await getDoc(soulRef);
-
-      if (soulDoc.exists()) {
-        const soulData = soulDoc.data();
+      // sourceCollection is either 'souls' or 'evangelized_souls'
+      const table = sourceCollection === 'evangelized_souls' ? 'evangelized_souls' : 'souls';
+      const { data: soulData } = await supabase.from(table).select('phone').eq('id', soulId).single();
+      if (soulData) {
         return soulData?.phone?.replace('+225', '') || null;
       }
       toast.error('Âme non trouvée');

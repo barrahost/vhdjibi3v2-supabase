@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, onData, query, where } from '../../../lib/firebase';
 import { Soul } from '../../../types/database.types';
 import { ServantFormData } from '../../../types/servant.types';
 import { SoulPromotionService } from '../../../services/soulPromotion.service';
@@ -13,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../../ui/checkbox';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface ServantPromotionFormProps {
   soul: Soul;
@@ -47,8 +47,8 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
 
   // Charger les départements disponibles
   useEffect(() => {
-    const q = query(collection(db, 'departments'), where('status', '==', 'active'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const q = query(collection(db, 'departments'), where('status', '==', 'active')
+    const unsubscribe = onData(q, (snapshot) => {
       const deptData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

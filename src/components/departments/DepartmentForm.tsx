@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { addDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, limit, orderBy, query, where } from '../../lib/firebase';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export default function DepartmentForm() {
   const [formData, setFormData] = useState({
@@ -22,27 +22,21 @@ export default function DepartmentForm() {
       }
 
       // Vérifier si le nom existe déjà
-      const nameQuery = query(
-        collection(db, 'departments'),
-        where('name', '==', formData.name.trim())
-      );
-      const nameSnapshot = await getDocs(nameQuery);
+      const nameQuery = query(collection(db, 'departments'), where('name', '==', formData.name.trim()
+      const { data: nameData } = await nameQuery;
       
-      if (!nameSnapshot.empty) {
+      if (!nameData.empty) {
         toast.error('Un département avec ce nom existe déjà');
         return;
       }
 
       // Récupérer l'ordre le plus élevé
-      const orderQuery = query(
-        collection(db, 'departments'),
-        orderBy('order', 'desc'),
+      const orderQuery = query(collection(db, 'departments'), orderBy('order', 'desc'),
         limit(1)
-      );
-      const orderSnapshot = await getDocs(orderQuery);
-      const lastOrder = orderSnapshot.empty ? 0 : orderSnapshot.docs[0].data().order;
+      const { data: orderData } = await orderQuery;
+const lastOrder = orderData.empty ? 0 : orderData?.[0].order;
 
-      await addDoc(collection(db, 'departments'), {
+      const { error: _insertErr } = await supabase.from('departments').insert({
         ...formData,
         name: formData.name.trim(),
         leader: formData.leader.trim(), // Ajout du leader

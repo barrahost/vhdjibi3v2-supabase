@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import {
-  ListTodo,
-  AlertTriangle,
-  CheckCircle2,
-  ArrowRight,
-  Loader2,
-} from 'lucide-react';
+import { ListTodo, AlertTriangle, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 type Props =
   | { role: 'adn' }
@@ -37,96 +30,78 @@ export default function PendingActionsWidget(props: Props) {
         const next: Action[] = [];
 
         if (props.role === 'adn') {
-          const snap = await getDocs(
-            query(collection(db, 'souls'), where('status', '==', 'active'))
-          );
+          const { data: souls } = await supabase
+            .from('souls')
+            .select('id, is_undecided, service_family_id')
+            .eq('status', 'active');
+
           let noFamily = 0;
           let undecided = 0;
-          snap.docs.forEach((d) => {
-            const data = d.data() as any;
-            if (data.isUndecided) undecided++;
-            else if (!data.serviceFamilyId) noFamily++;
-          });
+          for (const s of souls ?? []) {
+            if (s.is_undecided) undecided++;
+            else if (!s.service_family_id) noFamily++;
+          }
 
           next.push({
             id: 'no-family',
             count: noFamily,
-            label:
-              noFamily > 1
-                ? `${noFamily} âmes sans famille assignée`
-                : `${noFamily} âme sans famille assignée`,
+            label: noFamily > 1 ? `${noFamily} âmes sans famille assignée` : `${noFamily} âme sans famille assignée`,
             onClick: () => navigate('/souls?filter=unassigned_family'),
             ctaLabel: 'Voir',
           });
           next.push({
             id: 'undecided',
             count: undecided,
-            label:
-              undecided > 1
-                ? `${undecided} âmes indécises à recontacter`
-                : `${undecided} âme indécise à recontacter`,
+            label: undecided > 1 ? `${undecided} âmes indécises à recontacter` : `${undecided} âme indécise à recontacter`,
             onClick: () => navigate('/undecided-souls'),
             ctaLabel: 'Voir',
           });
+
         } else if (props.role === 'family_leader') {
-          const snap = await getDocs(
-            query(
-              collection(db, 'souls'),
-              where('serviceFamilyId', '==', props.familyId)
-            )
-          );
-          const noShepherd = snap.docs.filter((d) => {
-            const data = d.data() as any;
-            return !data.shepherdId && data.status !== 'inactive';
-          }).length;
+          const { data: souls } = await supabase
+            .from('souls')
+            .select('id, shepherd_id, status')
+            .eq('service_family_id', props.familyId);
+
+          const noShepherd = (souls ?? []).filter(s => !s.shepherd_id && s.status !== 'inactive').length;
 
           next.push({
             id: 'no-shepherd',
             count: noShepherd,
-            label:
-              noShepherd > 1
-                ? `${noShepherd} âmes sans berger dans ta famille`
-                : `${noShepherd} âme sans berger dans ta famille`,
+            label: noShepherd > 1 ? `${noShepherd} âmes sans berger dans ta famille` : `${noShepherd} âme sans berger dans ta famille`,
           });
+
         } else if (props.role === 'shepherd') {
-          const [soulsSnap, interactionsSnap] = await Promise.all([
-            getDocs(
-              query(
-                collection(db, 'souls'),
-                where('shepherdId', '==', props.shepherdId),
-                where('status', '==', 'active')
-              )
-            ),
-            getDocs(
-              query(
-                collection(db, 'interactions'),
-                where('shepherdId', '==', props.shepherdId)
-              )
-            ),
+          const [{ data: soulsData }, { data: interactionsData }] = await Promise.all([
+            supabase
+              .from('souls')
+              .select('id')
+              .eq('shepherd_id', props.shepherdId)
+              .eq('status', 'active'),
+            supabase
+              .from('interactions')
+              .select('soul_id, date')
+              .eq('shepherd_id', props.shepherdId),
           ]);
+
           const lastBySoul = new Map<string, number>();
-          interactionsSnap.docs.forEach((d) => {
-            const data = d.data() as any;
-            const t = data.date?.toDate ? data.date.toDate().getTime() : 0;
-            const sid = data.soulId;
-            if (!sid) return;
-            if (!lastBySoul.has(sid) || lastBySoul.get(sid)! < t) {
-              lastBySoul.set(sid, t);
-            }
-          });
+          for (const interaction of interactionsData ?? []) {
+            if (!interaction.soul_id) continue;
+            const t = interaction.date ? new Date(interaction.date).getTime() : 0;
+            const prev = lastBySoul.get(interaction.soul_id);
+            if (prev === undefined || prev < t) lastBySoul.set(interaction.soul_id, t);
+          }
+
           const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-          const stale = soulsSnap.docs.filter((d) => {
-            const last = lastBySoul.get(d.id);
+          const stale = (soulsData ?? []).filter(s => {
+            const last = lastBySoul.get(s.id);
             return !last || last < cutoff;
           }).length;
 
           next.push({
             id: 'stale-contact',
             count: stale,
-            label:
-              stale > 1
-                ? `${stale} âmes sans contact depuis plus de 14 jours`
-                : `${stale} âme sans contact depuis plus de 14 jours`,
+            label: stale > 1 ? `${stale} âmes sans contact depuis plus de 14 jours` : `${stale} âme sans contact depuis plus de 14 jours`,
             onClick: () => navigate('/assigned-souls'),
             ctaLabel: 'Voir',
           });
@@ -142,15 +117,9 @@ export default function PendingActionsWidget(props: Props) {
     };
 
     compute();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    props.role,
-    (props as any).familyId,
-    (props as any).shepherdId,
-  ]);
+  }, [props.role, (props as any).familyId, (props as any).shepherdId]);
 
   const visible = actions.filter((a) => a.count > 0);
   const allClear = !loading && visible.length === 0;
@@ -175,10 +144,7 @@ export default function PendingActionsWidget(props: Props) {
           </div>
         ) : (
           visible.map((a) => (
-            <div
-              key={a.id}
-              className="px-4 py-3 flex items-center gap-3 text-sm"
-            >
+            <div key={a.id} className="px-4 py-3 flex items-center gap-3 text-sm">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
               <span className="flex-1 text-gray-800">{a.label}</span>
               {a.onClick && (

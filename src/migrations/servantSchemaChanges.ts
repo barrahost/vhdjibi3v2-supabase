@@ -1,6 +1,6 @@
-import { collection, query, where, getDocs, doc, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import toast from 'react-hot-toast';
+import { collection, db, doc, limit, query, where, writeBatch } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 /**
  * Migration script to implement the servant management schema changes
@@ -24,39 +24,33 @@ export async function migrateToServantSchema() {
     // Note: In Firestore, collections are created implicitly when documents are added
     
     // Step 2: Migrate existing shepherds who should also be servants
-    const shepherdsQuery = query(
-      collection(db, 'users'),
-      where('role', 'in', ['shepherd', 'intern']),
+    const shepherdsQuery = query(collection(db, 'users'), where('role', 'in', ['shepherd', 'intern']),
       where('status', '==', 'active')
-    );
     
-    const shepherdsSnapshot = await getDocs(shepherdsQuery);
+    const { data: shepherdsData } = await shepherdsQuery;
     
     // Track migration statistics
     let shepherdsMigrated = 0;
     let shepherdsSkipped = 0;
     
     // For each shepherd, check if they already exist in the servants collection
-    for (const shepherdDoc of shepherdsSnapshot.docs) {
-      const shepherdData = shepherdDoc.data();
+    for (const shepherdDoc of shepherdsData) {
+      const shepherdData = shepherdDocData;
       
       // Check if this shepherd already exists in the servants collection
-      const existingServantQuery = query(
-        collection(db, 'servants'),
-        where('phone', '==', shepherdData.phone)
-      );
+      const existingServantQuery = query(collection(db, 'servants'), where('phone', '==', shepherdData.phone)
       
-      const existingServantSnapshot = await getDocs(existingServantQuery);
+      const { data: existingServantData } = await existingServantQuery;
       
-      if (!existingServantSnapshot.empty) {
+      if (!existingServantData.empty) {
         // Shepherd already exists as a servant, update their record
-        const servantDoc = existingServantSnapshot.docs[0];
-        const servantData = servantDoc.data();
+        const servantDoc = existingServantData[0];
+        const servantData = servantDocData;
         
         // Update the servant record to link it to the shepherd
-        batch.update(doc(db, 'servants', servantDoc.id), {
+        batch.update(doc(db, 'servants', servantDocData.id), {
           isShepherd: true,
-          shepherdId: shepherdDoc.id,
+          shepherdId: shepherdDocData.id,
           updatedAt: new Date()
         });
         
@@ -71,7 +65,7 @@ export async function migrateToServantSchema() {
           phone: shepherdData.phone,
           email: shepherdData.email,
           isShepherd: true,
-          shepherdId: shepherdDoc.id,
+          shepherdId: shepherdDocData.id,
           departmentId: null, // Will be assigned later
           isHead: false, // Will be updated later if they are a department head
           status: 'active',

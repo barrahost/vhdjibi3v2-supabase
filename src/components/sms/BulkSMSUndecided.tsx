@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, doc, query, where } from '../../lib/firebase';
 import { SMSService } from '../../services/sms.service';
 import { SMSTemplate, SMSRecipient } from '../../types/sms.types';
 import { Search, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const SMS_HARD_LIMIT = 160;
 
@@ -28,28 +28,22 @@ export default function BulkSMSUndecided() {
       
       try {
         // Get user info from Firestore
-        const userQuery = query(
-          collection(db, 'users'),
-          where('uid', '==', user.uid)
-        );
-        const userSnapshot = await getDocs(userQuery);
+        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid)
+        const { data: userData } = await userQuery;
         
-        if (!userSnapshot.empty) {
-          const userData = userSnapshot.docs[0].data();
+        if (!userData.empty) {
+          const userData = userData?.[0];
           setUserInfo({
             fullName: userData.fullName || '',
             phone: userData.phone || ''
           });
         } else {
           // Try to get from admins collection
-          const adminQuery = query(
-            collection(db, 'admins'),
-            where('uid', '==', user.uid)
-          );
-          const adminSnapshot = await getDocs(adminQuery);
+          const adminQuery = query(collection(db, 'admins'), where('uid', '==', user.uid)
+          const { data: adminData } = await adminQuery;
           
-          if (!adminSnapshot.empty) {
-            const adminData = adminSnapshot.docs[0].data();
+          if (!adminData.empty) {
+            const adminData = adminData?.[0];
             setUserInfo({
               fullName: adminData.fullName || '',
               phone: adminData.phone || ''
@@ -68,14 +62,11 @@ export default function BulkSMSUndecided() {
   useEffect(() => {
     const loadUndecidedSouls = async () => {
       try {
-        const soulsQuery = query(
-          collection(db, 'souls'),
-          where('isUndecided', '==', true),
+        const soulsQuery = query(collection(db, 'souls'), where('isUndecided', '==', true),
           where('status', '==', 'active')
-        );
         
-        const snapshot = await getDocs(soulsQuery);
-        const souls = snapshot.docs.map(doc => ({
+        const { data: snapshot } = await soulsQuery;
+const souls = snapshot.docs.map(doc => ({
           id: doc.id,
           fullName: doc.data().fullName,
           nickname: doc.data().nickname || null,

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { collection, db, doc, query, where } from '../../../lib/firebase';
 import { Modal } from '../../ui/Modal';
 import { MessageSquare } from 'lucide-react';
 import { SMS_VARIABLES } from '../../../types/sms.types';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 const MAX_LENGTH = 125; // Reduced to 125 to allow for appending user info
 
@@ -29,11 +29,12 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   useEffect(() => {
     const loadTemplate = async () => {
       try {
-        const docRef = doc(db, 'smsTemplates', templateId);
-        const docSnap = await getDoc(docRef);
+        // Supabase: use id directly: const docRefId = templateId; // table: smsTemplates
+        const { data: docData, error: docErr } = await supabase.from('sms_templates').select('*').eq('id', templateId).single();
+        if (docErr) throw docErr;
         
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (!!docData) {
+          const data = docData;
           const templateData = {
             title: data.title,
             content: data.content,
@@ -57,11 +58,8 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoriesQuery = query(
-          collection(db, 'smsCategories'),
-          where('status', '==', 'active')
-        );
-        const snapshot = await getDocs(categoriesQuery);
+        const categoriesQuery = query(collection(db, 'smsCategories'), where('status', '==', 'active')
+        const { data: snapshot } = await categoriesQuery;
         setCategories(snapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name
@@ -117,11 +115,12 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
         return;
       }
 
-      const templateRef = doc(db, 'smsTemplates', templateId);
-      await updateDoc(templateRef, {
+      // Supabase: use id directly: const templateRefId = templateId; // table: smsTemplates
+      const { error: updateErr } = await supabase.from('sms_templates').update({
         ...formData,
         updatedAt: new Date()
-      });
+      }).eq('id', templateId);
+      if (updateErr) throw updateErr;
 
       toast.success('Modèle modifié avec succès');
       setHasUnsavedChanges(false);

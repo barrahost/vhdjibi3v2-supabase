@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import {
@@ -14,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/roleHelpers';
 import EvangelistSelect from './EvangelistSelect';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface Props {
   soul: EvangelizedSoul;
@@ -75,7 +74,7 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
     if (!data.fullName.trim()) return toast.error('Le nom est obligatoire');
     try {
       setSubmitting(true);
-      await updateDoc(doc(db, 'evangelized_souls', soul.id), {
+      const { error: _updateErr } = await supabase.from('evangelized_souls').update({
         fullName: data.fullName.trim(),
         nickname: data.nickname.trim() || null,
         gender: data.gender,

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
 import { Modal } from '../../ui/Modal';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../lib/supabase';
 
 interface Category {
   id: string;
@@ -45,13 +44,13 @@ export function EditCategoryModal({ category, isOpen, onClose }: EditCategoryMod
         return;
       }
 
-      const categoryRef = doc(db, 'audio_categories', category.id);
-      await updateDoc(categoryRef, {
+      const { error: updateErr } = await supabase.from('audio_categories').update({
         ...formData,
         name: formData.name.trim(),
         description: formData.description.trim(),
-        updatedAt: new Date()
-      });
+        updated_at: new Date().toISOString(),
+      }).eq('id', category.id);
+      if (updateErr) throw updateErr;
       
       toast.success('Catégorie modifiée avec succès');
       onClose();

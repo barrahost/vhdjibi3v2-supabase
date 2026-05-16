@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { EvangelizedSoul } from '../../types/evangelized.types';
 import { Search, UserCheck } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface Props {
   isOpen: boolean;
@@ -22,20 +21,39 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect }: 
     setSearch('');
     setLoading(true);
     // Charger uniquement les âmes évangélisées pas encore reçues dans l'église
-    getDocs(query(
-      collection(db, 'evangelized_souls'),
-      where('status', '!=', 'imported')
-    ))
-      .then(snap => {
-        const list = snap.docs
-          .map(d => ({ id: d.id, ...d.data() } as EvangelizedSoul))
-          // Double sécurité : exclure aussi celles qui ont déjà un importedToSoulId
-          .filter(s => !s.importedToSoulId)
-          .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+    supabase
+      .from('evangelized_souls')
+      .select('*')
+      .neq('status', 'imported')
+      .then(({ data, error }) => {
+        if (error) { console.error('PickEvangelized load error:', error); return; }
+        const list = (data ?? [])
+          .map((d: any) => ({
+            id: d.id,
+            fullName: d.full_name,
+            phone: d.phone,
+            location: d.location,
+            gender: d.gender,
+            status: d.status,
+            evangelistId: d.evangelist_id,
+            evangelizationDate: d.evangelization_date,
+            importedToSoulId: d.imported_to_soul_id,
+            attendedCommunity: d.attended_community,
+            gaveLifeToJesus: d.gave_life_to_jesus,
+            plannedService: d.planned_service,
+            prayerTopics: d.prayer_topics,
+            interviewerName: d.interviewer_name,
+            notes: d.notes,
+            createdAt: d.created_at,
+            updatedAt: d.updated_at,
+            createdBy: d.created_by,
+          } as EvangelizedSoul))
+          // Exclure celles qui ont déjà un importedToSoulId
+          .filter((s: EvangelizedSoul) => !s.importedToSoulId)
+          .sort((a: EvangelizedSoul, b: EvangelizedSoul) => (a.fullName || '').localeCompare(b.fullName || ''));
         setSouls(list);
         setFiltered(list);
       })
-      .catch(err => console.error('PickEvangelized load error:', err))
       .finally(() => setLoading(false));
   }, [isOpen]);
 

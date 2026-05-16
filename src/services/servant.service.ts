@@ -1,13 +1,57 @@
-import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, documentId } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { Servant, ServantFormData, ServantSourceType } from '../types/servant.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 
 export interface ImportResult {
   imported: number;
   skipped: Array<{ name: string; reason: string }>;
 }
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+function rowToServant(row: any): Servant {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    nickname: row.nickname,
+    gender: row.gender,
+    phone: row.phone,
+    email: row.email,
+    departmentId: row.department_id,
+    isHead: row.is_head,
+    isShepherd: row.is_shepherd,
+    shepherdId: row.shepherd_id,
+    status: row.status,
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+    sourceType: row.source_type,
+    sourceId: row.source_id,
+    originalSoulId: row.original_soul_id,
+    promotionDate: row.promotion_date ? new Date(row.promotion_date) : undefined,
+  };
+}
+
+function formToRow(data: Partial<ServantFormData>): Record<string, any> {
+  const row: Record<string, any> = {};
+  if (data.fullName !== undefined)       row.full_name        = data.fullName.trim();
+  if (data.nickname !== undefined)       row.nickname         = data.nickname?.trim() || null;
+  if (data.gender !== undefined)         row.gender           = data.gender;
+  if (data.phone !== undefined)          row.phone            = data.phone;
+  if (data.email !== undefined)          row.email            = data.email?.trim() || null;
+  if (data.departmentId !== undefined)   row.department_id    = data.departmentId;
+  if (data.isHead !== undefined)         row.is_head          = data.isHead;
+  if (data.isShepherd !== undefined)     row.is_shepherd      = data.isShepherd;
+  if (data.shepherdId !== undefined)     row.shepherd_id      = data.shepherdId;
+  if (data.status !== undefined)         row.status           = data.status;
+  if (data.sourceType !== undefined)     row.source_type      = data.sourceType;
+  if (data.sourceId !== undefined)       row.source_id        = data.sourceId;
+  if (data.originalSoulId !== undefined) row.original_soul_id = data.originalSoulId;
+  if (data.promotionDate !== undefined)  row.promotion_date   = data.promotionDate?.toISOString() ?? null;
+  return row;
+}
+
+// ─── ServantService ───────────────────────────────────────────────────────────
 
 export class ServantService {
   /**
@@ -15,89 +59,84 @@ export class ServantService {
    */
   static async createServant(data: ServantFormData): Promise<string> {
     try {
-      // If a source is provided, prevent importing the same person twice in the same department
+      // Duplicate check: same source in same department
       if (data.sourceType && data.sourceId) {
-        const dupQuery = query(
-          collection(db, 'servants'),
-          where('sourceType', '==', data.sourceType),
-          where('sourceId', '==', data.sourceId),
-          where('departmentId', '==', data.departmentId)
-        );
-        const dupSnap = await getDocs(dupQuery);
-        if (!dupSnap.empty) {
+        const { data: dup } = await supabase
+          .from('servants')
+          .select('id')
+          .eq('source_type', data.sourceType)
+          .eq('source_id', data.sourceId)
+          .eq('department_id', data.departmentId)
+          .limit(1);
+        if (dup && dup.length > 0) {
           throw new Error('Cette personne est déjà serviteur dans ce département');
         }
       } else {
-        // Manual entry: prevent duplicate phone within the same department
-        const phoneQuery = query(
-          collection(db, 'servants'),
-          where('phone', '==', data.phone),
-          where('departmentId', '==', data.departmentId)
-        );
-        const phoneSnap = await getDocs(phoneQuery);
-        if (!phoneSnap.empty) {
+        // Manual: prevent duplicate phone in same department
+        const { data: phoneSnap } = await supabase
+          .from('servants')
+          .select('id')
+          .eq('phone', data.phone)
+          .eq('department_id', data.departmentId)
+          .limit(1);
+        if (phoneSnap && phoneSnap.length > 0) {
           throw new Error('Ce numéro est déjà utilisé pour un serviteur dans ce département');
         }
 
-        // Cross-department check: avertissement non bloquant
+        // Cross-department warning (non-blocking)
         try {
-          const globalPhoneQuery = query(
-            collection(db, 'servants'),
-            where('phone', '==', data.phone),
-            where('status', '==', 'active')
-          );
-          const globalSnap = await getDocs(globalPhoneQuery);
-          if (!globalSnap.empty) {
-            const otherDepts = globalSnap.docs
-              .map(d => d.data() as any)
-              .filter(d => d.departmentId !== data.departmentId)
-              .map(d => d.departmentId);
-            if (otherDepts.length > 0) {
-              console.warn(
-                `[Servants] Numéro ${data.phone} déjà utilisé dans ${otherDepts.length} autre(s) département(s)`
-              );
-            }
+          const { data: globalSnap } = await supabase
+            .from('servants')
+            .select('department_id')
+            .eq('phone', data.phone)
+            .eq('status', 'active');
+          const otherDepts = (globalSnap ?? []).filter(d => d.department_id !== data.departmentId);
+          if (otherDepts.length > 0) {
+            console.warn(`[Servants] Numéro ${data.phone} déjà utilisé dans ${otherDepts.length} autre(s) département(s)`);
           }
         } catch (e) {
           console.warn('Cross-department duplicate check failed', e);
         }
       }
 
-      // If this servant will be a department head, check if there's already a head
+      // Check for existing department head
       if (data.isHead) {
-        const headQuery = query(
-          collection(db, 'servants'),
-          where('departmentId', '==', data.departmentId),
-          where('isHead', '==', true),
-          where('status', '==', 'active')
-        );
-        const headSnapshot = await getDocs(headQuery);
-        if (!headSnapshot.empty) {
+        const { data: headSnap } = await supabase
+          .from('servants')
+          .select('id')
+          .eq('department_id', data.departmentId)
+          .eq('is_head', true)
+          .eq('status', 'active')
+          .limit(1);
+        if (headSnap && headSnap.length > 0) {
           throw new Error('Ce département a déjà un responsable');
         }
       }
 
-      // Create the servant document
-      const servantData: any = {
-        fullName: data.fullName.trim(),
+      const id = crypto.randomUUID();
+      const row = {
+        id,
+        full_name: data.fullName.trim(),
         nickname: data.nickname?.trim() || null,
         gender: data.gender,
         phone: data.phone,
         email: data.email?.trim() || null,
-        departmentId: data.departmentId,
-        isHead: data.isHead,
-        isShepherd: data.isShepherd || false,
-        shepherdId: data.shepherdId || null,
-        sourceType: data.sourceType || 'manual',
-        sourceId: data.sourceId || null,
-        originalSoulId: data.originalSoulId || (data.sourceType === 'soul' ? data.sourceId : null) || null,
+        department_id: data.departmentId,
+        is_head: data.isHead,
+        is_shepherd: data.isShepherd || false,
+        shepherd_id: data.shepherdId || null,
+        source_type: data.sourceType || 'manual',
+        source_id: data.sourceId || null,
+        original_soul_id: data.originalSoulId || (data.sourceType === 'soul' ? data.sourceId : null) || null,
+        promotion_date: data.promotionDate?.toISOString() ?? null,
         status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
-      const docRef = await addDoc(collection(db, 'servants'), servantData);
-      return docRef.id;
+      const { error } = await supabase.from('servants').insert(row);
+      if (error) throw error;
+      return id;
     } catch (error) {
       console.error('Error creating servant:', error);
       throw error;
@@ -109,17 +148,16 @@ export class ServantService {
    */
   static async getServant(id: string): Promise<Servant | null> {
     try {
-      const docRef = doc(db, 'servants', id);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        return {
-          id: docSnap.id,
-          ...docSnap.data()
-        } as Servant;
+      const { data, error } = await supabase
+        .from('servants')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) {
+        if (error.code === 'PGRST116') return null; // not found
+        throw error;
       }
-      
-      return null;
+      return data ? rowToServant(data) : null;
     } catch (error) {
       console.error('Error getting servant:', error);
       throw error;
@@ -131,94 +169,76 @@ export class ServantService {
    */
   static async updateServant(id: string, data: Partial<ServantFormData>): Promise<void> {
     try {
-      const servantRef = doc(db, 'servants', id);
-      const servantSnap = await getDoc(servantRef);
-      
-      if (!servantSnap.exists()) {
-        throw new Error('Serviteur non trouvé');
-      }
-      
-      const currentServant = servantSnap.data() as Servant;
-      
-      // Validate phone number if it's being updated
-      let formattedPhone = currentServant.phone;
+      const current = await this.getServant(id);
+      if (!current) throw new Error('Serviteur non trouvé');
+
+      // Validate phone
+      let formattedPhone = current.phone;
       if (data.phone) {
         const phoneValidation = validatePhoneNumber(data.phone);
-        if (!phoneValidation.isValid) {
-          throw new Error(phoneValidation.error);
-        }
+        if (!phoneValidation.isValid) throw new Error(phoneValidation.error);
         formattedPhone = phoneValidation.formattedNumber || '';
-        
-        // Check if the new phone number is already used by another servant
-        if (formattedPhone !== currentServant.phone) {
-          const phoneQuery = query(
-            collection(db, 'servants'),
-            where('phone', '==', formattedPhone)
-          );
-          const phoneSnapshot = await getDocs(phoneQuery);
-          if (!phoneSnapshot.empty && phoneSnapshot.docs[0].id !== id) {
+
+        if (formattedPhone !== current.phone) {
+          const { data: phoneSnap } = await supabase
+            .from('servants')
+            .select('id')
+            .eq('phone', formattedPhone)
+            .limit(1);
+          if (phoneSnap && phoneSnap.length > 0 && phoneSnap[0].id !== id) {
             throw new Error('Ce numéro de téléphone est déjà utilisé');
           }
         }
       }
-      
-      // Check email uniqueness if it's being updated
-      let formattedEmail = currentServant.email;
+
+      // Validate email uniqueness
+      let formattedEmail = current.email;
       if (data.email !== undefined) {
         formattedEmail = data.email?.trim() || '';
-        
-        if (formattedEmail && formattedEmail !== currentServant.email) {
-          const emailQuery = query(
-            collection(db, 'servants'),
-            where('email', '==', formattedEmail)
-          );
-          const emailSnapshot = await getDocs(emailQuery);
-          if (!emailSnapshot.empty && emailSnapshot.docs[0].id !== id) {
+        if (formattedEmail && formattedEmail !== current.email) {
+          const { data: emailSnap } = await supabase
+            .from('servants')
+            .select('id')
+            .eq('email', formattedEmail)
+            .limit(1);
+          if (emailSnap && emailSnap.length > 0 && emailSnap[0].id !== id) {
             throw new Error('Cet email est déjà utilisé');
           }
         }
       }
-      
-      // If changing department or head status, check for existing department head
-      if ((data.departmentId && data.departmentId !== currentServant.departmentId) || 
-          (data.isHead !== undefined && data.isHead !== currentServant.isHead)) {
-        
-        const newDepartmentId = data.departmentId || currentServant.departmentId;
-        const newIsHead = data.isHead !== undefined ? data.isHead : currentServant.isHead;
-        
-        if (newIsHead) {
-          const headQuery = query(
-            collection(db, 'servants'),
-            where('departmentId', '==', newDepartmentId),
-            where('isHead', '==', true),
-            where('status', '==', 'active')
-          );
-          const headSnapshot = await getDocs(headQuery);
-          
-          if (!headSnapshot.empty && headSnapshot.docs[0].id !== id) {
-            throw new Error('Ce département a déjà un responsable');
-          }
+
+      // Check department head conflict
+      const newDepartmentId = data.departmentId || current.departmentId;
+      const newIsHead = data.isHead !== undefined ? data.isHead : current.isHead;
+      if (newIsHead && (data.departmentId || data.isHead !== undefined)) {
+        const { data: headSnap } = await supabase
+          .from('servants')
+          .select('id')
+          .eq('department_id', newDepartmentId)
+          .eq('is_head', true)
+          .eq('status', 'active')
+          .limit(1);
+        if (headSnap && headSnap.length > 0 && headSnap[0].id !== id) {
+          throw new Error('Ce département a déjà un responsable');
         }
       }
-      
-      // Prepare update data
-      const updateData: Record<string, any> = {
-        updatedAt: new Date()
+
+      const updateRow: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+        phone: formattedPhone,
+        email: formattedEmail,
       };
-      
-      if (data.fullName) updateData.fullName = data.fullName.trim();
-      if (data.nickname !== undefined) updateData.nickname = data.nickname?.trim() || null;
-      if (data.gender) updateData.gender = data.gender;
-      if (data.phone) updateData.phone = formattedPhone;
-      if (data.email !== undefined) updateData.email = formattedEmail;
-      if (data.departmentId) updateData.departmentId = data.departmentId;
-      if (data.isHead !== undefined) updateData.isHead = data.isHead;
-      if (data.isShepherd !== undefined) updateData.isShepherd = data.isShepherd;
-      if (data.shepherdId !== undefined) updateData.shepherdId = data.shepherdId;
-      if (data.status !== undefined) updateData.status = data.status;
-      
-      // Update the servant
-      await updateDoc(servantRef, updateData);
+      if (data.fullName)              updateRow.full_name     = data.fullName.trim();
+      if (data.nickname !== undefined) updateRow.nickname     = data.nickname?.trim() || null;
+      if (data.gender)                updateRow.gender        = data.gender;
+      if (data.departmentId)          updateRow.department_id = data.departmentId;
+      if (data.isHead !== undefined)  updateRow.is_head       = data.isHead;
+      if (data.isShepherd !== undefined) updateRow.is_shepherd = data.isShepherd;
+      if (data.shepherdId !== undefined) updateRow.shepherd_id = data.shepherdId;
+      if (data.status !== undefined)  updateRow.status        = data.status;
+
+      const { error } = await supabase.from('servants').update(updateRow).eq('id', id);
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating servant:', error);
       throw error;
@@ -230,30 +250,15 @@ export class ServantService {
    */
   static async deleteServant(id: string): Promise<void> {
     try {
-      const servantRef = doc(db, 'servants', id);
-      const servantSnap = await getDoc(servantRef);
-      
-      if (!servantSnap.exists()) {
-        throw new Error('Serviteur non trouvé');
-      }
-      
-      const servant = servantSnap.data() as Servant;
-      
-      // If the servant is a department head, we should handle this carefully
+      const servant = await this.getServant(id);
+      if (!servant) throw new Error('Serviteur non trouvé');
+
       if (servant.isHead) {
-        // Option 1: Prevent deletion and suggest making someone else the head first
         throw new Error('Ce serviteur est responsable de département. Veuillez désigner un autre responsable avant de le supprimer.');
-        
-        // Option 2: Set status to inactive instead of deleting
-        // await updateDoc(servantRef, {
-        //   status: 'inactive',
-        //   updatedAt: new Date()
-        // });
-        // return;
       }
-      
-      // Delete the servant
-      await deleteDoc(servantRef);
+
+      const { error } = await supabase.from('servants').delete().eq('id', id);
+      if (error) throw error;
     } catch (error) {
       console.error('Error deleting servant:', error);
       throw error;
@@ -265,16 +270,12 @@ export class ServantService {
    */
   static async getAllServants(): Promise<Servant[]> {
     try {
-      const q = query(
-        collection(db, 'servants'),
-        where('status', '==', 'active')
-      );
-      
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Servant));
+      const { data, error } = await supabase
+        .from('servants')
+        .select('*')
+        .eq('status', 'active');
+      if (error) throw error;
+      return (data ?? []).map(rowToServant);
     } catch (error) {
       console.error('Error getting all servants:', error);
       throw error;
@@ -286,17 +287,13 @@ export class ServantService {
    */
   static async getServantsByDepartment(departmentId: string): Promise<Servant[]> {
     try {
-      const q = query(
-        collection(db, 'servants'),
-        where('departmentId', '==', departmentId),
-        where('status', '==', 'active')
-      );
-      
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Servant));
+      const { data, error } = await supabase
+        .from('servants')
+        .select('*')
+        .eq('department_id', departmentId)
+        .eq('status', 'active');
+      if (error) throw error;
+      return (data ?? []).map(rowToServant);
     } catch (error) {
       console.error('Error getting servants by department:', error);
       throw error;
@@ -308,22 +305,16 @@ export class ServantService {
    */
   static async getDepartmentHead(departmentId: string): Promise<Servant | null> {
     try {
-      const q = query(
-        collection(db, 'servants'),
-        where('departmentId', '==', departmentId),
-        where('isHead', '==', true),
-        where('status', '==', 'active')
-      );
-      
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) {
-        return null;
-      }
-      
-      return {
-        id: snapshot.docs[0].id,
-        ...snapshot.docs[0].data()
-      } as Servant;
+      const { data, error } = await supabase
+        .from('servants')
+        .select('*')
+        .eq('department_id', departmentId)
+        .eq('is_head', true)
+        .eq('status', 'active')
+        .limit(1);
+      if (error) throw error;
+      if (!data || data.length === 0) return null;
+      return rowToServant(data[0]);
     } catch (error) {
       console.error('Error getting department head:', error);
       throw error;
@@ -335,34 +326,30 @@ export class ServantService {
    */
   static async assignDepartmentHead(servantId: string, departmentId: string): Promise<void> {
     try {
-      const batch = writeBatch(db);
-      
-      // First, remove any existing department head
-      const currentHeadQuery = query(
-        collection(db, 'servants'),
-        where('departmentId', '==', departmentId),
-        where('isHead', '==', true),
-        where('status', '==', 'active')
-      );
-      
-      const currentHeadSnapshot = await getDocs(currentHeadQuery);
-      if (!currentHeadSnapshot.empty) {
-        const currentHeadRef = doc(db, 'servants', currentHeadSnapshot.docs[0].id);
-        batch.update(currentHeadRef, {
-          isHead: false,
-          updatedAt: new Date()
-        });
+      const now = new Date().toISOString();
+
+      // Remove any existing department head
+      const { data: currentHead } = await supabase
+        .from('servants')
+        .select('id')
+        .eq('department_id', departmentId)
+        .eq('is_head', true)
+        .eq('status', 'active')
+        .limit(1);
+
+      if (currentHead && currentHead.length > 0) {
+        await supabase
+          .from('servants')
+          .update({ is_head: false, updated_at: now })
+          .eq('id', currentHead[0].id);
       }
-      
-      // Then, assign the new head
-      const servantRef = doc(db, 'servants', servantId);
-      batch.update(servantRef, {
-        departmentId,
-        isHead: true,
-        updatedAt: new Date()
-      });
-      
-      await batch.commit();
+
+      // Assign the new head
+      const { error } = await supabase
+        .from('servants')
+        .update({ department_id: departmentId, is_head: true, updated_at: now })
+        .eq('id', servantId);
+      if (error) throw error;
     } catch (error) {
       console.error('Error assigning department head:', error);
       throw error;
@@ -374,17 +361,13 @@ export class ServantService {
    */
   static async getServantShepherds(): Promise<Servant[]> {
     try {
-      const q = query(
-        collection(db, 'servants'),
-        where('isShepherd', '==', true),
-        where('status', '==', 'active')
-      );
-      
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Servant));
+      const { data, error } = await supabase
+        .from('servants')
+        .select('*')
+        .eq('is_shepherd', true)
+        .eq('status', 'active');
+      if (error) throw error;
+      return (data ?? []).map(rowToServant);
     } catch (error) {
       console.error('Error getting servant shepherds:', error);
       throw error;
@@ -397,37 +380,29 @@ export class ServantService {
    */
   static async bulkDeleteServants(servantIds: string[]): Promise<{ deleted: number; deactivated: number }> {
     try {
-      const batch = writeBatch(db);
       let deletedCount = 0;
       let deactivatedCount = 0;
+      const now = new Date().toISOString();
 
-      // Process each servant
       for (const servantId of servantIds) {
-        const servantRef = doc(db, 'servants', servantId);
-        const servantSnap = await getDoc(servantRef);
-        
-        if (!servantSnap.exists()) {
+        const servant = await this.getServant(servantId);
+        if (!servant) {
           console.warn(`Servant ${servantId} not found, skipping`);
           continue;
         }
-        
-        const servant = servantSnap.data() as Servant;
-        
-        // If the servant is a department head, deactivate instead of delete
+
         if (servant.isHead) {
-          batch.update(servantRef, {
-            status: 'inactive',
-            updatedAt: new Date()
-          });
+          await supabase
+            .from('servants')
+            .update({ status: 'inactive', updated_at: now })
+            .eq('id', servantId);
           deactivatedCount++;
         } else {
-          batch.delete(servantRef);
+          await supabase.from('servants').delete().eq('id', servantId);
           deletedCount++;
         }
       }
 
-      await batch.commit();
-      
       return { deleted: deletedCount, deactivated: deactivatedCount };
     } catch (error) {
       console.error('Error in bulk delete servants:', error);
@@ -437,7 +412,6 @@ export class ServantService {
 
   /**
    * Find existing servants for a department restricted to a list of source ids.
-   * Returns a Set of sourceId already present in the department.
    */
   private static async getExistingSourceIds(
     departmentId: string,
@@ -447,24 +421,16 @@ export class ServantService {
     const existing = new Set<string>();
     if (sourceIds.length === 0) return existing;
 
-    // Firestore "in" supports up to 10 values; chunk it.
-    const chunks: string[][] = [];
-    for (let i = 0; i < sourceIds.length; i += 10) {
-      chunks.push(sourceIds.slice(i, i + 10));
-    }
-
-    for (const chunk of chunks) {
-      const q = query(
-        collection(db, 'servants'),
-        where('departmentId', '==', departmentId),
-        where('sourceType', '==', sourceType),
-        where('sourceId', 'in', chunk)
-      );
-      const snap = await getDocs(q);
-      snap.docs.forEach(d => {
-        const data = d.data() as any;
-        if (data.sourceId) existing.add(data.sourceId);
-      });
+    // chunk into 100 at a time for Supabase .in()
+    for (let i = 0; i < sourceIds.length; i += 100) {
+      const chunk = sourceIds.slice(i, i + 100);
+      const { data } = await supabase
+        .from('servants')
+        .select('source_id')
+        .eq('department_id', departmentId)
+        .eq('source_type', sourceType)
+        .in('source_id', chunk);
+      (data ?? []).forEach((d: any) => { if (d.source_id) existing.add(d.source_id); });
     }
     return existing;
   }
@@ -478,45 +444,43 @@ export class ServantService {
 
     const existing = await this.getExistingSourceIds(departmentId, 'soul', soulIds);
 
-    // Fetch souls in chunks of 10 (documentId in)
-    const chunks: string[][] = [];
-    for (let i = 0; i < soulIds.length; i += 10) {
-      chunks.push(soulIds.slice(i, i + 10));
-    }
+    for (let i = 0; i < soulIds.length; i += 100) {
+      const chunk = soulIds.slice(i, i + 100);
+      const { data: souls, error } = await supabase
+        .from('souls')
+        .select('*')
+        .in('id', chunk);
+      if (error) throw error;
 
-    for (const chunk of chunks) {
-      const snap = await getDocs(
-        query(collection(db, 'souls'), where(documentId(), 'in', chunk))
-      );
+      for (const soul of souls ?? []) {
+        const name = soul.full_name || 'Inconnu';
 
-      for (const soulDoc of snap.docs) {
-        const soul = soulDoc.data() as any;
-        const name = soul.fullName || 'Inconnu';
-
-        if (existing.has(soulDoc.id)) {
+        if (existing.has(soul.id)) {
           result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
           continue;
         }
 
         try {
-          await addDoc(collection(db, 'servants'), {
-            fullName: (soul.fullName || '').trim(),
+          const { error: insertErr } = await supabase.from('servants').insert({
+            id: crypto.randomUUID(),
+            full_name: (soul.full_name || '').trim(),
             nickname: soul.nickname?.trim() || null,
             gender: soul.gender || 'male',
             phone: soul.phone || '',
             email: soul.email?.trim() || null,
-            departmentId,
-            isHead: false,
-            isShepherd: false,
-            shepherdId: null,
-            sourceType: 'soul',
-            sourceId: soulDoc.id,
-            originalSoulId: soulDoc.id,
-            promotionDate: new Date(),
+            department_id: departmentId,
+            is_head: false,
+            is_shepherd: false,
+            shepherd_id: null,
+            source_type: 'soul',
+            source_id: soul.id,
+            original_soul_id: soul.id,
+            promotion_date: new Date().toISOString(),
             status: 'active',
-            createdAt: new Date(),
-            updatedAt: new Date()
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
+          if (insertErr) throw insertErr;
           result.imported++;
         } catch (e: any) {
           console.error('Error importing soul as servant:', e);
@@ -537,43 +501,46 @@ export class ServantService {
 
     const existing = await this.getExistingSourceIds(departmentId, 'user', userDocIds);
 
-    const chunks: string[][] = [];
-    for (let i = 0; i < userDocIds.length; i += 10) {
-      chunks.push(userDocIds.slice(i, i + 10));
-    }
+    for (let i = 0; i < userDocIds.length; i += 100) {
+      const chunk = userDocIds.slice(i, i + 100);
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .in('id', chunk);
+      if (error) throw error;
 
-    for (const chunk of chunks) {
-      const snap = await getDocs(
-        query(collection(db, 'users'), where(documentId(), 'in', chunk))
-      );
+      for (const user of users ?? []) {
+        const name = user.full_name || 'Inconnu';
 
-      for (const userDoc of snap.docs) {
-        const user = userDoc.data() as any;
-        const name = user.fullName || 'Inconnu';
-
-        if (existing.has(userDoc.id)) {
+        if (existing.has(user.id)) {
           result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
           continue;
         }
 
         try {
-          await addDoc(collection(db, 'servants'), {
-            fullName: (user.fullName || '').trim(),
+          const isShepherd =
+            user.role === 'shepherd' ||
+            !!(user.business_profiles?.some?.((p: any) => p?.type === 'shepherd'));
+
+          const { error: insertErr } = await supabase.from('servants').insert({
+            id: crypto.randomUUID(),
+            full_name: (user.full_name || '').trim(),
             nickname: user.nickname?.trim() || null,
             gender: user.gender || 'male',
             phone: user.phone || '',
             email: user.email?.trim() || null,
-            departmentId,
-            isHead: false,
-            isShepherd: user.role === 'shepherd' || !!user.businessProfiles?.some?.((p: any) => p.type === 'shepherd'),
-            shepherdId: null,
-            sourceType: 'user',
-            sourceId: userDoc.id,
-            originalSoulId: null,
+            department_id: departmentId,
+            is_head: false,
+            is_shepherd: isShepherd,
+            shepherd_id: null,
+            source_type: 'user',
+            source_id: user.id,
+            original_soul_id: null,
             status: 'active',
-            createdAt: new Date(),
-            updatedAt: new Date()
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
+          if (insertErr) throw insertErr;
           result.imported++;
         } catch (e: any) {
           console.error('Error importing user as servant:', e);

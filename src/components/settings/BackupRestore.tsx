@@ -1,6 +1,5 @@
+import { supabase } from '../../lib/supabase';
 import { useState } from 'react';
-import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, query, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Download, Upload, Database } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -16,12 +15,12 @@ export default function BackupRestore() {
     { name: 'interactions', label: 'Interactions', description: 'Historique des interactions avec les âmes' },
     { name: 'attendances', label: 'Présences', description: 'Enregistrements des présences aux cultes' },
     { name: 'departments', label: 'Départements', description: 'Départements de service' },
-    { name: 'serviceFamilies', label: 'Familles de service', description: 'Familles de service' },
-    { name: 'smsTemplates', label: 'Modèles SMS', description: 'Modèles de messages SMS' },
-    { name: 'smsCategories', label: 'Catégories SMS', description: 'Catégories de modèles SMS' },
+    { name: 'service_families', label: 'Familles de service', description: 'Familles de service' },
+    { name: 'sms_templates', label: 'Modèles SMS', description: 'Modèles de messages SMS' },
+    { name: 'sms_categories', label: 'Catégories SMS', description: 'Catégories de modèles SMS' },
     { name: 'birthdays', label: 'Anniversaires', description: 'Dates d\'anniversaire' },
     { name: 'announcements', label: 'Annonces', description: 'Annonces système' },
-    { name: 'announcementLogs', label: 'Logs d\'annonces', description: 'Historique des modifications d\'annonces' },
+    { name: 'announcement_logs', label: 'Logs d\'annonces', description: 'Historique des modifications d\'annonces' },
     { name: 'audio_categories', label: 'Catégories Audio', description: 'Catégories d\'enseignements audio' },
     { name: 'teachings', label: 'Enseignements', description: 'Enseignements audio' }
   ];
@@ -31,71 +30,29 @@ export default function BackupRestore() {
       setDownloading(true);
       const backup: Record<string, any> = {};
       const metadata = {
-        version: '1.4.1',
+        version: '2.0.0',
         timestamp: new Date().toISOString(),
         collections: collections.map(c => c.name),
         format: 'json',
-        source: 'firebase',
-        compatibleWith: ['firebase', 'supabase']
+        source: 'supabase',
+        compatibleWith: ['supabase']
       };
-      
+
       backup._metadata = metadata;
 
       // Sauvegarder chaque collection
       for (const { name } of collections) {
         try {
-          const querySnapshot = await getDocs(collection(db, name));
-          
-          // Traiter les timestamps et autres types spéciaux pour la compatibilité
-          backup[name] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            
-            // Convertir les timestamps en objets compatibles
-            const processedData = Object.entries(data).reduce((acc, [key, value]) => {
-              // Traiter les timestamps
-              if (value && typeof value === 'object' && 'toDate' in value && typeof (value as any).toDate === 'function') {
-                acc[key] = {
-                  _type: 'timestamp',
-                  value: (value as any).toDate().toISOString()
-                };
-              } 
-              // Traiter les références
-              else if (value && typeof value === 'object' && 'path' in value && typeof (value as any).path === 'string') {
-                acc[key] = {
-                  _type: 'reference',
-                  path: (value as any).path
-                };
-              }
-              // Traiter les tableaux de timestamps ou références
-              else if (Array.isArray(value)) {
-                acc[key] = value.map(item => {
-                  if (item && typeof item === 'object' && 'toDate' in item && typeof (item as any).toDate === 'function') {
-                    return {
-                      _type: 'timestamp',
-                      value: (item as any).toDate().toISOString()
-                    };
-                  } else if (item && typeof item === 'object' && 'path' in item && typeof (item as any).path === 'string') {
-                    return {
-                      _type: 'reference',
-                      path: (item as any).path
-                    };
-                  }
-                  return item;
-                });
-              }
-              else {
-                acc[key] = value;
-              }
-              return acc;
-            }, {} as Record<string, any>);
-            
-            return {
-              id: doc.id,
-              ...processedData
-            };
-          });
-          
-          console.log(`Sauvegarde de ${querySnapshot.size} documents dans la collection ${name}`);
+          const { data, error } = await supabase.from(name).select('*');
+          if (error) {
+            console.error(`Erreur lors de la sauvegarde de la collection ${name}:`, error);
+            backup[name] = [];
+            backup._errors = backup._errors || [];
+            backup._errors.push({ collection: name, error: error.message });
+          } else {
+            backup[name] = data ?? [];
+            console.log(`Sauvegarde de ${(data ?? []).length} documents dans la collection ${name}`);
+          }
         } catch (error) {
           console.error(`Erreur lors de la sauvegarde de la collection ${name}:`, error);
           backup[name] = [];
@@ -115,7 +72,7 @@ export default function BackupRestore() {
       link.href = url;
       const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
       link.download = `vhagc-backup-${timestamp}.json`;
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -132,7 +89,7 @@ export default function BackupRestore() {
 
   const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files?.length) return;
-    
+
     try {
       setRestoring(true);
       const file = event.target.files[0];
@@ -140,7 +97,7 @@ export default function BackupRestore() {
       if (!file) {
         throw new Error('Aucun fichier sélectionné');
       }
-      
+
       const fileContent = await file.text();
       const backup = JSON.parse(fileContent);
 
@@ -154,24 +111,7 @@ export default function BackupRestore() {
         console.warn('Aucune métadonnée trouvée dans le fichier de sauvegarde');
       } else {
         console.log('Métadonnées de la sauvegarde:', backup._metadata);
-        
-        // Vérifier la compatibilité
-        if (backup._metadata.compatibleWith && 
-            !backup._metadata.compatibleWith.includes('firebase')) {
-          console.warn(`Cette sauvegarde est marquée comme compatible avec: ${backup._metadata.compatibleWith.join(', ')}`);
-        }
       }
-
-      const batch = writeBatch(db);
-      let operationCount = 0;
-      const BATCH_LIMIT = 500;
-
-      // Fonction pour traiter un lot de documents
-      const processBatch = async () => {
-        await batch.commit();
-        operationCount = 0;
-        return writeBatch(db);
-      };
 
       // Pour chaque collection
       for (const { name } of collections) {
@@ -180,71 +120,36 @@ export default function BackupRestore() {
           continue;
         }
 
-        // Supprimer les documents existants
-        const existingDocs = await getDocs(collection(db, name));
-        for (const doc of existingDocs.docs) {
-          // Ne pas supprimer le super admin
-          if (name === 'admins' && doc.data().role === 'super_admin') {
-            console.log('Préservation du super admin');
-          } else {
-            batch.delete(doc.ref);
-            operationCount++;
-            
-            if (operationCount >= BATCH_LIMIT) {
-              await processBatch();
-            }
+        // Supprimer les documents existants (sauf super_admin)
+        if (name === 'admins') {
+          const { data: existingAdmins } = await supabase
+            .from('admins')
+            .select('id, role');
+          const toDelete = (existingAdmins ?? [])
+            .filter((a: any) => a.role !== 'super_admin')
+            .map((a: any) => a.id);
+          if (toDelete.length > 0) {
+            await supabase.from('admins').delete().in('id', toDelete);
           }
+        } else {
+          await supabase.from(name).delete().neq('id', '00000000-0000-0000-0000-000000000000');
         }
 
-        // Restaurer les documents de la sauvegarde
-        for (const item of backup[name]) {
-          const { id, ...data } = item;
-          const docRef = doc(db, name, id);
-
-          // Traiter les types spéciaux (timestamps, références, etc.)
-          const processedData = Object.entries(data).reduce((acc, [key, value]) => {
-            if (value && typeof value === 'object' && '_type' in value && (value as any)._type === 'timestamp') {
-              acc[key] = new Date((value as any).value);
-            } else if (value && typeof value === 'object' && '_type' in value && (value as any)._type === 'reference') {
-              // Gérer les références si nécessaire
-              acc[key] = doc(db, (value as any).path);
-            } else if (value && typeof value === 'object' && 'seconds' in value) {
-              // Format de timestamp Firestore
-              acc[key] = new Date((value as any).seconds * 1000);
-            } else if (Array.isArray(value)) {
-              // Traiter les tableaux
-              acc[key] = value.map(item => {
-                if (item && typeof item === 'object' && '_type' in item && (item as any)._type === 'timestamp') {
-                  return new Date((item as any).value);
-                } else if (item && typeof item === 'object' && '_type' in item && (item as any)._type === 'reference') {
-                  return doc(db, (item as any).path);
-                } else if (item && typeof item === 'object' && 'seconds' in item) {
-                  return new Date((item as any).seconds * 1000);
-                }
-                return item;
-              });
-            } else {
-              acc[key] = value;
-            }
-            return acc;
-          }, {} as Record<string, any>);
-
-          batch.set(docRef, processedData);
-          operationCount++;
-          
-          if (operationCount >= BATCH_LIMIT) {
-            await processBatch();
+        // Restaurer les documents par lots de 100
+        const items = backup[name];
+        const CHUNK = 100;
+        for (let i = 0; i < items.length; i += CHUNK) {
+          const chunk = items.slice(i, i + CHUNK);
+          const { error } = await supabase.from(name).upsert(chunk, { onConflict: 'id' });
+          if (error) {
+            console.error(`Erreur restauration ${name} chunk ${i}:`, error);
           }
         }
-      }
-
-      // Commit final si nécessaire
-      if (operationCount > 0) {
-        await batch.commit();
+        console.log(`Restauré ${items.length} entrées dans ${name}`);
       }
 
       toast.success('Restauration terminée avec succès');
-      
+
       // Recharger la page pour refléter les changements
       window.location.reload();
     } catch (error) {
@@ -263,14 +168,14 @@ export default function BackupRestore() {
         <Database className="w-5 h-5 mr-2" />
         Sauvegarde et restauration
       </h2>
-      
+
       <div className="space-y-8">
         {/* Section Sauvegarde */}
         <div className="space-y-4">
-          <h3 className="text-base font-medium text-gray-900">Sauvegarder les données pour migration</h3>
+          <h3 className="text-base font-medium text-gray-900">Sauvegarder les données</h3>
           <p className="text-gray-600">
-            Téléchargez une copie complète de la base de données au format JSON compatible avec Supabase.
-            Cette sauvegarde contient toutes les données de l'application et peut être utilisée pour migrer vers Supabase :
+            Téléchargez une copie complète de la base de données au format JSON.
+            Cette sauvegarde contient toutes les données de l'application :
           </p>
 
           <ul className="list-disc list-inside text-sm text-gray-600 ml-4 space-y-2">
@@ -288,7 +193,7 @@ export default function BackupRestore() {
             className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md disabled:opacity-50 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <Download className="w-4 h-4 mr-2" />
-            {downloading ? 'Téléchargement...' : 'Télécharger la sauvegarde compatible Supabase'}
+            {downloading ? 'Téléchargement...' : 'Télécharger la sauvegarde'}
           </button>
         </div>
 
@@ -296,10 +201,10 @@ export default function BackupRestore() {
         <div className="space-y-4">
           <h3 className="text-base font-medium text-gray-900">Restaurer les données</h3>
           <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-            <p className="text-sm text-amber-800 font-medium">⚠️ Attention - Migration de données</p>
+            <p className="text-sm text-amber-800 font-medium">⚠️ Attention</p>
             <p className="mt-1 text-sm text-amber-700">
-              La restauration remplacera toutes les données actuelles par celles de la sauvegarde. 
-              Cette action est irréversible et peut être utilisée pour migrer des données depuis Supabase vers Firebase.
+              La restauration remplacera toutes les données actuelles par celles de la sauvegarde.
+              Cette action est irréversible.
               Assurez-vous d'avoir une sauvegarde récente avant de procéder.
             </p>
           </div>
@@ -319,8 +224,8 @@ export default function BackupRestore() {
                 (downloading || restoring) ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              <Upload className="w-4 h-4 mr-2" /> 
-              {restoring ? 'Restauration...' : 'Restaurer une sauvegarde / Migrer depuis Supabase'}
+              <Upload className="w-4 h-4 mr-2" />
+              {restoring ? 'Restauration...' : 'Restaurer une sauvegarde'}
             </label>
           </div>
         </div>

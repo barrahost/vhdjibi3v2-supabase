@@ -1,9 +1,7 @@
+import { supabase } from '../lib/supabase';
 import { SMSMessage } from '../types/sms.types';
-import { collection, query, where, orderBy, getDocs, addDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import toast from 'react-hot-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Timestamp } from 'firebase/firestore';
 
 export class SMSService {
   private static readonly MIN_SMS_THRESHOLD = 5; // Alerte si moins de 5 SMS restants
@@ -70,7 +68,7 @@ export class SMSService {
     date: Date
   ) {
     try {
-      await addDoc(collection(db, 'interactions'), {
+      const { error: _insertErr } = await supabase.from('interactions').insert({
         type: 'message',
         soulId,
         shepherdId,
@@ -93,9 +91,9 @@ export class SMSService {
       }
       constraints.push(orderBy('title', 'asc'));
 
-      const templatesQuery = query(collection(db, 'smsTemplates'), ...constraints);
+      const templatesQuery = supabase.from('smsTemplates').select('*'), ...constraints);
 
-      const snapshot = await getDocs(templatesQuery);
+      const { data: snapshot } = await templatesQuery;
       return snapshot.docs.map(doc => ({
         id: doc.id,
         title: doc.data().title,

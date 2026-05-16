@@ -1,7 +1,7 @@
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { BusinessProfile } from '../../types/businessProfile.types';
+import { collection, db, query, where } from '../../lib/firebase';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 /**
  * Synchronizes business profiles for servants who are department heads
@@ -19,18 +19,15 @@ export class ServantLeaderSync {
     
     try {
       // Find all servants with isHead = true
-      const servantsQuery = query(
-        collection(db, 'servants'),
-        where('isHead', '==', true),
+      const servantsQuery = query(collection(db, 'servants'), where('isHead', '==', true),
         where('status', '==', 'active')
-      );
       
-      const servantsSnapshot = await getDocs(servantsQuery);
-      console.log(`Found ${servantsSnapshot.size} department heads to sync`);
+      const { data: servantsData } = await servantsQuery;
+      console.log(`Found ${servantsData.size} department heads to sync`);
       
-      for (const servantDoc of servantsSnapshot.docs) {
+      for (const servantDoc of servantsData) {
         try {
-          const servantData = servantDoc.data();
+          const servantData = servantDocData;
           
           // Find the corresponding user by email
           if (!servantData.email) {
@@ -38,20 +35,17 @@ export class ServantLeaderSync {
             continue;
           }
           
-          const usersQuery = query(
-            collection(db, 'users'),
-            where('email', '==', servantData.email)
-          );
+          const usersQuery = query(collection(db, 'users'), where('email', '==', servantData.email)
           
-          const userSnapshot = await getDocs(usersQuery);
+          const { data: userData } = await usersQuery;
           
-          if (userSnapshot.empty) {
+          if (userData.empty) {
             console.warn(`No user found for servant ${servantData.fullName} (${servantData.email})`);
             continue;
           }
           
-          const userDoc = userSnapshot.docs[0];
-          const userData = userDoc.data();
+          const userDoc = userData[0];
+          const userData = userDocData;
           
           // Check if user already has proper business profiles
           const hasProperProfiles = userData.businessProfiles && 
@@ -76,7 +70,7 @@ export class ServantLeaderSync {
             }
           ];
           
-          await updateDoc(doc(db, 'users', userDoc.id), {
+          const { error: _updateErr } = await supabase.from('users').update({
             businessProfiles,
             role: 'department_leader' // Keep for backward compatibility
           });
@@ -85,7 +79,7 @@ export class ServantLeaderSync {
           console.log(`Synced user: ${userData.fullName} with department ${servantData.departmentId}`);
           
         } catch (error) {
-          const errorMsg = `Failed to sync servant ${servantDoc.id}: ${error}`;
+          const errorMsg = `Failed to sync servant ${servantDocData.id}: ${error}`;
           console.error(errorMsg);
           results.errors.push(errorMsg);
         }
@@ -106,33 +100,27 @@ export class ServantLeaderSync {
   static async syncSingleServant(servantEmail: string): Promise<void> {
     try {
       // Find servant
-      const servantQuery = query(
-        collection(db, 'servants'),
-        where('email', '==', servantEmail),
+      const servantQuery = query(collection(db, 'servants'), where('email', '==', servantEmail),
         where('isHead', '==', true)
-      );
       
-      const servantSnapshot = await getDocs(servantQuery);
+      const { data: servantData } = await servantQuery;
       
-      if (servantSnapshot.empty) {
+      if (servantData.empty) {
         throw new Error('Servant not found or not a department head');
       }
       
-      const servantData = servantSnapshot.docs[0].data();
+      const servantData = servantData?.[0];
       
       // Find user
-      const userQuery = query(
-        collection(db, 'users'),
-        where('email', '==', servantEmail)
-      );
+      const userQuery = query(collection(db, 'users'), where('email', '==', servantEmail)
       
-      const userSnapshot = await getDocs(userQuery);
+      const { data: userData } = await userQuery;
       
-      if (userSnapshot.empty) {
+      if (userData.empty) {
         throw new Error('User not found');
       }
       
-      const userDoc = userSnapshot.docs[0];
+      const userDoc = userData[0];
       
       // Update profiles
       const businessProfiles: BusinessProfile[] = [
@@ -147,7 +135,7 @@ export class ServantLeaderSync {
         }
       ];
       
-      await updateDoc(doc(db, 'users', userDoc.id), {
+      const { error: _updateErr } = await supabase.from('users').update({
         businessProfiles,
         role: 'department_leader'
       });

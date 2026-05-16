@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 
 interface EvangelistOption {
   id: string;
@@ -19,12 +19,9 @@ function Options() {
   useEffect(() => {
     const load = async () => {
       try {
-        const q = query(
-          collection(db, 'users'),
-          where('status', '==', 'active')
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs
+        const q = query(collection(db, 'users'), where('status', '==', 'active')
+        const { data: snapshot } = await q;
+const data = snapshot.docs
           .map(d => {
             const u: any = d.data();
             const profiles: any[] = Array.isArray(u.businessProfiles) ? u.businessProfiles : [];

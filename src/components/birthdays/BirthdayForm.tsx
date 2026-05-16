@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import { collection, db, query, where } from '../../lib/firebase';
 import { useNavigate } from 'react-router-dom';
-import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Calendar, Cake, User } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface BirthdayFormProps {
   onSuccess?: () => void;
@@ -41,18 +41,15 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       }
 
       // Vérifier si le numéro existe déjà
-      const phoneQuery = query(
-        collection(db, 'birthdays'),
-        where('phone', '==', formData.phone)
-      );
-      const phoneSnapshot = await getDocs(phoneQuery);
+      const phoneQuery = query(collection(db, 'birthdays'), where('phone', '==', formData.phone)
+      const { data: phoneData } = await phoneQuery;
       
-      if (!phoneSnapshot.empty) {
+      if (!phoneData.empty) {
         toast.error('Ce numéro de téléphone est déjà enregistré');
         return;
       }
 
-      await addDoc(collection(db, 'birthdays'), {
+      const { error: _insertErr } = await supabase.from('birthdays').insert({
         ...formData,
         birthDate: `${formData.birthMonth}-${formData.birthDay}`,
         createdAt: new Date(),

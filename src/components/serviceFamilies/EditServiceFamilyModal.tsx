@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, db, query, where } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 interface ServiceFamily {
   id: string;
@@ -67,12 +67,9 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
       }
 
       if (formData.name.trim() !== family.name) {
-        const nameQuery = query(
-          collection(db, 'serviceFamilies'),
-          where('name', '==', formData.name.trim())
-        );
-        const nameSnapshot = await getDocs(nameQuery);
-        if (!nameSnapshot.empty) {
+        const nameQuery = query(collection(db, 'serviceFamilies'), where('name', '==', formData.name.trim()
+        const { data: nameData } = await nameQuery;
+        if (!nameData.empty) {
           toast.error('Une famille avec ce nom existe déjà');
           return;
         }
@@ -80,15 +77,16 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
 
       const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
 
-      const familyRef = doc(db, 'serviceFamilies', family.id);
-      await updateDoc(familyRef, {
+      // Supabase: use id directly: const familyRefId = family.id; // table: serviceFamilies
+      const { error: updateErr } = await supabase.from('service_families').update({
         name: formData.name.trim(),
         description: formData.description.trim(),
-        leader: leaderUser?.fullName || family.leader || '', // legacy compat
-        leaderId: formData.leaderId || null,
-        shepherdIds: formData.shepherdIds,
-        updatedAt: new Date()
-      });
+        leader: leaderUser?.fullName || family.leader || '',
+        leader_id: formData.leaderId || null,
+        shepherd_ids: formData.shepherdIds,
+        updated_at: new Date().toISOString(),
+      }).eq('id', family.id);
+      if (updateErr) throw updateErr;
 
       toast.success('Famille modifiée avec succès');
       onClose();

@@ -1,5 +1,3 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
 import { Input } from '../../ui/input';
 import { LocationField } from '../form/LocationField';
 import { GenderRadioGroup } from '../../ui/GenderRadioGroup';
@@ -9,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { useServiceFamilies } from '../../../hooks/useServiceFamilies';
 import { useAuth } from '../../../contexts/AuthContext';
+import { supabase } from '../../../lib/supabase';
 
 interface GeneralInfoTabProps {
   data: {
@@ -56,7 +55,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
       }
 
       try {
-        const userDoc = await getDoc(doc(db, 'users', data.shepherdId));
+        const userDoc = await supabase.from('users').select('*').eq('id', data.shepherdId).single();
         if (userDoc.exists()) {
           setShepherdName(userDoc.data().fullName);
           setShepherdRole(userDoc.data().role);

@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import { collection, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, db, doc, getDocs, writeBatch } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 export interface ParsedRow {
   rowNumber: number; // ligne dans le fichier Excel (1-indexed)
@@ -82,17 +82,17 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
   const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 3, defval: '' });
 
   // Pré-charger familles + téléphones existants
-  const [familiesSnap, soulsSnap] = await Promise.all([
+  const [familiesSnapData, soulsSnapData] = await Promise.all([
     getDocs(collection(db, 'serviceFamilies')),
     getDocs(collection(db, 'souls')),
   ]);
   const familyMap = new Map<string, string>();
-  familiesSnap.docs.forEach((d) => {
+  familiesSnapData.forEach((d) => {
     const data = d.data() as any;
     if (data?.name) familyMap.set(norm(data.name), d.id);
   });
   const existingPhones = new Set<string>();
-  soulsSnap.docs.forEach((d) => {
+  soulsSnapData.forEach((d) => {
     const p = (d.data() as any)?.phone;
     if (p) existingPhones.add(p.toString().replace(/\D/g, '').slice(-10));
   });
@@ -211,7 +211,7 @@ export async function importSouls(
   for (let i = 0; i < importable.length; i += BATCH_SIZE) {
     const slice = importable.slice(i, i + BATCH_SIZE);
     const batch = writeBatch(db);
-    const now = Timestamp.now();
+    const now = new Date().toISOString();
 
     slice.forEach((r) => {
       const ref = doc(collection(db, 'souls'));
@@ -222,7 +222,7 @@ export async function importSouls(
         location: r.parsed.location,
         isUndecided: r.parsed.isUndecided,
         firstVisitDate: r.parsed.firstVisitDate
-          ? Timestamp.fromDate(r.parsed.firstVisitDate)
+          ? r.parsed.firstVisitDate.toISOString()
           : now,
         status: 'active',
         createdAt: now,
