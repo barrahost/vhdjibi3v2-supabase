@@ -386,7 +386,12 @@ export default function SoulManagement() {
       }
 
       if (statusFilter !== 'all') {
-        q = q.eq('status', statusFilter);
+        if (statusFilter === 'active') {
+          // Include souls with status='active' OR null status (migrated data may lack status)
+          (q as any) = (q as any).or('status.eq.active,status.is.null');
+        } else {
+          q = q.eq('status', statusFilter);
+        }
       }
 
       const { data, error } = await q;
