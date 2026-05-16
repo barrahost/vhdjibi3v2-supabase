@@ -35,7 +35,7 @@ export default function ShepherdReminders() {
   useEffect(() => {
     const loadReminders = async () => {
       try {
-        // Charger tous les utilisateurs actifs puis filtrer côté client
+        // Charger tous les utilisateurs actifs puis filtrer cÃ´tÃ© client
         // afin d'inclure les bergers multi-casquettes (businessProfiles)
         const { data: usersData, error: usersError } = await supabase
           .from('users')
@@ -44,7 +44,10 @@ export default function ShepherdReminders() {
 
         if (usersError) throw usersError;
 
-        const shepherds = (usersData ?? []).filter(u => isShepherdUser(u));
+        const shepherds = (usersData ?? []).map((u: any) => ({
+          ...u,
+          fullName: u.fullName || u.full_name || '',
+        })).filter((u: any) => isShepherdUser(u));
 
         const remindersData: ShepherdReminder[] = [];
         let totalSouls = 0;
@@ -52,17 +55,27 @@ export default function ShepherdReminders() {
         let totalDays = 0;
         let totalSoulsWithInteractions = 0;
 
-        // Charger les données en parallèle pour chaque berger
+        // Charger les donnÃ©es en parallÃ¨le pour chaque berger
         await Promise.all(shepherds.map(async (shepherd) => {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
-            .eq('shepherdId', shepherd.id)
+            .eq('shepherd_id', shepherd.id)
             .eq('status', 'active');
 
           if (soulsError) throw soulsError;
 
-          const souls = (soulsData ?? []) as Soul[];
+          const souls = (soulsData ?? []).map((row: any) => ({
+            ...row,
+            id: row.id,
+            fullName: row.fullName || row.full_name || '',
+            phone: row.phone || '',
+            location: row.location || '',
+            gender: row.gender || 'male',
+            shepherdId: row.shepherdId || row.shepherd_id,
+            status: row.status || 'active',
+            createdAt: row.createdAt || row.created_at,
+          } as Soul));
           totalSouls += souls.length;
 
           if (souls.length === 0) return;
@@ -70,16 +83,17 @@ export default function ShepherdReminders() {
           const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*')
-            .eq('shepherdId', shepherd.id);
+            .eq('shepherd_id', shepherd.id);
 
           if (interactionsError) throw interactionsError;
 
           const interactions = (interactionsData ?? []).map(row => ({
             ...row,
+            soulId: row.soulId || row.soul_id,
             date: row.date ? new Date(row.date) : new Date()
           }));
 
-          // Calculer les jours sans interaction pour chaque âme
+          // Calculer les jours sans interaction pour chaque Ã¢me
           const soulsWithInteractions = souls.map(soul => {
             const soulInteractions = interactions.filter((i: any) => i.soulId === soul.id);
             const lastInteraction = soulInteractions.length > 0
@@ -102,7 +116,7 @@ export default function ShepherdReminders() {
             };
           });
 
-          // Filtrer pour ne garder que les âmes nécessitant attention (5 jours ou plus)
+          // Filtrer pour ne garder que les Ã¢mes nÃ©cessitant attention (5 jours ou plus)
           const soulsNeedingAttention = soulsWithInteractions.filter(
             s => s.daysWithoutInteraction >= 5
           );
@@ -173,15 +187,15 @@ export default function ShepherdReminders() {
           iconClassName="text-blue-600"
         />
         <StatCard
-          title="Âmes nécessitant attention"
+          title="Ãmes nÃ©cessitant attention"
           value={stats.needingAttention}
           icon={AlertTriangle}
           trend={`${((stats.needingAttention / stats.totalSouls) * 100).toFixed(1)}%`}
-          trendLabel="des âmes"
+          trendLabel="des Ã¢mes"
           iconClassName="text-amber-600"
         />
         <StatCard
-          title="Délai moyen"
+          title="DÃ©lai moyen"
           value={stats.averageDays}
           icon={Clock}
           trend="jours"
@@ -202,11 +216,11 @@ export default function ShepherdReminders() {
                 <div className="flex items-center space-x-2">
                   <h3 className="font-medium text-gray-900">{shepherd.fullName}</h3>
                   <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                    {souls.length} âme{souls.length > 1 ? 's' : ''} à suivre
+                    {souls.length} Ã¢me{souls.length > 1 ? 's' : ''} Ã  suivre
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {shepherd.phone} • {shepherd.email}
+                  {shepherd.phone} â¢ {shepherd.email}
                 </p>
               </div>
               {expandedShepherds.includes(shepherd.id) ? (
@@ -248,10 +262,10 @@ export default function ShepherdReminders() {
                       }`} />
                       {lastInteraction ? (
                         <>
-                          Dernière interaction le {formatDate(lastInteraction)}
+                          DerniÃ¨re interaction le {formatDate(lastInteraction)}
                         </>
                       ) : (
-                        "Aucune interaction enregistrée"
+                        "Aucune interaction enregistrÃ©e"
                       )}
                     </div>
                   </div>
@@ -265,7 +279,7 @@ export default function ShepherdReminders() {
           <div className="bg-gray-50 rounded-lg border p-8 text-center">
             <AlertTriangle className="w-8 h-8 text-green-600 mx-auto mb-2" />
             <p className="text-gray-600">
-              Aucun rappel pour le moment. Tous les bergers sont à jour dans leurs interactions.
+              Aucun rappel pour le moment. Tous les bergers sont Ã  jour dans leurs interactions.
             </p>
           </div>
         )}
