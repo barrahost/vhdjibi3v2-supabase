@@ -139,16 +139,22 @@ export default function InteractionsManagement() {
 
       if (!isAdminView) {
         // Shepherd or evangelist: find their document ID by uid
-        const userDocs = await getDocs(supabase)
-          .from('users')
-          .select('*')
-          .eq('uid', user.uid)
-          .eq('status', 'active');
-        const matched = (userDocs || []).find((d: any) => isShepherdUser(d) || isEvangelistUser(d));
-        if (matched) {
-          currentUserId = matched.id;
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const localUserId = localUser.id;
+        if (localUserId) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', localUserId)
+            .eq('status', 'active')
+            .single();
+          if (userData && (isShepherdUser(userData) || isEvangelistUser(userData))) {
+            currentUserId = localUserId;
+          } else {
+            currentUserId = localUserId;
+          }
         } else {
-          currentUserId = (user as any).id || (user as any).uid;
+          currentUserId = (user as any).id;
         }
       }
 
@@ -173,8 +179,8 @@ export default function InteractionsManagement() {
         sourceCollection: row.sourceCollection || row.source_collection || 'souls',
       }));
 
-      const uniqueSoulIds = [...new Set(interactionsData.map(i => i.soulId))].filter(Boolean) as string[];
-      const uniqueActorIds = [...new Set(interactionsData.map(i => i.shepherdId))].filter(Boolean) as string[];
+      const uniqueSoulIds = [...new Set(interactionsData.map((i: any) => i.soulId))].filter(Boolean) as string[];
+      const uniqueActorIds = [...new Set(interactionsData.map((i: any) => i.shepherdId))].filter(Boolean) as string[];
 
       // Batch load souls from both tables in parallel
       const soulsData: Record<string, any> = {};
@@ -184,22 +190,22 @@ export default function InteractionsManagement() {
           supabase.from('evangelized_souls').select('id, fullName').in('id', uniqueSoulIds),
         ]);
         (soulsResult.data || []).forEach((s: any) => {
-          soulsData[s.id] = { id: s.id, fullName: s.fullName, collection: 'souls' };
+          soulsData[s.id] = { id: s.id, fullName: s.full_name || s.fullName, collection: 'souls' };
         });
         (evangelizedResult.data || []).forEach((s: any) => {
-          if (!soulsData[s.id]) soulsData[s.id] = { id: s.id, fullName: s.fullName, collection: 'evangelized_souls' };
+          if (!soulsData[s.id]) soulsData[s.id] = { id: s.id, fullName: s.full_name || s.fullName, collection: 'evangelized_souls' };
         });
       }
 
       // Batch load actors
       const actorsData: Record<string, Actor> = {};
       if (uniqueActorIds.length > 0) {
-        const actorDocs = await getDocs(supabase)
+        const { data: actorDocs } = await supabase
           .from('users')
-          .select('id, fullName, role')
+          .select('id, full_name, role')
           .in('id', uniqueActorIds);
         (actorDocs || []).forEach((d: any) => {
-          actorsData[d.id] = { id: d.id, fullName: d.fullName, role: d.role };
+          actorsData[d.id] = { id: d.id, fullName: d.full_name || d.fullName, role: d.role };
         });
       }
 
