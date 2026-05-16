@@ -24,11 +24,11 @@ export default function SpiritualProgression() {
   // Calculer les statistiques
   const stats = useMemo(() => {
     const totalSouls = souls.length;
-    const bornAgain = souls.filter(s => s.spiritualProfile.isBornAgain).length;
-    const baptized = souls.filter(s => s.spiritualProfile.isBaptized).length;
-    const academy = souls.filter(s => s.spiritualProfile.isEnrolledInAcademy).length;
-    const lifeBearers = souls.filter(s => s.spiritualProfile.isEnrolledInLifeBearers).length;
-    const serving = souls.filter(s => s.spiritualProfile.departments?.length > 0).length;
+    const bornAgain = souls.filter(s => s.spiritualProfile?.isBornAgain).length;
+    const baptized = souls.filter(s => s.spiritualProfile?.isBaptized).length;
+    const academy = souls.filter(s => s.spiritualProfile?.isEnrolledInAcademy).length;
+    const lifeBearers = souls.filter(s => s.spiritualProfile?.isEnrolledInLifeBearers).length;
+    const serving = souls.filter(s => s.spiritualProfile?.departments?.length > 0).length;
 
     return {
       totalSouls,
@@ -78,6 +78,7 @@ export default function SpiritualProgression() {
             : undefined,
           createdAt: row.createdAt ? new Date(row.createdAt) : row.created_at ? new Date(row.created_at) : undefined,
           updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.updated_at ? new Date(row.updated_at) : undefined,
+          spiritualProfile: row.spiritualProfile || row.spiritual_profile || {},
         } as Soul))
         .sort((a, b) => {
           const aTime = a.createdAt ? a.createdAt.getTime() : 0;
