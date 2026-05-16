@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, db, onData, query, where } from '../../../lib/firebase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Users, UserCheck, Clock, TrendingUp } from 'lucide-react';
 import { StatCard } from './StatCard';
@@ -10,7 +9,7 @@ interface EvangelizedSoul {
   id: string;
   evangelistId?: string;
   status?: string;
-  evangelizationDate?: any;
+  evangelizationDate?: string;
 }
 
 interface UserDoc {
@@ -24,31 +23,45 @@ export function EvangelizationStats() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub1 = onData(
-      collection(db, 'evangelized_souls'),
-      (snap) => {
-        setEvangelizedSouls(snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+    const loadData = async () => {
+      try {
+        const [{ data: soulsRaw, error: soulsErr }, { data: usersRaw, error: usersErr }] = await Promise.all([
+          supabase.from('evangelized_souls').select('id, evangelist_id, status, evangelization_date'),
+          supabase.from('users').select('id, full_name').eq('status', 'active'),
+        ]);
+
+        if (soulsErr) throw soulsErr;
+        if (usersErr) throw usersErr;
+
+        setEvangelizedSouls((soulsRaw ?? []).map((r: any) => ({
+          id: r.id,
+          evangelistId: r.evangelist_id,
+          status: r.status,
+          evangelizationDate: r.evangelization_date,
+        })));
+        setUsers((usersRaw ?? []).map((r: any) => ({ id: r.id, fullName: r.full_name })));
         setLoading(false);
-      },
-      (err) => {
-        console.error('Error listening to evangelized_souls:', err);
+      } catch (error) {
+        console.error('Error loading evangelization stats:', error);
         toast.error('Erreur lors du chargement des âmes évangélisées');
         setLoading(false);
       }
-    );
-
-    const unsub2 = onData(
-      query(collection(db, 'users'), where('status', '==', 'active')),
-      (snap) => {
-        setUsers(snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
-      },
-      (err) => console.error('Error listening to users:', err)
-    );
-
-    return () => {
-      unsub1();
-      unsub2();
     };
+
+    loadData();
+
+    // Realtime
+    const channel = supabase
+      .channel('evangelized-souls-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'evangelized_souls' }, async () => {
+        const { data } = await supabase.from('evangelized_souls').select('id, evangelist_id, status, evangelization_date');
+        setEvangelizedSouls((data ?? []).map((r: any) => ({
+          id: r.id, evangelistId: r.evangelist_id, status: r.status, evangelizationDate: r.evangelization_date
+        })));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const stats = useMemo(() => {
@@ -85,95 +98,51 @@ export function EvangelizationStats() {
       const label = d.toLocaleString('fr-FR', { month: 'short' });
       const monthSouls = evangelizedSouls.filter(s => {
         if (!s.evangelizationDate) return false;
-        const date = s.evangelizationDate?.toDate?.() || new Date(s.evangelizationDate);
-        if (Number.isNaN(date.getTime())) return false;
+        const date = new Date(s.evangelizationDate);
+        if (isNaN(date.getTime())) return false;
         return date.getMonth() === d.getMonth() && date.getFullYear() === d.getFullYear();
       });
-      return {
-        label,
-        evangelized: monthSouls.length,
-        imported: monthSouls.filter(s => s.status === 'imported').length,
-      };
+      return { label, evangelized: monthSouls.length, imported: monthSouls.filter(s => s.status === 'imported').length };
     });
 
     return { total, imported, pending, conversionRate, withoutEvangelist, evangelistRanking, monthlyData };
   }, [evangelizedSouls, users]);
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white p-6 rounded-lg shadow-sm border animate-pulse">
-            <div className="h-16" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-white p-6 rounded-lg shadow-sm border animate-pulse"><div className="h-16" /></div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard
-          title="Total âmes évangélisées"
-          value={stats.total}
-          icon={Users}
-          trend={`${stats.total}`}
-          trendLabel="enregistrées"
-        />
-        <StatCard
-          title="Reçues dans l'église"
-          value={stats.imported}
-          icon={UserCheck}
-          trend={`${stats.conversionRate}%`}
-          trendLabel="du total"
-          iconClassName="text-green-600"
-        />
-        <StatCard
-          title="En attente de suivi"
-          value={stats.pending}
-          icon={Clock}
-          trend={`${stats.total ? ((stats.pending / stats.total) * 100).toFixed(1) : '0'}%`}
-          trendLabel="du total"
-          iconClassName="text-orange-600"
-        />
-        <StatCard
-          title="Taux de conversion"
-          value={stats.conversionRate}
-          icon={TrendingUp}
-          trend={`${stats.imported}/${stats.total}`}
-          trendLabel="reçues"
-          iconClassName="text-blue-600"
-        />
+        <StatCard title="Total âmes évangélisées" value={stats.total} icon={Users} trend={`${stats.total}`} trendLabel="enregistrées" />
+        <StatCard title="Reçues dans l'église" value={stats.imported} icon={UserCheck} trend={`${stats.conversionRate}%`} trendLabel="du total" iconClassName="text-green-600" />
+        <StatCard title="En attente de suivi" value={stats.pending} icon={Clock} trend={`${stats.total ? ((stats.pending / stats.total) * 100).toFixed(1) : '0'}%`} trendLabel="du total" iconClassName="text-orange-600" />
+        <StatCard title="Taux de conversion" value={stats.conversionRate} icon={TrendingUp} trend={`${stats.imported}/${stats.total}`} trendLabel="reçues" iconClassName="text-blue-600" />
       </div>
 
-      {/* Activity chart */}
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <h3 className="text-sm font-semibold text-gray-700 mb-4">Activité — 6 derniers mois</h3>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={stats.monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="label" />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            <Legend />
+            <XAxis dataKey="label" /><YAxis allowDecimals={false} />
+            <Tooltip /><Legend />
             <Bar dataKey="evangelized" name="Évangélisées" fill="#0F6E56" />
             <Bar dataKey="imported" name="Reçues" fill="#1D9E75" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Evangelist ranking */}
       <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-4 border-b">
-          <h3 className="text-sm font-semibold text-gray-700">Classement des évangélistes</h3>
-        </div>
+        <div className="p-4 border-b"><h3 className="text-sm font-semibold text-gray-700">Classement des évangélistes</h3></div>
         <div className="overflow-x-auto">
           {stats.evangelistRanking.length === 0 ? (
-            <div className="p-6 text-center text-sm text-gray-500">
-              Aucun évangéliste avec des âmes enregistrées pour le moment.
-            </div>
+            <div className="p-6 text-center text-sm text-gray-500">Aucun évangéliste avec des âmes enregistrées.</div>
           ) : (
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
@@ -194,10 +163,7 @@ export function EvangelizationStats() {
                     <td className="px-4 py-2 text-right">{ev.conversionRate}%</td>
                     <td className="px-4 py-2">
                       <div className="w-28 bg-gray-200 rounded h-2">
-                        <div
-                          className="h-2 rounded"
-                          style={{ width: `${ev.conversionRate}%`, background: '#00665C' }}
-                        />
+                        <div style={{ width: `${ev.conversionRate}%`, background: '#00665C', height: '8px', borderRadius: '4px' }} />
                       </div>
                     </td>
                   </tr>
@@ -208,15 +174,10 @@ export function EvangelizationStats() {
         </div>
       </div>
 
-      {/* Without evangelist warning */}
       {stats.withoutEvangelist > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="font-medium text-amber-800">
-            {stats.withoutEvangelist} âme(s) sans évangéliste assigné
-          </p>
-          <p className="text-sm text-amber-600">
-            Ces âmes n'ont pas de responsable de suivi.
-          </p>
+          <p className="font-medium text-amber-800">{stats.withoutEvangelist} âme(s) sans évangéliste assigné</p>
+          <p className="text-sm text-amber-600">Ces âmes n'ont pas de responsable de suivi.</p>
         </div>
       )}
     </div>

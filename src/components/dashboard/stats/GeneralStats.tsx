@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../../lib/firebase';
 import { Soul } from '../../../types/database.types';
 import { Users, UserCheck, User, AlertTriangle } from 'lucide-react';
 import { StatCard } from './StatCard';
@@ -10,67 +9,37 @@ import { supabase } from '../../../lib/supabase';
 
 export function GeneralStats() {
   const [stats, setStats] = useState({
-    totalSouls: 0,
-    assignedActiveSouls: 0,
-    undecidedSouls: 0,
-    unassignedDecidedActiveSouls: 0,
-    totalShepherds: 0,
-    assignedActiveMaleCount: 0,
-    assignedActiveFemaleCount: 0,
+    totalSouls: 0, assignedActiveSouls: 0, undecidedSouls: 0,
+    unassignedDecidedActiveSouls: 0, totalShepherds: 0,
+    assignedActiveMaleCount: 0, assignedActiveFemaleCount: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Récupérer toutes les âmes (actives et inactives)
-        const { data: soulsRaw } = await supabase.from('souls').select('*');
-        const souls = (soulsRaw ?? []).map(row => ({
-          id: row.id,
-          ...row,
-          shepherdId: row.shepherd_id,
-          isUndecided: row.is_undecided,
-          status: row.status,
-          gender: row.gender,
-        })) as Soul[];
-        
-        // Récupérer les bergers actifs (incl. multi-casquettes)
-        const shepherdsQuery = query(collection(db, 'users'), where('status', '==', 'active'))
-        const shepherdsData = await getDocs(shepherdsQuery);
-        const activeShepherds = shepherdsData.docs
-          .map(d => d.data() as any)
-          .filter(u => isShepherdUser(u));
-        
-        // Calculer les statistiques
+        const [{ data: soulsRaw, error: soulsErr }, { data: usersRaw, error: usersErr }] = await Promise.all([
+          supabase.from('souls').select('id, shepherd_id, is_undecided, status, gender'),
+          supabase.from('users').select('id, role, status').eq('status', 'active'),
+        ]);
+
+        if (soulsErr) throw soulsErr;
+        if (usersErr) throw usersErr;
+
+        const souls = soulsRaw ?? [];
+        const activeShepherds = (usersRaw ?? []).filter((u: any) => isShepherdUser(u));
+
         const totalSouls = souls.length;
-        const assignedActiveSouls = souls.filter(soul => 
-          soul.shepherdId && soul.status === 'active'
-        ).length;
-        const undecidedSouls = souls.filter(soul => soul.isUndecided).length;
-        
-        // Nouvelles catégories pour expliquer la différence
-        const unassignedDecidedActiveSouls = souls.filter(soul => 
-          !soul.shepherdId && !soul.isUndecided && soul.status === 'active'
-        ).length;
-        
-        // Calculer la répartition par genre pour les âmes assignées et actives
-        const assignedActiveMaleCount = souls.filter(soul => 
-          soul.shepherdId && soul.status === 'active' && soul.gender === 'male'
-        ).length;
-        const assignedActiveFemaleCount = souls.filter(soul => 
-          soul.shepherdId && soul.status === 'active' && soul.gender === 'female'
-        ).length;
-        
-        const totalShepherds = activeShepherds.length;
-        
+        const assignedActiveSouls = souls.filter((s: any) => s.shepherd_id && s.status === 'active').length;
+        const undecidedSouls = souls.filter((s: any) => s.is_undecided).length;
+        const unassignedDecidedActiveSouls = souls.filter((s: any) => !s.shepherd_id && !s.is_undecided && s.status === 'active').length;
+        const assignedActiveMaleCount = souls.filter((s: any) => s.shepherd_id && s.status === 'active' && s.gender === 'male').length;
+        const assignedActiveFemaleCount = souls.filter((s: any) => s.shepherd_id && s.status === 'active' && s.gender === 'female').length;
+
         setStats({
-          totalSouls,
-          assignedActiveSouls,
-          undecidedSouls,
-          unassignedDecidedActiveSouls,
-          totalShepherds,
-          assignedActiveMaleCount,
-          assignedActiveFemaleCount,
+          totalSouls, assignedActiveSouls, undecidedSouls,
+          unassignedDecidedActiveSouls, totalShepherds: activeShepherds.length,
+          assignedActiveMaleCount, assignedActiveFemaleCount,
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -79,96 +48,31 @@ export function GeneralStats() {
         setLoading(false);
       }
     };
-
     fetchStats();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white p-6 rounded-lg shadow-sm border animate-pulse">
-            <div className="h-16"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-white p-6 rounded-lg shadow-sm border animate-pulse"><div className="h-16" /></div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Première ligne de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          title="Âmes totales enregistrées"
-          value={stats.totalSouls}
-          icon={Users}
-          trend={`${stats.totalSouls}`}
-          trendLabel="âmes au total"
-        />
-        
-        <StatCard
-          title="Âmes assignées et actives"
-          value={stats.assignedActiveSouls}
-          icon={UserCheck}
-          trend={`${stats.totalSouls ? ((stats.assignedActiveSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="du total"
-          iconClassName="text-green-600"
-        />
-        
-        <StatCard
-          title="Âmes indécises (Non assignées)"
-          value={stats.undecidedSouls}
-          icon={AlertTriangle}
-          trend={`${stats.totalSouls ? ((stats.undecidedSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="du total"
-          iconClassName="text-amber-600"
-        />
+        <StatCard title="Âmes totales enregistrées" value={stats.totalSouls} icon={Users} trend={`${stats.totalSouls}`} trendLabel="âmes au total" />
+        <StatCard title="Âmes assignées et actives" value={stats.assignedActiveSouls} icon={UserCheck} trend={`${stats.totalSouls ? ((stats.assignedActiveSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`} trendLabel="du total" iconClassName="text-green-600" />
+        <StatCard title="Âmes indécises (Non assignées)" value={stats.undecidedSouls} icon={AlertTriangle} trend={`${stats.totalSouls ? ((stats.undecidedSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`} trendLabel="du total" iconClassName="text-amber-600" />
       </div>
-      
-      {/* Deuxième ligne de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        
-        <StatCard
-          title="Âmes non assignées (actives)"
-          value={stats.unassignedDecidedActiveSouls}
-          icon={User}
-          trend={`${stats.totalSouls ? ((stats.unassignedDecidedActiveSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="du total"
-          iconClassName="text-orange-600"
-        />
-        
-        <StatCard
-          title="Total des berger(e)s"
-          value={stats.totalShepherds}
-          icon={UserCheck}
-          trend={`${stats.totalShepherds}`}
-          trendLabel="berger(e)s actif(ve)s"
-        />
-        
-        <StatCard
-          title="Hommes (Assignés actifs)"
-          value={stats.assignedActiveMaleCount}
-          icon={User}
-          trend={`${stats.assignedActiveSouls ? ((stats.assignedActiveMaleCount / stats.assignedActiveSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="des assignés actifs"
-          iconClassName="text-blue-600"
-        />
-        
-        <StatCard
-          title="Femmes (Assignées actives)"
-          value={stats.assignedActiveFemaleCount}
-          icon={User}
-          trend={`${stats.assignedActiveSouls ? ((stats.assignedActiveFemaleCount / stats.assignedActiveSouls) * 100).toFixed(1) : '0'}%`}
-          trendLabel="des assignées actives"
-          iconClassName="text-pink-600"
-        />
+        <StatCard title="Âmes non assignées (actives)" value={stats.unassignedDecidedActiveSouls} icon={User} trend={`${stats.totalSouls ? ((stats.unassignedDecidedActiveSouls / stats.totalSouls) * 100).toFixed(1) : '0'}%`} trendLabel="du total" iconClassName="text-orange-600" />
+        <StatCard title="Total des berger(e)s" value={stats.totalShepherds} icon={UserCheck} trend={`${stats.totalShepherds}`} trendLabel="berger(e)s actif(ve)s" />
+        <StatCard title="Hommes (Assignés actifs)" value={stats.assignedActiveMaleCount} icon={User} trend={`${stats.assignedActiveSouls ? ((stats.assignedActiveMaleCount / stats.assignedActiveSouls) * 100).toFixed(1) : '0'}%`} trendLabel="des assignés actifs" iconClassName="text-blue-600" />
+        <StatCard title="Femmes (Assignées actives)" value={stats.assignedActiveFemaleCount} icon={User} trend={`${stats.assignedActiveSouls ? ((stats.assignedActiveFemaleCount / stats.assignedActiveSouls) * 100).toFixed(1) : '0'}%`} trendLabel="des assignées actives" iconClassName="text-pink-600" />
       </div>
-      
-      {/* Graphique d'évolution seul sur une ligne */}
-      <div>
-        <SoulEvolutionChart />
-      </div>
+      <div><SoulEvolutionChart /></div>
     </div>
   );
 }

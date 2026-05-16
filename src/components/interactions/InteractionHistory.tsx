@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Timestamp, collection, db, doc, onData, orderBy, query, where } from '../../lib/firebase';
 import { Interaction } from '../../types/database.types';
 import { formatDate } from '../../utils/dateUtils';
 import { Phone, Users, MessageSquare, Trash2, MessageCircle, HelpCircle } from 'lucide-react';
@@ -10,7 +9,7 @@ interface InteractionHistoryProps {
   soulId: string;
 }
 
-const interactionIcons = {
+const interactionIcons: Record<string, any> = {
   call: Phone,
   visit: Users,
   sms: MessageCircle,
@@ -18,7 +17,7 @@ const interactionIcons = {
   other: HelpCircle
 };
 
-const interactionLabels = {
+const interactionLabels: Record<string, string> = {
   call: 'Appel',
   visit: 'Visite',
   sms: 'SMS',
@@ -30,30 +29,54 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
   const [interactions, setInteractions] = useState<Interaction[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'interactions'), where('soulId', '==', soulId),
-      orderBy('date', 'desc'))
+    const loadInteractions = async () => {
+      const { data, error } = await supabase
+        .from('interactions')
+        .select('*')
+        .eq('soul_id', soulId)
+        .order('date', { ascending: false });
 
-    const unsubscribe = onData(q, (snapshot) => {
-      setInteractions(snapshot.docs.map(doc => {
-        const data = doc.data();
-        // Convertir les timestamps Firestore en objets Date
-        return {
-          id: doc.id,
-          ...data,
-          date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt)
-        } as Interaction;
-      }));
-    });
+      if (error) {
+        console.error('Error loading interactions:', error);
+        return;
+      }
 
-    return () => unsubscribe();
+      setInteractions((data ?? []).map((r: any) => ({
+        id: r.id,
+        soulId: r.soul_id,
+        shepherdId: r.shepherd_id,
+        type: r.type,
+        notes: r.notes,
+        date: r.date ? new Date(r.date) : new Date(),
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+      })));
+    };
+
+    loadInteractions();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('interaction-history-' + soulId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'interactions', filter: 'soul_id=eq.' + soulId }, async () => {
+        const { data } = await supabase.from('interactions').select('*').eq('soul_id', soulId).order('date', { ascending: false });
+        setInteractions((data ?? []).map((r: any) => ({
+          id: r.id, soulId: r.soul_id, shepherdId: r.shepherd_id, type: r.type, notes: r.notes,
+          date: r.date ? new Date(r.date) : new Date(),
+          createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+          updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+        })));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [soulId]);
 
   const handleDelete = async (interactionId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette interaction ?')) {
       try {
-        const { error: _deleteErr } = await supabase.from('interactions').delete().eq('id', interactionId);
+        const { error } = await supabase.from('interactions').delete().eq('id', interactionId);
+        if (error) throw error;
         toast.success('Interaction supprimée avec succès');
       } catch (error) {
         console.error('Error deleting interaction:', error);
@@ -74,15 +97,12 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
     <div className="flow-root">
       <ul className="-mb-8">
         {interactions.map((interaction, idx) => {
-          const Icon = interactionIcons[interaction.type];
+          const Icon = interactionIcons[interaction.type] || HelpCircle;
           return (
             <li key={interaction.id}>
               <div className="relative pb-8">
                 {idx !== interactions.length - 1 && (
-                  <span
-                    className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                    aria-hidden="true"
-                  />
+                  <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true" />
                 )}
                 <div className="relative flex space-x-3">
                   <div>
@@ -94,7 +114,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-gray-500">
-                          {interactionLabels[interaction.type]}
+                          {interactionLabels[interaction.type] || interaction.type}
                         </p>
                         <button
                           onClick={() => handleDelete(interaction.id)}
@@ -104,9 +124,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
-                      <p className="mt-1 text-sm text-gray-700">
-                        {interaction.notes}
-                      </p>
+                      <p className="mt-1 text-sm text-gray-700">{interaction.notes}</p>
                     </div>
                     <div className="whitespace-nowrap text-right text-sm text-gray-500">
                       <time dateTime={interaction.date.toISOString()}>
