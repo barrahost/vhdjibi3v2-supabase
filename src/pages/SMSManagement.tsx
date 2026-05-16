@@ -51,7 +51,7 @@ export default function SMSManagement() {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('id, fullName, nickname, phone')
-            .eq('shepherdId', currentShepherdId)
+            .eq('shepherd_id', currentShepherdId)
             .eq('status', 'active');
 
           if (soulsError) throw soulsError;
