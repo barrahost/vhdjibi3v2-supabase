@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getDocs,  collection, db, doc, query, where  } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { StatCard } from '../dashboard/stats/StatCard';
 import { Users, UserCheck, UserX } from 'lucide-react';
@@ -18,50 +17,49 @@ export default function AttendanceStats() {
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!user) return;
-
       try {
-        // Récupérer l'ID du berger depuis la collection users
-        const userQuery = query(collection(db, 'users'), where('uid', '==', user.uid),
-          where('status', '==', 'active'))
-        const userDoc = await getDocs(userQuery);
-        
-        if (userDocData.empty) {
+        // Get current user from localStorage
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (!currentUserId) {
           toast.error('Utilisateur non trouvé');
+          setLoading(false);
           return;
         }
 
-        // Vérifier si l'utilisateur a un profil berger actif
-        const userData = userDocData.docs[0].data();
-        const hasShepherdProfile = userData.businessProfiles?.some(
-          (profile: any) => profile.type === 'shepherd' && profile.isActive
-        ) || userData.role === 'shepherd' || userData.role === 'intern';
+        // Récupérer le profil berger
+        const { data: userRows, error: userErr } = await supabase
+          .from('users')
+          .select('id, role')
+          .eq('id', currentUserId)
+          .eq('status', 'active')
+          .limit(1);
 
-        if (!hasShepherdProfile) {
-          toast.error('Accès non autorisé - profil berger requis');
+        if (userErr) throw userErr;
+        if (!userRows || userRows.length === 0) {
+          toast.error('Utilisateur non trouvé');
+          setLoading(false);
           return;
         }
 
-        const shepherdId = userDocData.docs[0].id;
+        const shepherdId = userRows[0].id;
 
         // Récupérer toutes les présences
-        const attendancesQuery = query(collection(db, 'attendances'), where('shepherdId', '==', shepherdId))
-        const attendancesData = await getDocs(attendancesQuery);
-const totalAttendances = attendancesData.size;
-        const presentCount = attendancesData.filter(
-          doc => doc.data().present
-        ).length;
+        const { data: attendancesRows, error: attErr } = await supabase
+          .from('attendances')
+          .select('id, present')
+          .eq('shepherd_id', shepherdId);
+
+        if (attErr) throw attErr;
+
+        const totalAttendances = (attendancesRows ?? []).length;
+        const presentCount = (attendancesRows ?? []).filter((r: any) => r.present).length;
         const absentCount = totalAttendances - presentCount;
         const attendanceRate = totalAttendances > 0
           ? (presentCount / totalAttendances) * 100
           : 0;
 
-        setStats({
-          totalAttendances,
-          presentCount,
-          absentCount,
-          attendanceRate
-        });
+        setStats({ totalAttendances, presentCount, absentCount, attendanceRate });
       } catch (error) {
         console.error('Error loading attendance stats:', error);
         toast.error('Erreur lors du chargement des statistiques');
@@ -90,7 +88,6 @@ const totalAttendances = attendancesData.size;
         trend={`${stats.totalAttendances}`}
         trendLabel="enregistrements"
       />
-      
       <StatCard
         title="Présents"
         value={stats.presentCount}
@@ -99,7 +96,6 @@ const totalAttendances = attendancesData.size;
         trendLabel="de présence"
         iconClassName="text-green-600"
       />
-      
       <StatCard
         title="Absents"
         value={stats.absentCount}

@@ -24,42 +24,36 @@ export default function AttendanceList() {
   });
 
   useEffect(() => {
-    if (!user) return;
-
     const loadData = async () => {
       try {
+        // Get current user from localStorage
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = localUser.id;
+        if (!currentUserId) {
+          toast.error('Utilisateur non trouvé');
+          setLoading(false);
+          return;
+        }
+
         // Récupérer le profil berger depuis users
-        const { data: userRows } = await supabase
+        const { data: userRows, error: userErr } = await supabase
           .from('users')
-          .select('id, role, business_profiles')
-          .eq('uid', user.uid)
+          .select('id, role')
+          .eq('id', currentUserId)
           .eq('status', 'active')
           .limit(1);
 
+        if (userErr) throw userErr;
         if (!userRows || userRows.length === 0) {
           toast.error('Berger non trouvé');
           setLoading(false);
           return;
         }
 
-        const userData = userRows[0];
-        const hasShepherdProfile =
-          userData.business_profiles?.some(
-            (profile: any) => profile.type === 'shepherd' && profile.isActive
-          ) ||
-          userData.role === 'shepherd' ||
-          userData.role === 'intern';
-
-        if (!hasShepherdProfile) {
-          toast.error('Accès non autorisé - profil berger requis');
-          setLoading(false);
-          return;
-        }
-
-        const shepherdId = userData.id;
+        const shepherdId = userRows[0].id;
 
         // Récupérer les présences
-        const { data: attendancesRows } = await supabase
+        const { data: attendancesRows, error: attErr } = await supabase
           .from('attendances')
           .select('*')
           .eq('shepherd_id', shepherdId)
@@ -137,14 +131,12 @@ export default function AttendanceList() {
   const filteredAttendances = attendances.filter(attendance => {
     const soul = souls[attendance.soulId];
     if (!soul) return false;
-    
     return soul.fullName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   // Trier les présences
   const sortedAttendances = [...filteredAttendances].sort((a, b) => {
     const modifier = sortConfig.direction === 'asc' ? 1 : -1;
-    
     switch (sortConfig.field) {
       case 'date':
         return (a.date.getTime() - b.date.getTime()) * modifier;
