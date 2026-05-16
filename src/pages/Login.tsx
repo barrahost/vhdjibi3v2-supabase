@@ -70,10 +70,7 @@ export default function Login() {
         {/* Logo + titre + verset */}
         <div className="sm:mx-auto sm:w-full sm:max-w-xl">
           <div className="flex flex-col items-center">
-            <Logo className="h-20 w-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 text-center">
-              Vases d'Honneur Assemblée Grâce Confondante
-            </h1>
+            <Logo className="h-56 w-auto mb-2" />
             <blockquote className="mt-4 text-center">
               <p className="text-sm italic text-[#00665C]/80">« {verse.text} »</p>
               <cite className="text-xs text-gray-400 not-italic mt-1 block">{verse.ref}</cite>
