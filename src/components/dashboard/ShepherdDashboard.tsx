@@ -7,6 +7,7 @@ import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { isShepherdUser } from '../../utils/roleHelpers';
 
 export function ShepherdDashboard() {
   const { user } = useAuth();
@@ -32,9 +33,8 @@ export function ShepherdDashboard() {
 
         const { data: userRows, error: userErr } = await supabase
           .from('users')
-          .select('id, role')
+          .select('id, role, business_profiles')
           .eq('id', currentUserId)
-          .eq('status', 'active')
           .limit(1);
 
         if (userErr) throw userErr;
@@ -47,7 +47,10 @@ export function ShepherdDashboard() {
         }
 
         const userData = userRows[0];
-        const hasShepherdRole = userData.role === 'shepherd' || userData.role === 'intern';
+        const hasShepherdRole = isShepherdUser({
+          role: userData.role,
+          businessProfiles: userData.business_profiles || []
+        });
 
         if (!hasShepherdRole) {
           if (!cancelled) {
