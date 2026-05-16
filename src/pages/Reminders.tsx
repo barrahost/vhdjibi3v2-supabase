@@ -33,7 +33,13 @@ export default function Reminders() {
 
         if (usersError) throw usersError;
 
-        const matched = usersData?.find((u: any) => isShepherdUser(u));
+        const matched = usersData?.find((u: any) => {
+          const hasProfile = (u.business_profiles || u.businessProfiles)?.some(
+            (p: any) => ['shepherd', 'intern'].includes(p.type) && p.isActive !== false
+          );
+          const hasRole = ['shepherd', 'intern', 'adn'].includes(u.role);
+          return hasProfile || hasRole;
+        });
 
         if (matched) {
           const shepherdId = matched.id;

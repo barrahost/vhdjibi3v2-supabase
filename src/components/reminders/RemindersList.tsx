@@ -42,6 +42,16 @@ export function RemindersList({ souls, interactions }: RemindersListProps) {
     setReminders(reminderItems.sort((a, b) => b.daysWithoutInteraction - a.daysWithoutInteraction));
   }, [souls, interactions]);
 
+  if (reminders.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500">
+        <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+        <p className="font-medium">Aucun rappel</p>
+        <p className="text-sm mt-1">Vous n'avez aucune âme assignée pour le moment.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {reminders.map(({ soul, lastInteraction, daysWithoutInteraction }) => (
