@@ -1,5 +1,4 @@
 import { toast } from 'react-hot-toast';
-import { getDocs,  collection, db, doc, query, where, writeBatch  } from '../lib/firebase';
 import { ServantService } from './servant.service';
 import { BusinessProfile } from '../types/businessProfile.types';
 import { supabase } from '../lib/supabase';
@@ -7,133 +6,93 @@ import { supabase } from '../lib/supabase';
 export class ShepherdPromotionService {
   /**
    * Promouvoir un berger au rang de responsable de département
-   * Cette fonction met à jour le profil business de l'utilisateur et crée/met à jour l'entrée serviteur
    */
-  static async promoteToDepartmentLeader(
-    userId: string, 
-    departmentId: string
-  ): Promise<void> {
+  static async promoteToDepartmentLeader(userId: string, departmentId: string): Promise<void> {
     try {
       console.log('🔄 [ShepherdPromotion] Début de la promotion:', { userId, departmentId });
 
-      // Récupérer les données de l'utilisateur
-      const userQuery = query(collection(db, 'users'), where('uid', '==', userId))
-      const userSnap = await getDocs(userQuery);
+      const { data: userRows, error: userErr } = await supabase
+        .from('users')
+        .select('id, full_name, nickname, gender, phone, email, role, business_profiles')
+        .eq('id', userId)
+        .limit(1);
 
-      if (userSnap.empty) {
+      if (userErr || !userRows || userRows.length === 0) {
         throw new Error('Utilisateur non trouvé');
       }
 
-      const userDoc = userSnap.docs[0];
-      const userData = userDoc.data();
-
+      const userRow = userRows[0];
       console.log('📋 [ShepherdPromotion] Données utilisateur:', {
-        fullName: userData.fullName,
-        currentProfiles: userData.businessProfiles,
-        phone: userData.phone
+        fullName: userRow.full_name,
+        currentProfiles: userRow.business_profiles,
+        phone: userRow.phone,
       });
 
-      // Handle legacy role system - convert if needed
-      let existingProfiles = userData.businessProfiles || [];
-      if (existingProfiles.length === 0 && userData.role) {
-        // Convert legacy role to businessProfile
-        const roleMap: Record<string, BusinessProfile['type']> = {
-          'shepherd': 'shepherd',
-          'intern': 'shepherd',
-          'adn': 'adn',
-          'admin': 'admin',
-          'pasteur': 'admin'
+      let existingProfiles: any[] = userRow.business_profiles || [];
+      if (existingProfiles.length === 0 && userRow.role) {
+        const roleMap: Record<string, string> = {
+          shepherd: 'shepherd', intern: 'shepherd', adn: 'adn', admin: 'admin', pasteur: 'admin',
         };
-        const profileType = roleMap[userData.role];
-        if (profileType) {
-          existingProfiles = [{ type: profileType, isActive: true }];
-        }
+        const profileType = roleMap[userRow.role];
+        if (profileType) existingProfiles = [{ type: profileType, isActive: true }];
       }
 
-      // Vérifier si l'utilisateur a déjà le profil department_leader
-      const hasDepartmentLeaderProfile = existingProfiles.some(
-        (p: any) => p.type === 'department_leader'
-      );
+      const hasDepartmentLeaderProfile = existingProfiles.some((p: any) => p.type === 'department_leader');
+      let updatedProfiles: any[];
 
-      // Préparer les nouveaux profils business
-      let updatedProfiles;
       if (hasDepartmentLeaderProfile) {
-        // Mettre à jour le profil existant
-        updatedProfiles = existingProfiles.map((profile: any) => {
-          if (profile.type === 'department_leader') {
-            return {
-              ...profile,
-              departmentId,
-              isActive: true
-            };
-          }
-          return profile;
-        });
+        updatedProfiles = existingProfiles.map((profile: any) =>
+          profile.type === 'department_leader'
+            ? { ...profile, departmentId, isActive: true }
+            : profile
+        );
       } else {
-        // Ajouter le nouveau profil
-        updatedProfiles = [
-          ...existingProfiles,
-          {
-            type: 'department_leader',
-            departmentId,
-            isActive: true
-          }
-        ];
+        updatedProfiles = [...existingProfiles, { type: 'department_leader', departmentId, isActive: true }];
       }
 
       console.log('📝 [ShepherdPromotion] Profils mis à jour:', updatedProfiles);
 
-      // Vérifier si un serviteur existe déjà pour cet utilisateur
-      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email))
-      const servantData = await getDocs(servantQuery);
+      const now = new Date().toISOString();
 
-      const batch = writeBatch(db);
-      const now = new Date();
+      // Check existing servant by email
+      const { data: servantRows } = await supabase
+        .from('servants')
+        .select('id')
+        .eq('email', userRow.email)
+        .limit(1);
 
-      if (!servantData.empty) {
-        // Mettre à jour le serviteur existant
-        const servantDoc = servantData[0];
-        console.log('🔄 [ShepherdPromotion] Mise à jour serviteur existant:', servantDocData.id);
-        
-        batch.update(doc(db, 'servants', servantDocData.id), {
-          departmentId,
-          isHead: true,
-          updatedAt: now.toISOString()
-        });
+      if (servantRows && servantRows.length > 0) {
+        await supabase.from('servants').update({
+          department_id: departmentId,
+          is_head: true,
+          updated_at: now,
+        }).eq('id', servantRows[0].id);
+        console.log('🔄 [ShepherdPromotion] Mise à jour serviteur existant:', servantRows[0].id);
       } else {
-        // Créer un nouveau serviteur
-        const servantId = doc(collection(db, 'servants')).id;
-        console.log('➕ [ShepherdPromotion] Création nouveau serviteur:', servantId);
-        
-        const servantData = {
-          id: servantId,
-          fullName: userData.fullName,
-          nickname: userData.nickname,
-          gender: userData.gender || 'male',
-          phone: userData.phone,
-          email: userData.email,
-          departmentId,
-          isHead: true,
-          isShepherd: userData.businessProfiles?.some((p: any) => p.type === 'shepherd') || false,
+        const newServant = {
+          full_name: userRow.full_name,
+          nickname: userRow.nickname || null,
+          gender: userRow.gender || 'male',
+          phone: userRow.phone,
+          email: userRow.email,
+          department_id: departmentId,
+          is_head: true,
+          is_shepherd: existingProfiles.some((p: any) => p.type === 'shepherd'),
           status: 'active',
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString()
+          created_at: now,
+          updated_at: now,
         };
-
-        batch.set(doc(db, 'servants', servantId), servantData);
+        const { data: inserted } = await supabase.from('servants').insert(newServant).select('id').single();
+        console.log('➕ [ShepherdPromotion] Création nouveau serviteur:', inserted?.id);
       }
 
-      // Mettre à jour l'utilisateur avec les nouveaux profils business
-      batch.update(doc(db, 'users', userDocData.id), {
-        businessProfiles: updatedProfiles,
-        updatedAt: now.toISOString()
-      });
-
-      // Exécuter la transaction
-      await batch.commit();
+      await supabase.from('users').update({
+        business_profiles: updatedProfiles,
+        updated_at: now,
+      }).eq('id', userRow.id);
 
       console.log('✅ [ShepherdPromotion] Promotion réussie!');
-      toast.success(`${userData.fullName} a été promu(e) responsable de département avec succès !`);
+      toast.success(`${userRow.full_name} a été promu(e) responsable de département avec succès !`);
 
     } catch (error) {
       console.error('❌ [ShepherdPromotion] Erreur lors de la promotion:', error);
@@ -150,44 +109,38 @@ export class ShepherdPromotionService {
     try {
       console.log('🔄 [ShepherdPromotion] Début de la rétrogradation:', { userId });
 
-      // Récupérer les données de l'utilisateur
-      const userQuery = query(collection(db, 'users'), where('uid', '==', userId))
-      const userSnap = await getDocs(userQuery);
+      const { data: userRows, error: userErr } = await supabase
+        .from('users')
+        .select('id, full_name, email, business_profiles')
+        .eq('id', userId)
+        .limit(1);
 
-      if (userSnap.empty) {
+      if (userErr || !userRows || userRows.length === 0) {
         throw new Error('Utilisateur non trouvé');
       }
 
-      const userDoc = userSnap.docs[0];
-      const userData = userDoc.data();
-
-      // Retirer le profil department_leader
-      const updatedProfiles = (userData.businessProfiles || []).filter(
+      const userRow = userRows[0];
+      const updatedProfiles = (userRow.business_profiles || []).filter(
         (profile: any) => profile.type !== 'department_leader'
       );
 
-      // Mettre à jour le serviteur s'il existe
-      const servantQuery = query(collection(db, 'servants'), where('email', '==', userData.email))
-      const servantData = await getDocs(servantQuery);
+      const now = new Date().toISOString();
 
-      const batch = writeBatch(db);
-      const now = new Date();
+      // Update servant if exists
+      const { data: servantRows } = await supabase
+        .from('servants')
+        .select('id')
+        .eq('email', userRow.email)
+        .limit(1);
 
-      if (!servantData.empty) {
-        const servantDoc = servantData[0];
-        batch.update(doc(db, 'servants', servantDocData.id), {
-          isHead: false,
-          updatedAt: now.toISOString()
-        });
+      if (servantRows && servantRows.length > 0) {
+        await supabase.from('servants').update({ is_head: false, updated_at: now }).eq('id', servantRows[0].id);
       }
 
-      // Mettre à jour l'utilisateur
-      batch.update(doc(db, 'users', userDocData.id), {
-        businessProfiles: updatedProfiles,
-        updatedAt: now.toISOString()
-      });
-
-      await batch.commit();
+      await supabase.from('users').update({
+        business_profiles: updatedProfiles,
+        updated_at: now,
+      }).eq('id', userRow.id);
 
       console.log('✅ [ShepherdPromotion] Rétrogradation réussie!');
       toast.success('Rétrogradation effectuée avec succès');

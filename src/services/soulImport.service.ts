@@ -1,9 +1,8 @@
 import * as XLSX from 'xlsx';
-import { collection, db, doc, getDocs, writeBatch } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
 
 export interface ParsedRow {
-  rowNumber: number; // ligne dans le fichier Excel (1-indexed)
+  rowNumber: number;
   raw: {
     firstVisitDate: string;
     fullName: string;
@@ -51,11 +50,10 @@ const norm = (s: string) =>
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[̀-ͯ]/g, '');
 
 function parseFrenchDate(value: any): Date | undefined {
   if (!value && value !== 0) return undefined;
-  // Excel date number
   if (typeof value === 'number') {
     const d = XLSX.SSF.parse_date_code(value);
     if (d) return new Date(d.y, d.m - 1, d.d);
@@ -78,22 +76,22 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
   const sheet = wb.Sheets['Import Âmes'] || wb.Sheets[wb.SheetNames[0]];
   if (!sheet) throw new Error('Feuille "Import Âmes" introuvable.');
 
-  // Données à partir de la ligne 4 (range:3 en 0-index)
   const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 3, defval: '' });
 
-  // Pré-charger familles + téléphones existants
-  const [familiesSnapData, soulsSnapData] = await Promise.all([
-    getDocs(collection(db, 'serviceFamilies')),
-    getDocs(collection(db, 'souls')),
+  // Preload families + existing phones from Supabase
+  const [familiesRes, soulsRes] = await Promise.all([
+    supabase.from('service_families').select('id, name'),
+    supabase.from('souls').select('phone'),
   ]);
+
   const familyMap = new Map<string, string>();
-  familiesSnapData.forEach((d) => {
-    const data = d.data() as any;
-    if (data?.name) familyMap.set(norm(data.name), d.id);
+  (familiesRes.data || []).forEach((row: any) => {
+    if (row?.name) familyMap.set(norm(row.name), row.id);
   });
+
   const existingPhones = new Set<string>();
-  soulsSnapData.forEach((d) => {
-    const p = (d.data() as any)?.phone;
+  (soulsRes.data || []).forEach((row: any) => {
+    const p = row?.phone;
     if (p) existingPhones.add(p.toString().replace(/\D/g, '').slice(-10));
   });
 
@@ -115,28 +113,23 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
       remarks: (row[9] ?? '').toString().trim(),
     };
 
-    // Ligne entièrement vide → on l'ignore
     const isEmpty = Object.values(raw).every((v) => !v);
     if (isEmpty) return;
 
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Date
     const date = parseFrenchDate(row[0]);
     if (!date) errors.push('Date de 1ère visite invalide (attendu JJ/MM/AAAA).');
 
-    // Nom
     if (!raw.fullName) errors.push('Nom complet manquant.');
 
-    // Genre
     let gender: 'male' | 'female' | undefined;
     const g = norm(raw.gender);
     if (g === 'homme' || g === 'h' || g === 'm') gender = 'male';
     else if (g === 'femme' || g === 'f') gender = 'female';
     else errors.push('Genre invalide (Homme ou Femme).');
 
-    // Téléphone
     const digits = raw.phone.replace(/\D/g, '');
     let phone = '';
     if (!/^\d{10}$/.test(digits)) {
@@ -148,10 +141,8 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
       seenPhonesInFile.add(phone);
     }
 
-    // Lieu
     if (!raw.location) errors.push('Lieu d\'habitation manquant.');
 
-    // Famille de service (optionnel)
     let serviceFamilyId: string | undefined;
     if (raw.serviceFamily) {
       const fid = familyMap.get(norm(raw.serviceFamily));
@@ -159,7 +150,6 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
       else serviceFamilyId = fid;
     }
 
-    // Provenance (optionnel)
     let originSource: 'culte' | 'evangelisation' | undefined;
     if (raw.originSource) {
       const o = norm(raw.originSource);
@@ -168,7 +158,6 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
       else warnings.push('Provenance non reconnue — sera ignorée.');
     }
 
-    // Indécise
     const u = norm(raw.isUndecided);
     const isUndecided = u === 'oui' || u === 'yes' || u === 'true' || u === '1';
 
@@ -178,17 +167,7 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
     result.push({
       rowNumber,
       raw,
-      parsed: {
-        firstVisitDate: date,
-        fullName: raw.fullName,
-        nickname: raw.nickname || undefined,
-        gender,
-        phone,
-        location: raw.location,
-        serviceFamilyId,
-        originSource,
-        isUndecided,
-      },
+      parsed: { firstVisitDate: date, fullName: raw.fullName, nickname: raw.nickname || undefined, gender, phone, location: raw.location, serviceFamilyId, originSource, isUndecided },
       errors,
       warnings,
       status,
@@ -210,25 +189,21 @@ export async function importSouls(
 
   for (let i = 0; i < importable.length; i += BATCH_SIZE) {
     const slice = importable.slice(i, i + BATCH_SIZE);
-    const batch = writeBatch(db);
     const now = new Date().toISOString();
 
-    slice.forEach((r) => {
-      const ref = doc(collection(db, 'souls'));
+    const payloads = slice.map((r) => {
       const payload: any = {
-        fullName: r.parsed.fullName,
+        full_name: r.parsed.fullName,
         gender: r.parsed.gender,
         phone: '+225' + r.parsed.phone,
         location: r.parsed.location,
-        isUndecided: r.parsed.isUndecided,
-        firstVisitDate: r.parsed.firstVisitDate
-          ? r.parsed.firstVisitDate.toISOString()
-          : now,
+        is_undecided: r.parsed.isUndecided,
+        first_visit_date: r.parsed.firstVisitDate ? r.parsed.firstVisitDate.toISOString() : now,
         status: 'active',
-        createdAt: now,
-        updatedAt: now,
-        createdBy,
-        spiritualProfile: {
+        created_at: now,
+        updated_at: now,
+        created_by: createdBy,
+        spiritual_profile: {
           isBornAgain: false,
           isBaptized: false,
           isEnrolledInAcademy: false,
@@ -237,13 +212,12 @@ export async function importSouls(
         },
       };
       if (r.parsed.nickname) payload.nickname = r.parsed.nickname;
-      if (r.parsed.serviceFamilyId) payload.serviceFamilyId = r.parsed.serviceFamilyId;
-      if (r.parsed.originSource) payload.originSource = r.parsed.originSource;
-
-      batch.set(ref, payload);
+      if (r.parsed.serviceFamilyId) payload.service_family_id = r.parsed.serviceFamilyId;
+      if (r.parsed.originSource) payload.origin_source = r.parsed.originSource;
+      return payload;
     });
 
-    await batch.commit();
+    await supabase.from('souls').insert(payloads);
     done += slice.length;
     onProgress?.(done, total);
   }
@@ -267,19 +241,16 @@ export function downloadTemplate(familyNames: string[] = []) {
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  // Largeurs de colonnes
   ws['!cols'] = [
     { wch: 22 }, { wch: 24 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
     { wch: 22 }, { wch: 22 }, { wch: 26 }, { wch: 16 }, { wch: 28 },
   ];
 
-  // Fusion du titre et sous-titre
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
   ];
 
-  // Listes déroulantes (Genre D, Famille G, Provenance H, Indécise I) — lignes 4 à 1000
   const validations: any[] = [
     { sqref: 'D4:D1000', type: 'list', formula1: '"Homme,Femme"' },
     { sqref: 'H4:H1000', type: 'list', formula1: '"Culte,Evangelisation"' },

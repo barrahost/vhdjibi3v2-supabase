@@ -1,5 +1,4 @@
 import { Soul } from '../types/database.types';
-import { collection, db, doc, writeBatch } from '../lib/firebase';
 import { ServantFormData } from '../types/servant.types';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -7,71 +6,67 @@ import { supabase } from '../lib/supabase';
 export class SoulPromotionService {
   /**
    * Promouvoir une âme au rang de serviteur
-   * Cette fonction gère la transaction complète pour créer le serviteur et mettre à jour l'âme
    */
   static async promoteToServant(soulId: string, servantData: ServantFormData): Promise<string> {
     try {
-      // Récupérer les données actuelles de l'âme
-      const soulDoc = await supabase.from('souls').select('*').eq('id', soulId).single();
-      if (!!!soulDocData) {
+      const { data: soulRow, error: soulErr } = await supabase
+        .from('souls')
+        .select('*')
+        .eq('id', soulId)
+        .single();
+
+      if (soulErr || !soulRow) {
         throw new Error('Âme non trouvée');
       }
 
-      const soulDataCurrent = soulDocData as Soul;
-      
-      // Vérifier si l'âme est déjà promue
-      if (soulDataCurrent.isServant) {
+      const soulDataCurrent = soulRow as any;
+
+      if (soulDataCurrent.is_servant) {
         throw new Error('Cette âme est déjà promue au rang de serviteur');
       }
 
-      // Créer un batch pour les opérations atomiques
-      const batch = writeBatch(db);
-      
-      // Générer un ID pour le nouveau serviteur
-      const servantId = doc(collection(db, 'servants')).id;
-      const now = new Date();
+      const now = new Date().toISOString();
 
-      // Préparer les données du serviteur
-      const servantDataToSave = {
-        id: servantId,
-        fullName: servantData.fullName || soulDataCurrent.fullName,
+      // Insert servant
+      const servantPayload = {
+        full_name: servantData.fullName || soulDataCurrent.full_name,
         nickname: servantData.nickname || soulDataCurrent.nickname,
         gender: servantData.gender || soulDataCurrent.gender,
         phone: servantData.phone || soulDataCurrent.phone,
-        email: servantData.email, // Email requis pour les serviteurs
-        departmentId: servantData.departmentId,
-        isHead: servantData.isHead || false,
-        isShepherd: servantData.isShepherd || false,
-        shepherdId: servantData.shepherdId,
+        email: servantData.email,
+        department_id: servantData.departmentId,
+        is_head: servantData.isHead || false,
+        is_shepherd: servantData.isShepherd || false,
+        shepherd_id: servantData.shepherdId || null,
         status: servantData.status || 'active',
-        originalSoulId: soulId, // Lien vers l'âme d'origine
-        promotionDate: now.toISOString(),
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString()
+        original_soul_id: soulId,
+        promotion_date: now,
+        created_at: now,
+        updated_at: now,
       };
 
-      // Ajouter le serviteur à la collection
-      batch.set(doc(db, 'servants', servantId), servantDataToSave);
+      const { data: newServant, error: servantErr } = await supabase
+        .from('servants')
+        .insert(servantPayload)
+        .select('id')
+        .single();
 
-      // Mettre à jour l'âme avec les informations de promotion
-      batch.update(doc(db, 'souls', soulId), {
-        isServant: true,
-        servantId: servantId,
-        promotionToServantDate: now.toISOString(),
-        updatedAt: now.toISOString()
-      });
+      if (servantErr || !newServant) {
+        throw new Error('Erreur lors de la création du serviteur');
+      }
 
-      // Exécuter la transaction
-      await batch.commit();
+      const servantId = newServant.id;
 
-      console.log('✅ [SoulPromotion] Promotion réussie:', {
-        soulId,
-        servantId,
-        fullName: soulDataCurrent.fullName,
-        servantData: servantDataToSave
-      });
+      // Update soul
+      await supabase.from('souls').update({
+        is_servant: true,
+        servant_id: servantId,
+        promotion_to_servant_date: now,
+        updated_at: now,
+      }).eq('id', soulId);
 
-      toast.success(`${soulDataCurrent.fullName} a été promu(e) au rang de serviteur avec succès !`);
+      console.log('✅ [SoulPromotion] Promotion réussie:', { soulId, servantId });
+      toast.success(`${soulDataCurrent.full_name} a été promu(e) au rang de serviteur avec succès !`);
       return servantId;
 
     } catch (error) {
@@ -89,16 +84,12 @@ export class SoulPromotionService {
     if (soul.isServant) {
       return { canPromote: false, reason: 'Cette âme est déjà serviteur' };
     }
-
     if (soul.status !== 'active') {
       return { canPromote: false, reason: 'Seules les âmes actives peuvent être promues' };
     }
-
-    // Vérifier si l'âme a un profil spirituel approprié (optionnel)
     if (!soul.spiritualProfile?.isBornAgain) {
       return { canPromote: false, reason: 'L\'âme doit être née de nouveau pour devenir serviteur' };
     }
-
     return { canPromote: true };
   }
 
@@ -111,20 +102,10 @@ export class SoulPromotionService {
     eligibleForPromotion: number;
   }> {
     try {
-      // Cette fonction pourrait être étendue pour calculer les statistiques
-      // Pour l'instant, elle retourne des valeurs par défaut
-      return {
-        totalSouls: 0,
-        promotedToServant: 0,
-        eligibleForPromotion: 0
-      };
+      return { totalSouls: 0, promotedToServant: 0, eligibleForPromotion: 0 };
     } catch (error) {
       console.error('Erreur lors du calcul des statistiques:', error);
-      return {
-        totalSouls: 0,
-        promotedToServant: 0,
-        eligibleForPromotion: 0
-      };
+      return { totalSouls: 0, promotedToServant: 0, eligibleForPromotion: 0 };
     }
   }
 }
