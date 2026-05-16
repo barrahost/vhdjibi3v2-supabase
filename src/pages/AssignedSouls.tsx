@@ -148,7 +148,24 @@ export default function AssignedSouls() {
 
           if (soulsError) throw soulsError;
 
-          const loaded = (soulsData ?? []) as Soul[];
+          const loaded = (soulsData ?? []).map((row: any) => ({
+            id: row.id,
+            fullName: row.full_name || row.fullName || '',
+            nickname: row.nickname,
+            gender: row.gender || 'male',
+            phone: row.phone || '',
+            location: row.location || '',
+            isUndecided: row.is_undecided ?? row.isUndecided ?? false,
+            coordinates: row.coordinates || null,
+            firstVisitDate: row.first_visit_date ? new Date(row.first_visit_date) : (row.firstVisitDate ? new Date(row.firstVisitDate) : new Date()),
+            shepherdId: row.shepherd_id || row.shepherdId,
+            evangelistId: row.evangelist_id || row.evangelistId,
+            spiritualProfile: row.spiritual_profile || row.spiritualProfile || {},
+            createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+            updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+            status: row.status || 'active',
+            photoURL: row.photo_url || row.photoURL,
+          } as Soul));
           setSouls(loaded);
 
           if (loaded.length > 0) {
