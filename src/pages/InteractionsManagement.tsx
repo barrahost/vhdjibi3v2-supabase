@@ -155,9 +155,9 @@ export default function InteractionsManagement() {
       let q = supabase.from('interactions').select('*').order('date', { ascending: false });
 
       if (currentUserId) {
-        q = q.eq('shepherdId', currentUserId);
+        q = q.eq('shepherd_id', currentUserId);
       } else if (selectedActorId) {
-        q = q.eq('shepherdId', selectedActorId);
+        q = q.eq('shepherd_id', selectedActorId);
       }
 
       const { data, error } = await q;
@@ -168,9 +168,9 @@ export default function InteractionsManagement() {
         date: row.date ? new Date(row.date) : new Date(),
         type: row.type,
         notes: row.notes,
-        soulId: row.soulId,
-        shepherdId: row.shepherdId,
-        sourceCollection: row.sourceCollection || 'souls',
+        soulId: row.soulId || row.soul_id,
+        shepherdId: row.shepherdId || row.shepherd_id,
+        sourceCollection: row.sourceCollection || row.source_collection || 'souls',
       }));
 
       const uniqueSoulIds = [...new Set(interactionsData.map(i => i.soulId))].filter(Boolean) as string[];
@@ -227,7 +227,7 @@ export default function InteractionsManagement() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchInteractions]);
 
-  // Filter — don't exclude interactions with unknown actor
+  // Filter â don't exclude interactions with unknown actor
   const filteredInteractions = interactions.filter(interaction => {
     const soul = souls[interaction.soulId];
     const actor = actors[interaction.shepherdId];
