@@ -132,7 +132,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
 
           await SMSService.sendSMS(phone, personalizedMessage, soulFullName, soulNickname);
 
-          const { error: insertErr } = await supabase.from('interactions').insert({
+          const smsInteractionData: Record<string, any> = {
             id: crypto.randomUUID(),
             type: formData.type,
             soul_id: soulId,
@@ -142,9 +142,17 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
             notes: 'Envoi du message suivant:\n' + personalizedMessage,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          });
+          };
 
-          if (insertErr) throw insertErr;
+          const { error: insertErr } = await supabase.from('interactions').insert(smsInteractionData);
+          if (insertErr) {
+            if (insertErr.code === 'PGRST204' || insertErr.message?.includes('source_collection')) {
+              const { error: retryErr } = await supabase.from('interactions').insert({ ...smsInteractionData, source_collection: undefined });
+              if (retryErr) throw retryErr;
+            } else {
+              throw insertErr;
+            }
+          }
 
           toast.success('Message envoyé et interaction enregistrée');
           onSuccess?.();
@@ -164,7 +172,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
       }
 
       // Pour les autres types d'interactions
-      const { error: insertErr } = await supabase.from('interactions').insert({
+      const interactionData: Record<string, any> = {
         id: crypto.randomUUID(),
         type: formData.type,
         soul_id: soulId,
@@ -174,9 +182,22 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
         notes: formData.notes,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      });
+      };
 
-      if (insertErr) throw insertErr;
+      const { error: insertErr } = await supabase.from('interactions').insert(interactionData);
+
+      if (insertErr) {
+        // Fallback: retry without source_collection if column doesn't exist yet
+        if (insertErr.code === 'PGRST204' || insertErr.message?.includes('source_collection')) {
+          const { error: retryErr } = await supabase.from('interactions').insert({
+            ...interactionData,
+            source_collection: undefined
+          });
+          if (retryErr) throw retryErr;
+        } else {
+          throw insertErr;
+        }
+      }
 
       toast.success('Interaction enregistrée avec succès');
       onSuccess?.();
