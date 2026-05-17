@@ -137,6 +137,8 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
             type: formData.type,
             soul_id: soulId,
             shepherd_id: shepherdId,
+            soul_snapshot_name: soulFullName || null,
+            actor_snapshot_name: userInfo.fullName || null,
             source_collection: sourceCollection,
             date: interactionDate.toISOString(),
             notes: 'Envoi du message suivant:\n' + personalizedMessage,
@@ -172,11 +174,27 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
       }
 
       // Pour les autres types d'interactions
+      // Fetch soul name snapshot
+      let soulSnapshotName: string | null = null;
+      try {
+        const table2 = sourceCollection === 'evangelized_souls' ? 'evangelized_souls' : 'souls';
+        const { data: soulSnap } = await supabase.from(table2).select('full_name').eq('id', soulId).limit(1).single();
+        soulSnapshotName = soulSnap?.full_name || null;
+      } catch (_) {}
+
+      let actorSnapshotName: string | null = null;
+      try {
+        const { data: actorSnap } = await supabase.from('users').select('full_name').eq('id', shepherdId).limit(1).single();
+        actorSnapshotName = actorSnap?.full_name || null;
+      } catch (_) {}
+
       const interactionData: Record<string, any> = {
         id: crypto.randomUUID(),
         type: formData.type,
         soul_id: soulId,
         shepherd_id: shepherdId,
+        soul_snapshot_name: soulSnapshotName,
+        actor_snapshot_name: actorSnapshotName,
         source_collection: sourceCollection,
         date: interactionDate.toISOString(),
         notes: formData.notes,

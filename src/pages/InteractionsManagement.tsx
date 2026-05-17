@@ -92,11 +92,12 @@ export default function InteractionsManagement() {
     {
       key: 'soulId',
       title: 'Ame',
-      render: (value: string) => {
+      render: (value: string, row: any) => {
         const soul = souls[value];
-        return soul ? (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F2B636]/10 text-[#F2B636]">
-            {soul.fullName}
+        const name = soul?.fullName || row.soul_snapshot_name;
+        return name ? (
+          <span className={"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium " + (soul ? "bg-[#F2B636]/10 text-[#F2B636]" : "bg-gray-100 text-gray-500 italic")}>
+            {name}{!soul && ' (supprimé)'}
           </span>
         ) : (
           <span className="text-sm text-gray-400 italic">Ame inconnue</span>
@@ -106,11 +107,12 @@ export default function InteractionsManagement() {
     {
       key: 'shepherdId',
       title: actorColumnLabel,
-      render: (value: string) => {
+      render: (value: string, row: any) => {
         const actor = actors[value];
-        return actor ? (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">
-            {actor.fullName}
+        const name = actor?.fullName || row.actor_snapshot_name;
+        return name ? (
+          <span className={"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium " + (actor ? "bg-[#00665C]/10 text-[#00665C]" : "bg-gray-100 text-gray-500 italic")}>
+            {name}{!actor && ' (supprimé)'}
           </span>
         ) : (
           <span className="text-sm text-gray-400 italic">Inconnu(e)</span>
@@ -345,9 +347,9 @@ export default function InteractionsManagement() {
         {/* Soul */}
         <div className="flex items-start gap-2 mb-2">
           <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Âme</span>
-          {soul ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#F2B636]/10 text-[#c8941a]">
-              {soul.fullName}
+          {soul || interaction.soul_snapshot_name ? (
+            <span className={"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium " + (soul ? "bg-[#F2B636]/10 text-[#c8941a]" : "bg-gray-100 text-gray-500 italic")}>
+              {soul ? soul.fullName : interaction.soul_snapshot_name + ' (supprimé)'}
             </span>
           ) : (
             <span className="text-xs text-gray-400 italic">Inconnue</span>
@@ -357,9 +359,9 @@ export default function InteractionsManagement() {
         {/* Actor */}
         <div className="flex items-start gap-2 mb-2">
           <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">{actorColumnLabel}</span>
-          {actor ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">
-              {actor.fullName}
+          {actor || interaction.actor_snapshot_name ? (
+            <span className={"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium " + (actor ? "bg-[#00665C]/10 text-[#00665C]" : "bg-gray-100 text-gray-500 italic")}>
+              {actor ? actor.fullName : interaction.actor_snapshot_name + ' (supprimé)'}
             </span>
           ) : (
             <span className="text-xs text-gray-400 italic">Inconnu(e)</span>
