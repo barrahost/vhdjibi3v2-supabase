@@ -11,9 +11,92 @@ import { Logo } from '../components/ui/Logo';
 import toast from 'react-hot-toast';
 import {
   Search, X, Share2, Info, Headphones, Menu,
-  Facebook, Copy, Check, Star, Clock, ChevronLeft, ChevronRight,
+  Facebook, Copy, Check, Star, Clock, Sun, Moon,
 } from 'lucide-react';
 
+// ─── Theme ────────────────────────────────────────────────────────────────────
+const T = {
+  light: {
+    pageBg:          '#f8fafc',
+    sidebarBg:       '#ffffff',
+    sidebarBorder:   '#e5e7eb',
+    topbarBg:        'rgba(248,250,252,0.95)',
+    topbarBorder:    '#e5e7eb',
+    cardBg:          '#ffffff',
+    cardHover:       '#f1f5f9',
+    cardSelected:    '#ecfdf5',
+    textH:           '#0f172a',
+    textBody:        '#374151',
+    textMuted:       '#9ca3af',
+    accent:          '#00665C',
+    accentBg:        'rgba(0,102,92,0.08)',
+    gold:            '#d97706',
+    inputBg:         '#f1f5f9',
+    inputText:       '#0f172a',
+    sectionLabel:    '#9ca3af',
+    modalBg:         '#ffffff',
+    chipBg:          '#f1f5f9',
+    chipText:        '#475569',
+    chipActive:      '#00665C',
+    chipActiveText:  '#ffffff',
+    loadMoreBg:      '#f1f5f9',
+    loadMoreText:    '#6b7280',
+    loadMoreBorder:  '#e5e7eb',
+    thumbBg:         '#e5e7eb',
+    navActiveBg:     'rgba(0,102,92,0.08)',
+    navActiveText:   '#00665C',
+    navText:         '#6b7280',
+    badgeBg:         'rgba(0,102,92,0.08)',
+    badgeText:       '#00665C',
+    resetBg:         'rgba(239,68,68,0.06)',
+    resetText:       '#dc2626',
+    toggleBg:        '#f1f5f9',
+    toggleText:      '#475569',
+    overlayBg:       'rgba(0,0,0,0.45)',
+    drawerBg:        '#ffffff',
+  },
+  dark: {
+    pageBg:          '#0f172a',
+    sidebarBg:       '#0a0f1a',
+    sidebarBorder:   'rgba(255,255,255,0.05)',
+    topbarBg:        'rgba(15,23,42,0.92)',
+    topbarBorder:    'rgba(255,255,255,0.05)',
+    cardBg:          '#1a2332',
+    cardHover:       '#253341',
+    cardSelected:    '#253341',
+    textH:           '#f1f5f9',
+    textBody:        '#cbd5e1',
+    textMuted:       '#475569',
+    accent:          '#F2B636',
+    accentBg:        'rgba(242,182,54,0.12)',
+    gold:            '#F2B636',
+    inputBg:         '#1e293b',
+    inputText:       '#e2e8f0',
+    sectionLabel:    '#475569',
+    modalBg:         '#1e293b',
+    chipBg:          '#1e293b',
+    chipText:        '#94a3b8',
+    chipActive:      '#F2B636',
+    chipActiveText:  '#111827',
+    loadMoreBg:      '#1e293b',
+    loadMoreText:    '#94a3b8',
+    loadMoreBorder:  'rgba(255,255,255,0.08)',
+    thumbBg:         '#2d3f55',
+    navActiveBg:     'rgba(242,182,54,0.12)',
+    navActiveText:   '#F2B636',
+    navText:         '#94a3b8',
+    badgeBg:         'rgba(242,182,54,0.12)',
+    badgeText:       '#F2B636',
+    resetBg:         'rgba(239,68,68,0.1)',
+    resetText:       '#f87171',
+    toggleBg:        '#1e293b',
+    toggleText:      '#94a3b8',
+    overlayBg:       'rgba(0,0,0,0.65)',
+    drawerBg:        '#0a0f1a',
+  },
+} as const;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const getOneMonthAgoDate = (): string => {
   const d = new Date(); d.setMonth(d.getMonth() - 1);
   return formatDateForInput(d);
@@ -29,34 +112,58 @@ interface Teaching {
 
 const ITEMS_STEP = 24;
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ReplayTeachings() {
   const [searchParams] = useSearchParams();
-  const [teachings, setTeachings] = useState<Teaching[]>([]);
+
+  // Theme
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try { return localStorage.getItem('replay-theme') === 'dark'; } catch { return false; }
+  });
+  const th = isDark ? T.dark : T.light;
+  const toggleTheme = () => setIsDark(d => {
+    const next = !d;
+    try { localStorage.setItem('replay-theme', next ? 'dark' : 'light'); } catch {}
+    return next;
+  });
+
+  // Data
+  const [teachings, setTeachings]               = useState<Teaching[]>([]);
   const [featuredTeachings, setFeaturedTeachings] = useState<Teaching[]>([]);
-  const [selectedTeaching, setSelectedTeaching] = useState<Teaching | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [dateRange, setDateRange] = useState<DateRange>({ startDate: getOneMonthAgoDate(), endDate: formatDateForInput(new Date()) });
+  const [selectedTeaching, setSelectedTeaching]  = useState<Teaching | null>(null);
+  const [loading, setLoading]                    = useState(true);
+  const [currentIndex, setCurrentIndex]          = useState(-1);
+  const [dateRange, setDateRange]                = useState<DateRange>({
+    startDate: getOneMonthAgoDate(),
+    endDate:   formatDateForInput(new Date()),
+  });
+
+  // Filters
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedSpeaker, setSelectedSpeaker] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [visibleCount, setVisibleCount] = useState(ITEMS_STEP);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedSpeaker, setSelectedSpeaker]   = useState('');
+  const [searchTerm, setSearchTerm]             = useState('');
+  const [visibleCount, setVisibleCount]         = useState(ITEMS_STEP);
+
+  // UI
+  const [isSidebarOpen, setIsSidebarOpen]   = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const [isAudioPlayerVisible, setIsAudioPlayerVisible] = useState(false);
+  const [showInfoModal, setShowInfoModal]   = useState(false);
+  const [copied, setCopied]                 = useState(false);
   const [recentlyPlayedIds, setRecentlyPlayedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch { return []; }
   });
+
+  // Player
+  const [isAudioPlayerVisible, setIsAudioPlayerVisible] = useState(false);
   const [audioPlayerProps, setAudioPlayerProps] = useState<{
     url: string; id: string; title: string; speaker: string; thumbnailUrl?: string;
   } | null>(null);
   const shouldContinuePlaying = useRef(false);
-  const isMobile = useMediaQuery('(max-width: 1023px)');
-  const mainRef = useRef<HTMLDivElement>(null);
 
-  // ── Fetch ─────────────────────────────────────────────────────
+  const isMobile = useMediaQuery('(max-width: 1023px)');
+  const mainRef  = useRef<HTMLDivElement>(null);
+
+  // ── Fetch ──────────────────────────────────────────────────────
   const fetchTeachings = async () => {
     try {
       let q = supabase.from('teachings').select('*').eq('status', 'active').order('date', { ascending: false });
@@ -89,17 +196,18 @@ export default function ReplayTeachings() {
     return () => { supabase.removeChannel(ch); };
   }, [dateRange.startDate, dateRange.endDate]);
 
-  // Sync recently played
   useEffect(() => {
     const sync = () => {
       try { setRecentlyPlayedIds(JSON.parse(localStorage.getItem('recently_played') || '[]')); } catch {}
     };
     window.addEventListener('recently_played:updated', sync);
     window.addEventListener('storage', sync);
-    return () => { window.removeEventListener('recently_played:updated', sync); window.removeEventListener('storage', sync); };
+    return () => {
+      window.removeEventListener('recently_played:updated', sync);
+      window.removeEventListener('storage', sync);
+    };
   }, []);
 
-  // URL audioId
   useEffect(() => {
     const audioId = searchParams.get('audioId');
     if (audioId && teachings.length > 0 && !selectedTeaching) {
@@ -108,13 +216,12 @@ export default function ReplayTeachings() {
     }
   }, [teachings, searchParams]);
 
-  // currentIndex
   useEffect(() => {
     if (selectedTeaching) setCurrentIndex(teachings.findIndex(t => t.id === selectedTeaching.id));
     else setCurrentIndex(-1);
   }, [selectedTeaching, teachings]);
 
-  // ── Handlers ─────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────
   const handleTeachingSelect = (t: Teaching) => {
     setSelectedTeaching(t);
     supabase.from('teachings').update({ plays: (t.plays || 0) + 1 }).eq('id', t.id).then(() => {});
@@ -124,75 +231,84 @@ export default function ReplayTeachings() {
     const p = new URLSearchParams(window.location.search); p.set('audioId', t.id);
     window.history.pushState(null, '', window.location.pathname + '?' + p.toString());
     if (isMobile) setIsSidebarOpen(false);
-    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNext = () => { if (currentIndex < teachings.length - 1) handleTeachingSelect(teachings[currentIndex + 1]); };
+  const handleNext     = () => { if (currentIndex < teachings.length - 1) handleTeachingSelect(teachings[currentIndex + 1]); };
   const handlePrevious = () => { if (currentIndex > 0) handleTeachingSelect(teachings[currentIndex - 1]); };
 
-  const copyToClipboard = (text = window.location.href) => {
+  const copyToClipboard = (text = window.location.href) =>
     navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); toast.success('Lien copié'); });
-  };
-  const shareOnFacebook = (url = window.location.href) => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  const shareOnFacebook = (url = window.location.href) =>
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
   const shareOnWhatsApp = (url = window.location.href, text = "Écoutez les audios de l'assemblée") =>
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}%20${encodeURIComponent(url)}`, '_blank');
 
-  // ── Derived ───────────────────────────────────────────────────
-  const categories = [...new Set(teachings.map(t => t.category).filter(Boolean))];
-  const speakers   = [...new Set(teachings.map(t => t.speaker).filter(Boolean))];
+  // ── Derived ────────────────────────────────────────────────────
+  const categories     = [...new Set(teachings.map(t => t.category).filter(Boolean))];
+  const speakers       = [...new Set(teachings.map(t => t.speaker).filter(Boolean))];
   const filteredTeachings = teachings.filter(t => {
     const q = searchTerm.toLowerCase();
-    const matchSearch = !searchTerm || t.title.toLowerCase().includes(q) || t.speaker.toLowerCase().includes(q) || (t.theme || '').toLowerCase().includes(q);
-    const matchCat = !selectedCategory || t.category === selectedCategory;
-    const matchSpk = !selectedSpeaker || t.speaker === selectedSpeaker;
-    return matchSearch && matchCat && matchSpk;
+    return (!searchTerm || t.title.toLowerCase().includes(q) || t.speaker.toLowerCase().includes(q) || (t.theme || '').toLowerCase().includes(q))
+        && (!selectedCategory || t.category === selectedCategory)
+        && (!selectedSpeaker  || t.speaker  === selectedSpeaker);
   });
-  const recentlyPlayed = recentlyPlayedIds.map(id => teachings.find(t => t.id === id)).filter((t): t is Teaching => Boolean(t));
-  const playerHeight = isAudioPlayerVisible ? 72 : 0;
+  const recentlyPlayed = recentlyPlayedIds
+    .map(id => teachings.find(t => t.id === id))
+    .filter((t): t is Teaching => Boolean(t));
   const shareUrl = selectedTeaching
     ? `${window.location.origin}${window.location.pathname}?audioId=${selectedTeaching.id}`
     : window.location.href;
+  const playerHeight = isAudioPlayerVisible ? 72 : 0;
 
-  // ── Sidebar content ───────────────────────────────────────────
+  // ── Sidebar body ───────────────────────────────────────────────
   const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-y-auto" style={{ color: '#cbd5e1' }}>
+    <div className="flex flex-col h-full overflow-y-auto" style={{ color: th.textBody }}>
       {/* Logo */}
-      <div className="px-5 pt-6 pb-5 flex items-center gap-3 flex-shrink-0">
+      <div className="px-5 pt-5 pb-4 flex items-center gap-3 flex-shrink-0"
+           style={{ borderBottom: `1px solid ${th.sidebarBorder}` }}>
         <Logo className="h-9 w-auto" />
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: '#F2B636' }}>Replay</p>
-          <p className="text-xs" style={{ color: '#64748b' }}>Audios</p>
+          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: th.accent }}>Replay</p>
+          <p className="text-xs" style={{ color: th.textMuted }}>Audios</p>
         </div>
       </div>
 
-      {/* Search (sidebar) — hidden when top search bar visible on desktop */}
-      <div className="px-4 pb-4 flex-shrink-0">
+      {/* Search */}
+      <div className="px-4 py-3 flex-shrink-0">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#64748b' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: th.textMuted }} />
           <input
             type="text"
             placeholder="Rechercher..."
             value={searchTerm}
             onChange={e => { setSearchTerm(e.target.value); setVisibleCount(ITEMS_STEP); }}
             className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border-none outline-none"
-            style={{ background: '#1e293b', color: '#e2e8f0' }}
+            style={{ background: th.inputBg, color: th.inputText }}
           />
+          {searchTerm && (
+            <button className="absolute right-2 top-1/2 -translate-y-1/2"
+                    style={{ color: th.textMuted }}
+                    onClick={() => setSearchTerm('')}>
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="px-4 space-y-6 flex-1 overflow-y-auto pb-6">
+      <div className="px-4 space-y-5 flex-1 overflow-y-auto pb-6">
         {/* Catégories */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#475569' }}>Catégories</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+             style={{ color: th.sectionLabel }}>Catégories</p>
           <ul className="space-y-0.5">
             {['', ...categories].map(cat => (
               <li key={cat || '__all__'}>
                 <button
                   onClick={() => { setSelectedCategory(cat); setVisibleCount(ITEMS_STEP); }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs transition-colors"
+                  className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors"
                   style={{
-                    background: selectedCategory === cat ? 'rgba(242,182,54,0.12)' : 'transparent',
-                    color: selectedCategory === cat ? '#F2B636' : '#94a3b8',
+                    background: selectedCategory === cat ? th.navActiveBg : 'transparent',
+                    color:      selectedCategory === cat ? th.navActiveText : th.navText,
                     fontWeight: selectedCategory === cat ? 600 : 400,
                   }}
                 >
@@ -206,16 +322,17 @@ export default function ReplayTeachings() {
         {/* Orateurs */}
         {speakers.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#475569' }}>Orateurs</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+               style={{ color: th.sectionLabel }}>Orateurs</p>
             <ul className="space-y-0.5">
               {['', ...speakers].map(spk => (
                 <li key={spk || '__all__'}>
                   <button
                     onClick={() => { setSelectedSpeaker(spk); setVisibleCount(ITEMS_STEP); }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs transition-colors"
+                    className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors"
                     style={{
-                      background: selectedSpeaker === spk ? 'rgba(242,182,54,0.12)' : 'transparent',
-                      color: selectedSpeaker === spk ? '#F2B636' : '#94a3b8',
+                      background: selectedSpeaker === spk ? th.navActiveBg : 'transparent',
+                      color:      selectedSpeaker === spk ? th.navActiveText : th.navText,
                       fontWeight: selectedSpeaker === spk ? 600 : 400,
                     }}
                   >
@@ -229,7 +346,8 @@ export default function ReplayTeachings() {
 
         {/* Période */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: '#475569' }}>Période</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+             style={{ color: th.sectionLabel }}>Période</p>
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </div>
 
@@ -237,8 +355,8 @@ export default function ReplayTeachings() {
         {(selectedCategory || selectedSpeaker || searchTerm) && (
           <button
             onClick={() => { setSelectedCategory(''); setSelectedSpeaker(''); setSearchTerm(''); setVisibleCount(ITEMS_STEP); }}
-            className="w-full text-xs py-2 rounded-lg transition-colors"
-            style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+            className="w-full text-xs py-2 rounded-lg"
+            style={{ background: th.resetBg, color: th.resetText }}
           >
             Réinitialiser les filtres
           </button>
@@ -247,44 +365,37 @@ export default function ReplayTeachings() {
     </div>
   );
 
-  // ── Loading ───────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: '#0f172a' }}>
-        <div className="text-center">
-          <Headphones className="w-12 h-12 mx-auto mb-4 animate-pulse" style={{ color: '#F2B636' }} />
-          <p className="text-sm" style={{ color: '#64748b' }}>Chargement des enseignements...</p>
-        </div>
+  // ── Loading ────────────────────────────────────────────────────
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen" style={{ background: th.pageBg }}>
+      <div className="text-center">
+        <Headphones className="w-12 h-12 mx-auto mb-4 animate-pulse" style={{ color: th.accent }} />
+        <p className="text-sm" style={{ color: th.textMuted }}>Chargement des enseignements...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // ── Render ────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────
   return (
-    <div className="flex" style={{ background: '#0f172a', minHeight: '100vh' }}>
+    <div className="flex" style={{ background: th.pageBg, minHeight: '100vh' }}>
 
-      {/* ── Desktop Sidebar (≥1024px) ── */}
+      {/* Desktop Sidebar */}
       <aside
         className="hidden lg:flex lg:flex-col flex-shrink-0 sticky top-0 h-screen overflow-hidden"
-        style={{ width: 240, background: '#0a0f1a', borderRight: '1px solid rgba(255,255,255,0.04)' }}
+        style={{ width: 240, background: th.sidebarBg, borderRight: `1px solid ${th.sidebarBorder}` }}
       >
         <SidebarContent />
       </aside>
 
-      {/* ── Mobile Sidebar Drawer ── */}
+      {/* Mobile Drawer */}
       {isMobile && isSidebarOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
-            onClick={() => setIsSidebarOpen(false)}
-          />
-          <aside
-            className="fixed top-0 left-0 h-full z-50 overflow-hidden flex flex-col"
-            style={{ width: 280, background: '#0a0f1a' }}
-          >
+          <div className="fixed inset-0 z-40" style={{ background: th.overlayBg }}
+               onClick={() => setIsSidebarOpen(false)} />
+          <aside className="fixed top-0 left-0 h-full z-50 overflow-hidden flex flex-col"
+                 style={{ width: 280, background: th.drawerBg }}>
             <div className="flex justify-end px-4 pt-4">
-              <button onClick={() => setIsSidebarOpen(false)} style={{ color: '#64748b' }}>
+              <button onClick={() => setIsSidebarOpen(false)} style={{ color: th.textMuted }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -293,39 +404,39 @@ export default function ReplayTeachings() {
         </>
       )}
 
-      {/* ── Main content ── */}
-      <div
-        ref={mainRef}
-        className="flex-1 overflow-y-auto"
-        style={{ height: '100vh', paddingBottom: playerHeight + 16 }}
-      >
+      {/* Main */}
+      <div ref={mainRef} className="flex-1 overflow-y-auto"
+           style={{ height: '100vh', paddingBottom: playerHeight + 16 }}>
+
         {/* Top bar */}
         <div
           className="sticky top-0 z-30 flex items-center gap-3 px-4 sm:px-6 py-3"
-          style={{ background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+          style={{
+            background:   th.topbarBg,
+            borderBottom: `1px solid ${th.topbarBorder}`,
+            backdropFilter: 'blur(12px)',
+          }}
         >
-          {/* Hamburger (mobile) */}
-          <button
-            className="lg:hidden p-1.5 rounded-lg"
-            style={{ color: '#94a3b8' }}
-            onClick={() => setIsSidebarOpen(true)}
-          >
+          {/* Hamburger */}
+          <button className="lg:hidden p-1.5 rounded-lg" style={{ color: th.textMuted }}
+                  onClick={() => setIsSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Search (top bar — desktop) */}
+          {/* Desktop search */}
           <div className="relative flex-1 max-w-md hidden lg:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#475569' }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: th.textMuted }} />
             <input
               type="text"
               placeholder="Titres, orateurs, thèmes..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setVisibleCount(ITEMS_STEP); }}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border-none outline-none"
-              style={{ background: '#1e293b', color: '#e2e8f0' }}
+              style={{ background: th.inputBg, color: th.inputText }}
             />
             {searchTerm && (
-              <button className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setSearchTerm('')} style={{ color: '#64748b' }}>
+              <button className="absolute right-2 top-1/2 -translate-y-1/2"
+                      style={{ color: th.textMuted }} onClick={() => setSearchTerm('')}>
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -333,39 +444,39 @@ export default function ReplayTeachings() {
 
           {/* Mobile title */}
           <div className="lg:hidden flex items-center gap-2 flex-1">
-            <Headphones className="w-5 h-5" style={{ color: '#F2B636' }} />
-            <span className="font-semibold text-sm" style={{ color: '#f1f5f9' }}>Replay Audios</span>
+            <Headphones className="w-5 h-5" style={{ color: th.accent }} />
+            <span className="font-semibold text-sm" style={{ color: th.textH }}>Replay Audios</span>
           </div>
 
           <div className="flex items-center gap-1 ml-auto">
+            {/* Theme toggle */}
             <button
-              onClick={() => setShowShareModal(true)}
+              onClick={toggleTheme}
               className="p-2 rounded-full transition-colors"
-              style={{ color: '#64748b' }}
+              style={{ background: th.toggleBg, color: th.toggleText }}
+              title={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
             >
-              <Share2 className="w-4 h-4" />
+              {isDark
+                ? <Sun  className="w-4 h-4" />
+                : <Moon className="w-4 h-4" />}
             </button>
-            <button
-              onClick={() => setShowInfoModal(true)}
-              className="p-2 rounded-full transition-colors"
-              style={{ color: '#64748b' }}
-            >
-              <Info className="w-4 h-4" />
-            </button>
+            <button onClick={() => setShowShareModal(true)} className="p-2 rounded-full"
+                    style={{ color: th.textMuted }}><Share2 className="w-4 h-4" /></button>
+            <button onClick={() => setShowInfoModal(true)} className="p-2 rounded-full"
+                    style={{ color: th.textMuted }}><Info className="w-4 h-4" /></button>
           </div>
         </div>
 
         {/* Mobile search */}
         <div className="lg:hidden px-4 pt-3 pb-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#475569' }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: th.textMuted }} />
             <input
-              type="text"
-              placeholder="Rechercher..."
+              type="text" placeholder="Rechercher..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setVisibleCount(ITEMS_STEP); }}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border-none outline-none"
-              style={{ background: '#1e293b', color: '#e2e8f0' }}
+              style={{ background: th.inputBg, color: th.inputText }}
             />
           </div>
         </div>
@@ -379,8 +490,8 @@ export default function ReplayTeachings() {
                 onClick={() => { setSelectedCategory(cat); setVisibleCount(ITEMS_STEP); }}
                 className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
                 style={{
-                  background: selectedCategory === cat ? '#F2B636' : '#1e293b',
-                  color: selectedCategory === cat ? '#111827' : '#94a3b8',
+                  background: selectedCategory === cat ? th.chipActive : th.chipBg,
+                  color:      selectedCategory === cat ? th.chipActiveText : th.chipText,
                 }}
               >
                 {cat || 'Tout'}
@@ -391,27 +502,25 @@ export default function ReplayTeachings() {
 
         <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-10">
 
-          {/* ── À la une ── */}
+          {/* À la une */}
           {featuredTeachings.length > 0 && !searchTerm && !selectedCategory && !selectedSpeaker && (
             <section>
               <div className="flex items-center gap-2 mb-5">
-                <Star className="w-5 h-5" style={{ color: '#F2B636' }} />
-                <h2 className="text-lg font-bold" style={{ color: '#f1f5f9' }}>À la une</h2>
-                <span className="text-xs px-2 py-0.5 rounded-full ml-1" style={{ background: 'rgba(242,182,54,0.12)', color: '#F2B636' }}>
-                  {featuredTeachings.length} nouveaux
+                <Star className="w-5 h-5" style={{ color: th.gold }} />
+                <h2 className="text-lg font-bold" style={{ color: th.textH }}>À la une</h2>
+                <span className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: th.badgeBg, color: th.badgeText }}>
+                  {featuredTeachings.length} nouveau{featuredTeachings.length > 1 ? 'x' : ''}
                 </span>
               </div>
-              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+              <div className="grid gap-4"
+                   style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
                 {featuredTeachings.slice(0, 6).map(t => (
                   <SpotifyCard
-                    key={t.id}
-                    title={t.title}
-                    speaker={t.speaker}
-                    duration={t.duration}
-                    category={t.category}
-                    theme={t.theme}
-                    thumbnail_url={t.thumbnail_url}
-                    plays={t.plays}
+                    key={t.id} isDark={isDark}
+                    title={t.title} speaker={t.speaker} duration={t.duration}
+                    category={t.category} theme={t.theme}
+                    thumbnail_url={t.thumbnail_url} plays={t.plays}
                     isSelected={selectedTeaching?.id === t.id}
                     isPlaying={selectedTeaching?.id === t.id && isAudioPlayerVisible}
                     onClick={() => handleTeachingSelect(t)}
@@ -421,22 +530,20 @@ export default function ReplayTeachings() {
             </section>
           )}
 
-          {/* ── Récemment écoutés ── */}
+          {/* Récemment écoutés */}
           {recentlyPlayed.length > 0 && !searchTerm && (
             <section>
-              <div className="flex items-center gap-2 mb-5">
-                <Clock className="w-4 h-4" style={{ color: '#64748b' }} />
-                <h2 className="text-base font-bold" style={{ color: '#f1f5f9' }}>Récemment écoutés</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-4 h-4" style={{ color: th.textMuted }} />
+                <h2 className="text-base font-bold" style={{ color: th.textH }}>Récemment écoutés</h2>
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {recentlyPlayed.map(t => (
-                  <div key={t.id} className="flex-shrink-0" style={{ width: 140 }}>
+                  <div key={t.id} className="flex-shrink-0" style={{ width: 148 }}>
                     <SpotifyCard
-                      title={t.title}
-                      speaker={t.speaker}
-                      duration={t.duration}
-                      category={t.category}
-                      thumbnail_url={t.thumbnail_url}
+                      isDark={isDark}
+                      title={t.title} speaker={t.speaker} duration={t.duration}
+                      category={t.category} thumbnail_url={t.thumbnail_url}
                       isSelected={selectedTeaching?.id === t.id}
                       isPlaying={selectedTeaching?.id === t.id && isAudioPlayerVisible}
                       onClick={() => handleTeachingSelect(t)}
@@ -447,26 +554,26 @@ export default function ReplayTeachings() {
             </section>
           )}
 
-          {/* ── Tous les audios ── */}
+          {/* Tous les audios */}
           <section>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold" style={{ color: '#f1f5f9' }}>
+              <h2 className="text-base font-bold" style={{ color: th.textH }}>
                 {searchTerm || selectedCategory || selectedSpeaker ? 'Résultats' : 'Tous les audios'}
               </h2>
-              <span className="text-xs" style={{ color: '#475569' }}>
+              <span className="text-xs" style={{ color: th.textMuted }}>
                 {filteredTeachings.length} audio{filteredTeachings.length > 1 ? 's' : ''}
               </span>
             </div>
 
             {filteredTeachings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <Headphones className="w-14 h-14 opacity-20" style={{ color: '#94a3b8' }} />
-                <p className="text-sm" style={{ color: '#475569' }}>Aucun audio trouvé</p>
+                <Headphones className="w-14 h-14 opacity-20" style={{ color: th.textMuted }} />
+                <p className="text-sm" style={{ color: th.textMuted }}>Aucun audio trouvé</p>
                 {(searchTerm || selectedCategory || selectedSpeaker) && (
                   <button
                     onClick={() => { setSearchTerm(''); setSelectedCategory(''); setSelectedSpeaker(''); }}
                     className="text-xs px-4 py-2 rounded-full"
-                    style={{ background: 'rgba(242,182,54,0.12)', color: '#F2B636' }}
+                    style={{ background: th.accentBg, color: th.accent }}
                   >
                     Effacer les filtres
                   </button>
@@ -474,30 +581,29 @@ export default function ReplayTeachings() {
               </div>
             ) : (
               <>
-                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+                <div className="grid gap-4"
+                     style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
                   {filteredTeachings.slice(0, visibleCount).map(t => (
                     <SpotifyCard
-                      key={t.id}
-                      title={t.title}
-                      speaker={t.speaker}
-                      duration={t.duration}
-                      category={t.category}
-                      theme={t.theme}
-                      thumbnail_url={t.thumbnail_url}
-                      plays={t.plays}
+                      key={t.id} isDark={isDark}
+                      title={t.title} speaker={t.speaker} duration={t.duration}
+                      category={t.category} theme={t.theme}
+                      thumbnail_url={t.thumbnail_url} plays={t.plays}
                       isSelected={selectedTeaching?.id === t.id}
                       isPlaying={selectedTeaching?.id === t.id && isAudioPlayerVisible}
                       onClick={() => handleTeachingSelect(t)}
                     />
                   ))}
                 </div>
-
                 {visibleCount < filteredTeachings.length && (
                   <div className="flex justify-center mt-8">
                     <button
                       onClick={() => setVisibleCount(c => c + ITEMS_STEP)}
                       className="px-6 py-2.5 rounded-full text-sm font-medium transition-colors"
-                      style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.08)' }}
+                      style={{
+                        background: th.loadMoreBg, color: th.loadMoreText,
+                        border: `1px solid ${th.loadMoreBorder}`,
+                      }}
                     >
                       Voir plus ({filteredTeachings.length - visibleCount} restants)
                     </button>
@@ -506,17 +612,14 @@ export default function ReplayTeachings() {
               </>
             )}
           </section>
-
         </div>
       </div>
 
-      {/* ── Player ── */}
+      {/* Player */}
       {isAudioPlayerVisible && audioPlayerProps && (
         <AudioPlayer
-          url={audioPlayerProps.url}
-          id={audioPlayerProps.id}
-          title={audioPlayerProps.title}
-          speaker={audioPlayerProps.speaker}
+          url={audioPlayerProps.url} id={audioPlayerProps.id}
+          title={audioPlayerProps.title} speaker={audioPlayerProps.speaker}
           thumbnailUrl={audioPlayerProps.thumbnailUrl}
           onClose={() => { setIsAudioPlayerVisible(false); setSelectedTeaching(null); setAudioPlayerProps(null); }}
           onNext={currentIndex < teachings.length - 1 ? handleNext : undefined}
@@ -527,26 +630,25 @@ export default function ReplayTeachings() {
         />
       )}
 
-      {/* ── Share modal ── */}
+      {/* Share modal */}
       {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6" style={{ background: '#1e293b' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: th.overlayBg }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6"
+               style={{ background: th.modalBg }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-semibold" style={{ color: '#f1f5f9' }}>Partager</h3>
-              <button onClick={() => setShowShareModal(false)} style={{ color: '#64748b' }}><X className="w-5 h-5" /></button>
+              <h3 className="font-semibold" style={{ color: th.textH }}>Partager</h3>
+              <button onClick={() => setShowShareModal(false)} style={{ color: th.textMuted }}>
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="relative mb-5">
-              <input
-                readOnly
-                value={shareUrl}
-                className="w-full pr-10 pl-3 py-2 text-xs rounded-lg border-none outline-none"
-                style={{ background: '#0f172a', color: '#94a3b8' }}
-              />
-              <button
-                onClick={() => copyToClipboard(shareUrl)}
-                className="absolute right-2 top-1/2 -translate-y-1/2"
-                style={{ color: copied ? '#22c55e' : '#64748b' }}
-              >
+              <input readOnly value={shareUrl}
+                className="w-full pr-10 pl-3 py-2 text-xs rounded-lg outline-none border"
+                style={{ background: th.inputBg, color: th.textBody, borderColor: th.loadMoreBorder }} />
+              <button className="absolute right-2 top-1/2 -translate-y-1/2"
+                      style={{ color: copied ? '#22c55e' : th.textMuted }}
+                      onClick={() => copyToClipboard(shareUrl)}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
@@ -568,29 +670,29 @@ export default function ReplayTeachings() {
         </div>
       )}
 
-      {/* ── Info modal ── */}
+      {/* Info modal */}
       {showInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6" style={{ background: '#1e293b' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: th.overlayBg }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6"
+               style={{ background: th.modalBg }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold" style={{ color: '#f1f5f9' }}>À propos de Replay Audio</h3>
-              <button onClick={() => setShowInfoModal(false)} style={{ color: '#64748b' }}><X className="w-5 h-5" /></button>
+              <h3 className="font-semibold" style={{ color: th.textH }}>À propos de Replay Audio</h3>
+              <button onClick={() => setShowInfoModal(false)} style={{ color: th.textMuted }}>
+                <X className="w-5 h-5" /></button>
             </div>
-            <div className="space-y-3 text-sm" style={{ color: '#94a3b8' }}>
+            <div className="space-y-3 text-sm" style={{ color: th.textBody }}>
               <p>Retrouvez tous les moments forts de la cellule : adoration, louange, prédication, sainte cène et plus encore.</p>
               <p>Filtrez par catégorie, orateur ou période. Partagez avec vos proches.</p>
             </div>
             <button
               onClick={() => setShowInfoModal(false)}
               className="w-full mt-5 py-2 rounded-xl text-sm font-medium"
-              style={{ background: '#F2B636', color: '#111827' }}
-            >
-              Fermer
-            </button>
+              style={{ background: th.accent, color: '#ffffff' }}
+            >Fermer</button>
           </div>
         </div>
       )}
-
     </div>
   );
 }
