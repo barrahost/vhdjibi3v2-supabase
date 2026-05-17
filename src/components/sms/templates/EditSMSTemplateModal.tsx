@@ -250,5 +250,6 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
         </div>
       </form>
     </Modal>
+    <ConfirmModal {...confirmModalProps} />
   );
 }
