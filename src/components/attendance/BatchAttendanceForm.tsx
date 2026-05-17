@@ -30,7 +30,8 @@ export default function BatchAttendanceForm() {
 
         if (userErr || !userData) { toast.error('Utilisateur non trouvé'); setLoading(false); return; }
 
-        const hasShepherdProfile = (userData.business_profiles || userData.businessProfiles)?.some(
+        const isAdmin = userData.role === 'admin';
+        const hasShepherdProfile = isAdmin || (userData.business_profiles || userData.businessProfiles)?.some(
           (p: any) => p.type === 'shepherd' && p.isActive
         ) || userData.role === 'shepherd' || userData.role === 'intern';
 
@@ -38,11 +39,14 @@ export default function BatchAttendanceForm() {
 
         setShepherdId(currentUserId);
 
-        const { data: soulsData, error: soulsErr } = await supabase
+        // L'admin voit toutes les âmes actives ; un berger ne voit que les siennes
+        const soulsQuery = supabase
           .from('souls')
           .select('id, full_name')
-          .eq('shepherd_id', currentUserId)
           .eq('status', 'active');
+        if (!isAdmin) soulsQuery.eq('shepherd_id', currentUserId);
+
+        const { data: soulsData, error: soulsErr } = await soulsQuery;
 
         if (soulsErr) throw soulsErr;
 
