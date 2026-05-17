@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export function ConfirmModal({
     default: 'bg-[#00665C] hover:bg-[#004d45] text-white',
   };
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
       onClick={onCancel}
@@ -38,7 +39,6 @@ export function ConfirmModal({
         className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
         onClick={e => e.stopPropagation()}
       >
-        {/* Icon */}
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
             variant === 'danger' ? 'bg-red-100' : variant === 'warning' ? 'bg-yellow-100' : 'bg-teal-100'
@@ -77,4 +77,6 @@ export function ConfirmModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

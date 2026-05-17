@@ -17,6 +17,7 @@ interface DepartmentListItemProps {
 }
 
 export default function DepartmentListItem({ department, onEdit }: DepartmentListItemProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) {
       try {
@@ -62,6 +63,7 @@ export default function DepartmentListItem({ department, onEdit }: DepartmentLis
           </button>
         </div>
       </div>
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

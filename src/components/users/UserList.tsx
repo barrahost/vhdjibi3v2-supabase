@@ -99,7 +99,6 @@ function ActionButtons({
           <Trash2 className="w-4 h-4" />
         </button>
       )}
-    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }
@@ -505,6 +504,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
           onClose={() => setEditingUser(null)}
         />
       )}
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

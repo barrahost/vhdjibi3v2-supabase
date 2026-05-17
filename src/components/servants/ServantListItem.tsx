@@ -13,6 +13,7 @@ interface ServantListItemProps {
 }
 
 export default function ServantListItem({ servant, departmentName, departmentNames, onEdit }: ServantListItemProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer ce serviteur ?')) {
       try {
@@ -105,5 +106,6 @@ export default function ServantListItem({ servant, departmentName, departmentNam
         </div>
       </td>
     </>
+      <ConfirmModal {...confirmModalProps} />
   );
 }

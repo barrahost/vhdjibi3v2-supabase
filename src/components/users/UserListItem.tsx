@@ -11,6 +11,7 @@ interface UserListItemProps {
 }
 
 export default function UserListItem({ user, onEdit }: UserListItemProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
@@ -102,6 +103,7 @@ export default function UserListItem({ user, onEdit }: UserListItemProps) {
           </button>
         </div>
       </td>
+      <ConfirmModal {...confirmModalProps} />
     </tr>
   );
 }

@@ -13,6 +13,7 @@ interface AttendanceTableRowProps {
 }
 
 export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTableRowProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   if (!soul) return null;
 
   const handleDelete = async () => {
@@ -50,6 +51,7 @@ export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTable
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         <AttendanceActions onEdit={onEdit} onDelete={handleDelete} />
       </td>
+    <ConfirmModal {...confirmModalProps} />
     </tr>
   );
 }
