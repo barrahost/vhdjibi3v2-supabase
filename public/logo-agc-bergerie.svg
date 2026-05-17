@@ -1,40 +1,24 @@
-<svg width="512" height="530" viewBox="0 0 512 530" xmlns="http://www.w3.org/2000/svg">
-
-  <!-- Cercle principal -->
+<svg width="512" height="420" viewBox="0 0 512 420" xmlns="http://www.w3.org/2000/svg">
   <circle cx="256" cy="200" r="190" fill="#00665C"/>
   <circle cx="256" cy="200" r="178" fill="none" stroke="#F2B636" stroke-width="3.5"/>
-
-  <!-- Étoile haute -->
   <g transform="translate(256,36)">
     <line x1="0" y1="-22" x2="0" y2="22" stroke="#F2B636" stroke-width="4.5" stroke-linecap="round"/>
     <line x1="-22" y1="0" x2="22" y2="0" stroke="#F2B636" stroke-width="4.5" stroke-linecap="round"/>
     <line x1="-15" y1="-15" x2="15" y2="15" stroke="#F2B636" stroke-width="3" stroke-linecap="round" opacity="0.65"/>
     <line x1="15" y1="-15" x2="-15" y2="15" stroke="#F2B636" stroke-width="3" stroke-linecap="round" opacity="0.65"/>
   </g>
-
-  <!-- Feuilles gauche -->
   <path d="M58,230 Q36,200 50,172 Q68,202 58,230 Z" fill="#00865C" opacity="0.85"/>
   <path d="M50,218 Q24,208 28,178 Q50,190 50,218 Z" fill="#00a070" opacity="0.6"/>
   <path d="M72,252 Q44,244 42,216 Q66,222 72,252 Z" fill="#00865C" opacity="0.55"/>
-
-  <!-- Feuilles droite -->
   <path d="M454,230 Q476,200 462,172 Q444,202 454,230 Z" fill="#00865C" opacity="0.85"/>
   <path d="M462,218 Q488,208 484,178 Q462,190 462,218 Z" fill="#00a070" opacity="0.6"/>
   <path d="M440,252 Q468,244 470,216 Q446,222 440,252 Z" fill="#00865C" opacity="0.55"/>
-
-  <!-- Halo doré -->
   <circle cx="256" cy="168" r="62" fill="none" stroke="#F2B636" stroke-width="7"/>
-  <!-- Tête berger -->
   <circle cx="256" cy="172" r="52" fill="white"/>
-  <!-- Corps/robe -->
   <path d="M200,218 Q256,242 312,218 L348,382 Q256,408 164,382 Z" fill="white"/>
-  <!-- Accent doré manteau -->
   <path d="M202,222 Q256,244 310,222 L310,282 Q256,302 202,282 Z" fill="#F2B636" opacity="0.25"/>
-  <!-- Crosse -->
   <path d="M196,248 Q146,224 116,192" fill="none" stroke="#F2B636" stroke-width="12" stroke-linecap="round"/>
   <path d="M116,192 Q88,160 106,132 Q124,104 154,122" fill="none" stroke="#F2B636" stroke-width="12" stroke-linecap="round"/>
-
-  <!-- Brebis droite -->
   <ellipse cx="356" cy="320" rx="58" ry="36" fill="white"/>
   <circle cx="398" cy="295" r="30" fill="white"/>
   <circle cx="336" cy="298" r="20" fill="#f0f0f0"/>
@@ -50,8 +34,6 @@
   <line x1="350" y1="358" x2="346" y2="386" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
   <line x1="368" y1="358" x2="364" y2="386" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
   <line x1="386" y1="354" x2="382" y2="382" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
-
-  <!-- Brebis gauche -->
   <ellipse cx="158" cy="326" rx="54" ry="34" fill="white"/>
   <circle cx="116" cy="306" r="28" fill="white"/>
   <circle cx="122" cy="292" r="19" fill="#f0f0f0"/>
@@ -68,39 +50,5 @@
   <line x1="140" y1="362" x2="136" y2="390" stroke="#bbb" stroke-width="7.5" stroke-linecap="round"/>
   <line x1="156" y1="362" x2="152" y2="390" stroke="#bbb" stroke-width="7.5" stroke-linecap="round"/>
   <line x1="172" y1="360" x2="168" y2="388" stroke="#bbb" stroke-width="7.5" stroke-linecap="round"/>
-
-  <!-- Sol -->
   <ellipse cx="256" cy="390" rx="170" ry="12" fill="#00865C" opacity="0.45"/>
-
-  <!-- ═══ TEXTE SOUS LE CERCLE ═══ -->
-  <!-- Trait décoratif gauche -->
-  <line x1="60" y1="428" x2="178" y2="428" stroke="#F2B636" stroke-width="1.5"/>
-  <!-- Trait décoratif droit -->
-  <line x1="334" y1="428" x2="452" y2="428" stroke="#F2B636" stroke-width="1.5"/>
-
-  <!-- BERGERIE -->
-  <text x="256" y="424"
-    text-anchor="middle"
-    font-family="Georgia, 'Times New Roman', serif"
-    font-size="44"
-    font-weight="700"
-    fill="#00665C"
-    letter-spacing="6">BERGERIE</text>
-
-  <!-- Petits points décoratifs -->
-  <circle cx="192" cy="456" r="3" fill="#F2B636"/>
-  <circle cx="320" cy="456" r="3" fill="#F2B636"/>
-
-  <!-- AGC -->
-  <text x="256" y="478"
-    text-anchor="middle"
-    font-family="Georgia, 'Times New Roman', serif"
-    font-size="28"
-    font-weight="400"
-    fill="#F2B636"
-    letter-spacing="12">AGC</text>
-
-  <!-- Filet bas -->
-  <line x1="100" y1="496" x2="412" y2="496" stroke="#00665C" stroke-width="1" opacity="0.4"/>
-
 </svg>
