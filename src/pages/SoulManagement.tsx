@@ -11,6 +11,7 @@ import { formatDate } from '../utils/dateUtils';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { CustomPagination } from '../components/ui/CustomPagination';
+import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import EditSoulModal from '../components/souls/EditSoulModal';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
 import AssignToShepherdModal from '../components/souls/AssignToShepherdModal';
@@ -102,6 +103,14 @@ export default function SoulManagement() {
     dateRange.startDate !== '' ||
     dateRange.endDate !== '' ||
     statusFilter !== 'active';
+  const activeFiltersCount = [
+    searchTerm !== '',
+    selectedShepherdId !== null,
+    dateRange.startDate !== '',
+    dateRange.endDate !== '',
+    statusFilter !== 'active',
+    unassignedFamilyOnly,
+  ].filter(Boolean).length;
 
   const resetAllFilters = () => {
     setSearchTerm('');
@@ -541,8 +550,19 @@ export default function SoulManagement() {
       )}
 
       <div className="space-y-4">
-        <div className="bg-white p-4 rounded-lg border space-y-4">
-          <h3 className="text-lg font-medium text-gray-900">Filtres</h3>
+        <CollapsibleFilters
+          activeCount={activeFiltersCount}
+          storageKey="filters:souls:open"
+          resetButton={
+            <button
+              onClick={resetAllFilters}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] rounded-lg hover:bg-[#00665C] hover:text-white transition-colors"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reinitialiser les filtres
+            </button>
+          }
+        >
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -596,14 +616,7 @@ export default function SoulManagement() {
             </div>
           )}
 
-          <div className="flex justify-end">
-            <button
-              onClick={() => setDateRange({ startDate: '', endDate: '' })}
-              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
-            >
-              Reinitialiser les dates
-            </button>
-          </div>
+
 
           <div className="relative">
             <div className="flex flex-col sm:flex-row gap-2">
@@ -617,22 +630,13 @@ export default function SoulManagement() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
                 />
               </div>
-              {hasActiveFilters && (
-                <button
-                  onClick={resetAllFilters}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] rounded-lg hover:bg-[#00665C] hover:text-white transition-colors whitespace-nowrap"
-                  title="Reinitialiser tous les filtres"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reinitialiser les filtres
-                </button>
-              )}
+
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {filteredSouls.length} resultat{filteredSouls.length !== 1 ? 's' : ''} trouve{filteredSouls.length !== 1 ? 's' : ''}
             </p>
           </div>
-        </div>
+        </CollapsibleFilters>
 
         {canAssign && selectedSoulIds.length > 0 && (
           <div className="flex items-center justify-between bg-[#00665C]/5 border border-[#00665C]/30 rounded-lg px-4 py-3">

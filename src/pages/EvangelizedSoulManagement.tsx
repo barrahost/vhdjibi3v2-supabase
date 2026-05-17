@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, Info, CheckCircle2, Download, Phone, UserCheck, UserX, Shuffle, AlertTriangle, MoreVertical, X as XIcon } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
+import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { formatDate, formatDateForExcel } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { isAdminUser, isADNUser, isEvangelistUser } from '../utils/roleHelpers';
@@ -211,6 +212,15 @@ export default function EvangelizedSoulManagement() {
 
   const hasActiveFilters = searchTerm !== '' || dateRange.startDate !== '' || dateRange.endDate !== '' ||
     statusFilter !== 'active' || importFilter !== 'pending' || attributionFilter !== 'all' || evangelistFilter !== '';
+  const activeFiltersCount = [
+    searchTerm !== '',
+    dateRange.startDate !== '',
+    dateRange.endDate !== '',
+    statusFilter !== 'active',
+    importFilter !== 'pending',
+    attributionFilter !== 'all',
+    evangelistFilter !== '',
+  ].filter(Boolean).length;
 
   const resetFilters = () => {
     setSearchTerm(''); setDateRange({ startDate: '', endDate: '' });
@@ -582,15 +592,15 @@ export default function EvangelizedSoulManagement() {
         </div>
       )}
 
-      <div className="bg-white p-4 rounded-lg border space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Filtres</h3>
-          {hasActiveFilters && (
-            <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[#00665C] hover:underline">
-              <RotateCcw className="w-4 h-4" /> Reinitialiser
-            </button>
-          )}
-        </div>
+      <CollapsibleFilters
+        activeCount={activeFiltersCount}
+        storageKey="filters:evangelized:open"
+        resetButton={hasActiveFilters ? (
+          <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[#00665C] hover:underline">
+            <RotateCcw className="w-4 h-4" /> Reinitialiser
+          </button>
+        ) : undefined}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date d'evangelisation (debut)</label>
@@ -664,7 +674,7 @@ export default function EvangelizedSoulManagement() {
             </span>
           )}
         </p>
-      </div>
+      </CollapsibleFilters>
 
       {selectedSoulIds.length > 0 && (
         <div className={"rounded-lg px-4 py-3 border " + (showBulkDeleteConfirm ? 'bg-red-50 border-red-300' : 'bg-[#00665C]/5 border-[#00665C]/30')}>

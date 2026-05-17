@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, MessageCircle, Phone, Users, ChevronDown } from 'lucide-react';
+import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { CustomTable } from '../components/ui/CustomTable';
 import { formatDate } from '../utils/dateUtils';
 import { usePermissions } from '../hooks/usePermissions';
@@ -352,8 +353,7 @@ export default function InteractionsManagement() {
       </div>
 
       <div className="space-y-4">
-        <div className="bg-white p-4 rounded-lg border space-y-4">
-          <h3 className="text-lg font-medium text-gray-900">Filtres</h3>
+        <CollapsibleFilters activeCount={activeFiltersCount} storageKey="filters:interactions:open">
 
           {isAdminView && (
             <div>
@@ -410,7 +410,7 @@ export default function InteractionsManagement() {
               {filteredInteractions.length} resultat{filteredInteractions.length !== 1 ? 's' : ''} trouve{filteredInteractions.length !== 1 ? 's' : ''}
             </p>
           </div>
-        </div>
+        </CollapsibleFilters>
 
         <CustomTable data={paginatedInteractions} columns={columns} mobileCard={renderInteractionMobileCard} />
 
