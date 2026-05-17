@@ -10,7 +10,6 @@ import { UserProfileProvider } from './contexts/UserProfileContext';
 import { OnboardingProvider } from './contexts/OnboardingContext';
 import { CookieBanner } from './components/gdpr/CookieBanner';
 import { UserProfileModal } from './components/profile/UserProfileModal';
-import { FeatureAnnouncementModal } from './components/announcements/FeatureAnnouncementModal';
 import { PERMISSIONS } from './constants/roles';
 import PrivateRoute from './components/auth/PrivateRoute';
 import Layout from './components/ui/Layout';
@@ -43,7 +42,6 @@ const BirthdayList = lazy(() => import('./pages/BirthdayList'));
 const BirthdayConfirmation = lazy(() => import('./pages/BirthdayConfirmation'));
 const ReplayTeachings = lazy(() => import('./pages/ReplayTeachings'));
 const AudioManagement = lazy(() => import('./pages/AudioManagement'));
-const SyncDepartmentLeaders = lazy(() => import('./pages/SyncDepartmentLeaders'));
 
 // Loading component
 function PageLoader() {
@@ -70,7 +68,6 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={
           <Suspense fallback={<PageLoader />}>
-            <FeatureAnnouncementModal />
             <Login />
           </Suspense>
         } />
@@ -297,13 +294,6 @@ function AppContent() {
           <Route path="/audio" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_AUDIO]}>
               <AudioManagement />
-            </PrivateRoute>
-          } />
-
-          {/* Synchronisation des responsables de département */}
-          <Route path="/sync-department-leaders" element={
-            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_USERS]}>
-              <SyncDepartmentLeaders />
             </PrivateRoute>
           } />
 
