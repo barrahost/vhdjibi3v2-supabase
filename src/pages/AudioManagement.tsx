@@ -337,8 +337,10 @@ export default function AudioManagement() {
         thumbnailUrl = uploadedThumbnailUrl;
       }
       
-      // Save to Firestore with correct duration
+      // Save to Supabase with correct duration
+      const newId = crypto.randomUUID();
       const { error: insertError } = await supabase.from('teachings').insert({
+        id: newId,
         title: formData.title.trim(),
         description: formData.description.trim(),
         speaker: formData.speaker.trim(),
