@@ -105,7 +105,7 @@ export default function ServantListItem({ servant, departmentName, departmentNam
           </button>
         </div>
       </td>
-    </>
       <ConfirmModal {...confirmModalProps} />
+    </>
   );
 }
