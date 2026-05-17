@@ -50,8 +50,10 @@ export default function ReplayTeachings() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [startDate, setStartDate] = useState<string>(getOneMonthAgoDate());
-  const [endDate, setEndDate] = useState<string>(formatDateForInput(new Date()));
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
+    startDate: getOneMonthAgoDate(),
+    endDate: formatDateForInput(new Date())
+  });
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -150,10 +152,10 @@ export default function ReplayTeachings() {
         .eq('status', 'active')
         .order('date', { ascending: false });
 
-      if (startDate && endDate) {
+      if (dateRange.startDate && dateRange.endDate) {
         queryBuilder = queryBuilder
-          .gte('date', new Date(startDate).toISOString())
-          .lte('date', new Date(endDate).toISOString());
+          .gte('date', new Date(dateRange.startDate).toISOString())
+          .lte('date', new Date(dateRange.endDate).toISOString());
       }
 
       if (selectedCategory) {
@@ -222,7 +224,7 @@ export default function ReplayTeachings() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [startDate, endDate, selectedCategory]);
+  }, [dateRange.startDate, dateRange.endDate, selectedCategory]);
 
   // Find and select the teaching from URL parameter
   useEffect(() => {
@@ -294,10 +296,7 @@ export default function ReplayTeachings() {
     }
   };
 
-  const handlePresetSelect = (preset: 'today' | 'week' | 'month' | 'year') => {
-    // This is handled inside the DateRangePicker component
-  };
-  
+
   const copyToClipboard = (text: string = window.location.href) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -363,11 +362,9 @@ export default function ReplayTeachings() {
         </div>
 
         <DateRangePicker
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onPresetSelect={handlePresetSelect}
+          value={dateRange}
+          onChange={setDateRange}
+          label="Période"
         />
 
         <RecentlyPlayedBar
