@@ -8,12 +8,23 @@ interface PrivateRouteProps {
   requiredPermissions?: Permission[];
 }
 
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex flex-col items-center gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#00665C]" />
+        <span className="text-sm text-gray-500">Chargement...</span>
+      </div>
+    </div>
+  );
+}
+
 export default function PrivateRoute({ children, requiredPermissions }: PrivateRouteProps) {
   const { loading, userRole, additionalMenus } = useAuth();
   const { hasPermission } = usePermissions();
 
   if (loading) {
-    return <div>Chargement...</div>;
+    return <PageLoader />;
   }
 
   // Check if user exists in localStorage
