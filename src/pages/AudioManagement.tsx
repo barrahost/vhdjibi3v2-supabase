@@ -92,9 +92,9 @@ export default function AudioManagement() {
 
       const teachingsData = ((data || []) as any[]).map(row => ({
         ...row,
-        thumbnail_url: row.thumbnailUrl || row.thumbnail_url,
+        fileUrl: row.file_url || row.fileUrl,
+        thumbnail_url: row.thumbnail_url || row.thumbnailUrl,
         date: row.date ? new Date(row.date) : undefined,
-        createdAt: row.createdAt ? new Date(row.createdAt) : undefined
       })) as Teaching[];
 
       setTeachings(teachingsData);
@@ -386,7 +386,7 @@ export default function AudioManagement() {
 
     try {
       // Delete from storage
-      await StorageService.deleteAudioFile(teaching.fileUrl);
+      await StorageService.deleteAudioFile(teaching.fileUrl || teaching.file_url);
 
       // If there's a thumbnail, delete it too
       if (teaching.thumbnail_url) {
