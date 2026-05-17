@@ -386,6 +386,25 @@ export default function SoulManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedSoulIds.length === 0) return;
+    const count = selectedSoulIds.length;
+    const confirmed = await confirm(
+      `Etes-vous sur de vouloir supprimer definitivement ${count} ame${count > 1 ? 's' : ''} ? Cette action est irreversible.`
+    );
+    if (!confirmed) return;
+    try {
+      const { error } = await supabase.from('souls').delete().in('id', selectedSoulIds);
+      if (error) throw error;
+      setSouls(prev => prev.filter(s => !selectedSoulIds.includes(s.id)));
+      setSelectedSoulIds([]);
+      toast.success(`${count} ame${count > 1 ? 's' : ''} supprimee${count > 1 ? 's' : ''} avec succes`);
+    } catch (error) {
+      console.error('Error bulk deleting souls:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   const fetchSouls = useCallback(async () => {
     setLoading(true);
     try {
@@ -651,6 +670,15 @@ export default function SoulManagement() {
               >
                 Deselectionner tout
               </button>
+              {userRole === 'super_admin' && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Supprimer la selection
+                </button>
+              )}
               <button
                 onClick={() => setShowAssignModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md transition-colors"
