@@ -376,7 +376,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
             id: crypto.randomUUID(),
             full_name: r.fullName, nickname: r.nickname, gender: r.gender,
             phone: r.phone, location: r.location,
-            evangelization_date: r.evangelizationDate,
+            evangelization_date: r.evangelizationDate ? r.evangelizationDate.toISOString() : null,
             evangelization_location: r.evangelizationLocation,
             notes: r.notes, attended_community: r.attendedCommunity,
             gave_life_to_jesus: r.gaveLifeToJesus, planned_service: r.plannedService,
@@ -497,7 +497,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
                           <th className="px-2 py-1 text-left">Nom</th>
                           <th className="px-2 py-1 text-left">Genre</th>
                           <th className="px-2 py-1 text-left">Lieu</th>
-                          <th className="px-2 py-1 text-left">Date évang.</th>
+                          <th className="px-2 py-1 text-left">Date évang. (JJ/MM/AAAA)</th>
                           <th className="px-2 py-1 text-left">Évangéliste</th>
                         </tr>
                       </thead>
