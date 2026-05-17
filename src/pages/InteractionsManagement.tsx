@@ -234,6 +234,8 @@ export default function InteractionsManagement() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchInteractions]);
 
+  const activeFiltersCount = [searchTerm !== '', selectedActorId !== null].filter(Boolean).length;
+
   // Filter â don't exclude interactions with unknown actor
   const filteredInteractions = interactions.filter(interaction => {
     const soul = souls[interaction.soulId];
