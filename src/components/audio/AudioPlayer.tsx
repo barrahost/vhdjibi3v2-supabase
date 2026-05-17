@@ -70,83 +70,76 @@ export function AudioPlayer({
     };
   }, []);
   
-  // Mettre à jour la source audio et les événements lorsque l'URL change
+  // Ref pour décider si on auto-joue après un changement d'URL (évite les dépendances instables)
+  const autoPlayRef = useRef(initialPlayState);
+
+  // Mettre à jour la source audio UNIQUEMENT quand l'URL change
+  // Volume et mute sont gérés par leur propre effet séparé — ne pas les mettre ici
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    
-    // Reset audio player state for new URL
+
+    // Décider si on doit reprendre la lecture (capture instantanée au moment du changement d'URL)
+    autoPlayRef.current = initialPlayState || isPlaying;
+
     setError(null);
     setIsLoading(true);
     playTrackedRef.current = false;
-    
-    // If this is initial load and initialPlayState is true, or
-    // if we're changing audio and current audio was playing
-    const shouldContinuePlaying = initialPlayState || isPlaying;
-    setShouldPlay(shouldContinuePlaying);
-    
-    console.log(`Audio source changing to: ${url}, should continue playing: ${shouldContinuePlaying}`);
-    
-    // Mettre à jour la source audio
+
     audio.src = url;
-    audio.volume = isMuted ? 0 : volume;
-    
-    // Set up event listeners
+    // Appliquer le volume courant sans passer par les deps
+    audio.volume = audio.muted ? 0 : audio.volume;
+
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
       setIsLoading(false);
       setError(null);
     };
-    
+
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
       updateProgress();
     };
-    
+
     const handleEnded = () => {
       setIsPlaying(false);
       setShouldPlay(false);
       onEnded?.();
     };
-    
+
     const handleCanPlay = () => {
       setIsLoading(false);
-      // Restaurer l'état de lecture après changement d'URL
-      if (shouldPlay) {
+      if (autoPlayRef.current) {
+        autoPlayRef.current = false; // ne jouer qu'une fois
         audio.play()
-          .then(() => { 
-            console.log("Auto-playing audio after source change");
+          .then(() => {
             setIsPlaying(true);
+            setShouldPlay(true);
             playTrackedRef.current = true;
           })
-          .catch(error => {
-            console.error('Error auto-playing audio after source change:', error);
-            setShouldPlay(false);
+          .catch(() => {
             setIsPlaying(false);
+            setShouldPlay(false);
           });
       }
     };
-    
+
     const handleError = () => {
-      const errorMessage = getErrorMessage(audio.error);
-      console.error('Audio error:', errorMessage, audio.error);
-      setError(errorMessage);
+      const msg = getErrorMessage(audio.error);
+      setError(msg);
       setIsLoading(false);
       setIsPlaying(false);
       toast.error('Impossible de lire cet audio. Veuillez réessayer plus tard.');
     };
-    
-    // Add event listeners
+
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
     audio.addEventListener('canplay', handleCanPlay);
-    
-    // Load the audio
+
     audio.load();
-    
-    // Cleanup
+
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
@@ -154,7 +147,7 @@ export function AudioPlayer({
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('canplay', handleCanPlay);
     };
-  }, [url, volume, isMuted, shouldPlay, initialPlayState]);
+  }, [url]); // ← UNIQUEMENT url : volume/mute/shouldPlay ont leur propre effet
   
   // Mettre à jour le volume quand il change
   useEffect(() => {
