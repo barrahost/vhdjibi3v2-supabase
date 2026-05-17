@@ -5,6 +5,7 @@ import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, In
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
+import { DateRangePicker } from '../components/ui/DateRangePicker';
 import { formatDate, formatDateForExcel } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { isAdminUser, isADNUser, isEvangelistUser } from '../utils/roleHelpers';
@@ -214,8 +215,7 @@ export default function EvangelizedSoulManagement() {
     statusFilter !== 'active' || importFilter !== 'pending' || attributionFilter !== 'all' || evangelistFilter !== '';
   const activeFiltersCount = [
     searchTerm !== '',
-    dateRange.startDate !== '',
-    dateRange.endDate !== '',
+    dateRange.startDate !== '' || dateRange.endDate !== '',
     statusFilter !== 'active',
     importFilter !== 'pending',
     attributionFilter !== 'all',
@@ -601,18 +601,11 @@ export default function EvangelizedSoulManagement() {
           </button>
         ) : undefined}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date d'evangelisation (debut)</label>
-            <input type="date" value={dateRange.startDate} onChange={e => setDateRange(p => ({ ...p, startDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date d'evangelisation (fin)</label>
-            <input type="date" value={dateRange.endDate} onChange={e => setDateRange(p => ({ ...p, endDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
-          </div>
-        </div>
+        <DateRangePicker
+          label="Date d'évangélisation"
+          value={dateRange}
+          onChange={setDateRange}
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Rechercher</label>

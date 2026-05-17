@@ -12,6 +12,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
+import { DateRangePicker } from '../components/ui/DateRangePicker';
 import EditSoulModal from '../components/souls/EditSoulModal';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
 import AssignToShepherdModal from '../components/souls/AssignToShepherdModal';
@@ -106,8 +107,7 @@ export default function SoulManagement() {
   const activeFiltersCount = [
     searchTerm !== '',
     selectedShepherdId !== null,
-    dateRange.startDate !== '',
-    dateRange.endDate !== '',
+    dateRange.startDate !== '' || dateRange.endDate !== '',
     statusFilter !== 'active',
     unassignedFamilyOnly,
   ].filter(Boolean).length;
@@ -564,30 +564,11 @@ export default function SoulManagement() {
           }
         >
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de premiere visite (debut)
-              </label>
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de premiere visite (fin)
-              </label>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              />
-            </div>
-          </div>
+          <DateRangePicker
+            label="Date de première visite"
+            value={dateRange}
+            onChange={setDateRange}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
