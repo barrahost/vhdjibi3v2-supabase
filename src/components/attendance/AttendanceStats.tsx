@@ -32,7 +32,6 @@ export default function AttendanceStats() {
           .from('users')
           .select('id, role')
           .eq('id', currentUserId)
-          .eq('status', 'active')
           .limit(1);
 
         if (userErr) throw userErr;
@@ -43,12 +42,16 @@ export default function AttendanceStats() {
         }
 
         const shepherdId = userRows[0].id;
+        const userRole = userRows[0].role;
+        const isAdminUser = userRole === 'admin' || userRole === 'super_admin';
 
-        // Récupérer toutes les présences
-        const { data: attendancesRows, error: attErr } = await supabase
+        // Récupérer toutes les présences (admin = toutes, berger = les siennes)
+        const statsQuery = supabase
           .from('attendances')
-          .select('id, present')
-          .eq('shepherd_id', shepherdId);
+          .select('id, present');
+        if (!isAdminUser) statsQuery.eq('shepherd_id', shepherdId);
+
+        const { data: attendancesRows, error: attErr } = await statsQuery;
 
         if (attErr) throw attErr;
 

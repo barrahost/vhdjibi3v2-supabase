@@ -40,7 +40,6 @@ export default function AttendanceList() {
           .from('users')
           .select('id, role')
           .eq('id', currentUserId)
-          .eq('status', 'active')
           .limit(1);
 
         if (userErr) throw userErr;
@@ -51,13 +50,17 @@ export default function AttendanceList() {
         }
 
         const shepherdId = userRows[0].id;
+        const userRole = userRows[0].role;
+        const isAdminUser = userRole === 'admin' || userRole === 'super_admin';
 
-        // Récupérer les présences
-        const { data: attendancesRows, error: attErr } = await supabase
+        // L'admin voit toutes les présences ; un berger ne voit que les siennes
+        const attQuery = supabase
           .from('attendances')
           .select('*')
-          .eq('shepherd_id', shepherdId)
           .order('date', { ascending: false });
+        if (!isAdminUser) attQuery.eq('shepherd_id', shepherdId);
+
+        const { data: attendancesRows, error: attErr } = await attQuery;
 
         if (attErr) throw attErr;
 

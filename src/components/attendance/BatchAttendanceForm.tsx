@@ -25,12 +25,11 @@ export default function BatchAttendanceForm() {
           .from('users')
           .select('*')
           .eq('id', currentUserId)
-          .eq('status', 'active')
           .single();
 
         if (userErr || !userData) { toast.error('Utilisateur non trouvé'); setLoading(false); return; }
 
-        const isAdmin = userData.role === 'admin';
+        const isAdmin = userData.role === 'admin' || userData.role === 'super_admin';
         const hasShepherdProfile = isAdmin || (userData.business_profiles || userData.businessProfiles)?.some(
           (p: any) => p.type === 'shepherd' && p.isActive
         ) || userData.role === 'shepherd' || userData.role === 'intern';
