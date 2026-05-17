@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Navigation, AlertCircle, Trash2, Link, Check, Crosshair } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
 interface Coordinates {
   latitude: number;
@@ -23,6 +25,7 @@ export function LocationField({
   onLocationChange, 
   onCoordinatesChange 
 }: LocationFieldProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [loading, setLoading] = useState(false);
   const [googleMapsUrl, setGoogleMapsUrl] = useState('');
   const [extractingCoordinates, setExtractingCoordinates] = useState(false);
@@ -161,7 +164,7 @@ export function LocationField({
   };
 
   // Handle extraction of coordinates from Google Maps URL
-  const handleExtractCoordinates = () => {
+  const handleExtractCoordinates = async () => {
     if (!googleMapsUrl.trim()) {
       toast.error('Veuillez entrer un lien Google Maps');
       return;
@@ -203,8 +206,8 @@ export function LocationField({
     }
   };
 
-  const handleRemoveCoordinates = () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer les coordonnées GPS ?')) {
+  const handleRemoveCoordinates = async () => {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer les coordonnées GPS ?')) {
       setCoordinateSource(null);
       onCoordinatesChange(null);
       setGoogleMapsUrl('');
@@ -351,6 +354,7 @@ export function LocationField({
           </div>
         </div>
       )}
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

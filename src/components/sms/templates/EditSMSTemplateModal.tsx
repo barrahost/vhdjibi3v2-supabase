@@ -5,6 +5,8 @@ import { MessageSquare } from 'lucide-react';
 import { SMS_VARIABLES } from '../../../types/sms.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
 const MAX_LENGTH = 125; // Reduced to 125 to allow for appending user info
 
@@ -15,6 +17,7 @@ interface EditSMSTemplateModalProps {
 }
 
 export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: EditSMSTemplateModalProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -75,7 +78,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   }, [formData, initialData]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
         e.returnValue = '';
@@ -129,9 +132,9 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (hasUnsavedChanges) {
-      if (window.confirm('Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter ?')) {
+      if (await confirm('Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter ?')) {
         onClose();
       }
     } else {

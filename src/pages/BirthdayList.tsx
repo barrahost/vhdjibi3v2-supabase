@@ -11,10 +11,13 @@ import { usePermissions } from '../hooks/usePermissions';
 import BirthdayForm from '../components/birthdays/BirthdayForm';
 import toast from 'react-hot-toast';
 import { getDaysUntilBirthday } from '../utils/dateUtils';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function BirthdayList() {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const { userRole } = useAuth();
   const { hasPermission } = usePermissions();
   const canManageBirthdays = userRole === 'super_admin' || hasPermission('MANAGE_BIRTHDAYS');
@@ -86,7 +89,7 @@ export default function BirthdayList() {
       return;
     }
 
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet anniversaire ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cet anniversaire ?')) {
       try {
         const { error } = await supabase
           .from('birthdays')
@@ -255,6 +258,7 @@ export default function BirthdayList() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-gray-500">Chargement des anniversaires...</div>
+      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }

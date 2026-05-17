@@ -2,6 +2,8 @@ import { Servant } from '../../types/servant.types';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface ServantListItemProps {
   servant: Servant;
@@ -12,7 +14,7 @@ interface ServantListItemProps {
 
 export default function ServantListItem({ servant, departmentName, departmentNames, onEdit }: ServantListItemProps) {
   const handleDelete = async () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce serviteur ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer ce serviteur ?')) {
       try {
         // Si c'est un responsable, vérifier s'il y a des serviteurs dans son département
         if (servant.isHead) {

@@ -2,6 +2,8 @@ import { User } from '../../types/user.types';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface UserListItemProps {
   user: User;
@@ -10,7 +12,7 @@ interface UserListItemProps {
 
 export default function UserListItem({ user, onEdit }: UserListItemProps) {
   const handleDelete = async () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
         const { error: _deleteErr } = await supabase.from('users').delete().eq('id', user.id);
         toast.success('Utilisateur supprimé avec succès');

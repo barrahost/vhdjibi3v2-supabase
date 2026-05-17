@@ -6,8 +6,11 @@ import EditSMSTemplateModal from './EditSMSTemplateModal';
 import { SMSTemplatePreview } from './SMSTemplatePreview';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
 export default function SMSTemplateList() {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export default function SMSTemplateList() {
   }, []);
 
   const handleDelete = async (templateId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce modèle ? Cette action est irréversible.')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer ce modèle ? Cette action est irréversible.')) {
       try {
         const { error: _deleteErr } = await supabase.from('sms_templates').delete().eq('id', templateId);
         toast.success('Modèle supprimé avec succès');
@@ -144,6 +147,7 @@ export default function SMSTemplateList() {
           onClose={() => setEditingTemplateId(null)}
         />
       )}
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

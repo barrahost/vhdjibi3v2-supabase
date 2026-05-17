@@ -16,6 +16,8 @@ import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
 import { useServantStatus } from '../../hooks/useServantStatus';
 import { isShepherdUser, isADNUser, isAdminUser, isDepartmentLeaderUser, isFamilyLeaderUser, isEvangelistUser } from '../../utils/roleHelpers';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins' | 'department_leader' | 'family_leader' | 'evangelist';
@@ -97,11 +99,13 @@ function ActionButtons({
           <Trash2 className="w-4 h-4" />
         </button>
       )}
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }
 
 export default function UserList({ filter, statusFilter, selectedUserIds = [], onSelectionChange, onPromoteShepherd }: UserListProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const { userRole } = useAuth();
   const { hasPermission } = usePermissions();
   const canEditUsers = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_USERS);
@@ -190,7 +194,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
       return;
     }
 
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
         // Supprimer l'utilisateur de Firestore
         const { error: _deleteErr } = await supabase.from('users').delete().eq('id', userId);
@@ -455,7 +459,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
     }
   ];
 
-  const handleSort = (field: keyof User) => {
+  const handleSort = async (field: keyof User) => {
     setSortConfig(current => ({
       field,
       direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc'

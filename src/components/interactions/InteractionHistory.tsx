@@ -4,6 +4,8 @@ import { formatDate } from '../../utils/dateUtils';
 import { Phone, Users, MessageSquare, Trash2, MessageCircle, HelpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface InteractionHistoryProps {
   soulId: string;
@@ -26,6 +28,7 @@ const interactionLabels: Record<string, string> = {
 };
 
 export default function InteractionHistory({ soulId }: InteractionHistoryProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [interactions, setInteractions] = useState<Interaction[]>([]);
 
   useEffect(() => {
@@ -73,7 +76,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
   }, [soulId]);
 
   const handleDelete = async (interactionId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette interaction ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cette interaction ?')) {
       try {
         const { error } = await supabase.from('interactions').delete().eq('id', interactionId);
         if (error) throw error;
@@ -89,6 +92,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
     return (
       <div className="text-center py-6 text-gray-500">
         Aucune interaction enregistrée
+      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }

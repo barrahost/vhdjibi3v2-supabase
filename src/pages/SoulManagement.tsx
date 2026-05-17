@@ -21,6 +21,8 @@ import ImportToSoulModal from '../components/evangelizedSouls/ImportToSoulModal'
 import { EvangelizedSoul } from '../types/evangelized.types';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 const FILTERS_STORAGE_KEY = 'souls:filters:v1';
@@ -63,6 +65,7 @@ function loadPersistedFilters(): PersistedFilters {
 
 export default function SoulManagement() {
   const initialFilters = loadPersistedFilters();
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [showForm, setShowForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [souls, setSouls] = useState<Soul[]>([]);
@@ -370,7 +373,7 @@ export default function SoulManagement() {
   };
 
   const handleDelete = async (soulId: string) => {
-    if (window.confirm('Etes-vous sur de vouloir supprimer cette ame ?')) {
+    if (await confirm('Etes-vous sur de vouloir supprimer cette ame ?')) {
       try {
         const { error } = await supabase.from('souls').delete().eq('id', soulId);
         if (error) throw error;
@@ -511,6 +514,7 @@ export default function SoulManagement() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-gray-500">Chargement des ames...</div>
+      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }

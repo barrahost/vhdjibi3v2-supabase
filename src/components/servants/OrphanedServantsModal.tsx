@@ -5,6 +5,8 @@ import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface OrphanedServantsModalProps {
   isOpen: boolean;
@@ -13,13 +15,15 @@ interface OrphanedServantsModalProps {
 }
 
 export default function OrphanedServantsModal({ isOpen, onClose, orphans }: OrphanedServantsModalProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
 
   if (!isOpen) return null;
 
   const handleDeleteOne = async (id: string) => {
-    if (!window.confirm('Supprimer définitivement ce serviteur orphelin ?')) return;
+    const _confirmed = await confirm('Supprimer définitivement ce serviteur orphelin ?');
+    if (!_confirmed) return;
     try {
       setDeleting(id);
       const { error: _deleteErr } = await supabase.from('servants').delete().eq('id', id);
@@ -33,7 +37,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm(`Supprimer définitivement les ${orphans.length} serviteur(s) orphelin(s) ?`)) return;
+    if (!await confirm(`Supprimer définitivement les ${orphans.length} serviteur(s) orphelin(s) ?`)) return;
     try {
       setDeletingAll(true);
       const ids = orphans.map(o => o.id);
@@ -108,6 +112,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
           )}
         </div>
       </div>
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

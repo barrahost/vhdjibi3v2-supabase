@@ -21,10 +21,13 @@ import DistributeEvangelizedSoulsModal from '../components/evangelizedSouls/Dist
 import { EvangelizedSoul, plannedServiceLabel, gaveLifeLabel } from '../types/evangelized.types';
 import { formatGender } from '../utils/formatting/genderFormat';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function EvangelizedSoulManagement() {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const { user, userRole, activeRole } = useAuth();
   const [souls, setSouls] = useState<EvangelizedSoul[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +232,8 @@ export default function EvangelizedSoulManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Supprimer cette ame evangelisee ?')) return;
+    const _confirmed = await confirm('Supprimer cette ame evangelisee ?');
+    if (!_confirmed) return;
     try {
       const { error } = await supabase.from('evangelized_souls').delete().eq('id', id);
       if (error) throw error;
@@ -237,7 +241,7 @@ export default function EvangelizedSoulManagement() {
     } catch { toast.error('Erreur lors de la suppression'); }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const rows = filtered.map(s => ({
       'Nom et Prenoms': s.fullName, 'Surnom': s.nickname || '',
       'Genre': formatGender(s.gender), 'Telephone': (s.phone || '').replace('+225', ''),
@@ -385,6 +389,7 @@ export default function EvangelizedSoulManagement() {
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
+          <ConfirmModal {...confirmModalProps} />
           </div>
         );
       },

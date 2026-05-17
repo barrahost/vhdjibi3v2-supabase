@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
 interface Category {
   id: string;
@@ -12,6 +14,7 @@ interface Category {
 }
 
 export function CategoryManagement() {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -89,7 +92,7 @@ export function CategoryManagement() {
   };
 
   const handleDelete = async (category: Category) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
       try {
         // Vérifier si la catégorie est utilisée
         const { data: templatesData } = await supabase.from('sms_templates').select('id').eq('category', category.name).limit(1);
@@ -274,6 +277,7 @@ export function CategoryManagement() {
           )}
         </div>
       </div>
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

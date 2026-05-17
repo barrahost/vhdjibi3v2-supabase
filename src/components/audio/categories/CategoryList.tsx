@@ -4,6 +4,8 @@ import { Search, Pencil, Trash2 } from 'lucide-react';
 import { EditCategoryModal } from './EditCategoryModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
 interface Category {
   id: string;
@@ -15,6 +17,7 @@ interface Category {
 }
 
 export function CategoryList() {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,7 +50,7 @@ export function CategoryList() {
   }, []);
 
   const handleDelete = async (category: Category) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
       try {
         const { error: _deleteErr } = await supabase.from('audio_categories').delete().eq('id', category.id);
         toast.success('Catégorie supprimée avec succès');
@@ -133,6 +136,7 @@ export function CategoryList() {
           onClose={() => setEditingCategory(null)}
         />
       )}
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

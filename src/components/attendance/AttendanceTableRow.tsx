@@ -3,6 +3,8 @@ import AttendanceActions from './AttendanceActions';
 import { AttendanceRecord, Soul } from '../../types/attendance.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface AttendanceTableRowProps {
   attendance: AttendanceRecord;
@@ -14,7 +16,7 @@ export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTable
   if (!soul) return null;
 
   const handleDelete = async () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette présence ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cette présence ?')) {
       try {
         const { error: _deleteErr } = await supabase.from('attendances').delete().eq('id', attendance.id);
         toast.success('Présence supprimée avec succès');

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Pencil, Trash2, Users, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface ServiceFamily {
   id: string;
@@ -18,6 +20,7 @@ interface ServiceFamilyListItemProps {
 }
 
 export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyListItemProps) {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [leaderName, setLeaderName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
   }, [family.leaderId]);
 
   const handleDelete = async () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette famille ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer cette famille ?')) {
       try {
         const { error: _deleteErr } = await supabase.from('serviceFamilies').delete().eq('id', family.id);
         toast.success('Famille supprimée avec succès');
@@ -92,6 +95,7 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
           </button>
         </div>
       </div>
+    <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

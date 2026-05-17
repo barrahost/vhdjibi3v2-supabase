@@ -1,6 +1,8 @@
 import { Pencil, Trash2, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 interface Department {
   id: string;
@@ -16,7 +18,7 @@ interface DepartmentListItemProps {
 
 export default function DepartmentListItem({ department, onEdit }: DepartmentListItemProps) {
   const handleDelete = async () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) {
       try {
         const { error: _deleteErr } = await supabase.from('departments').delete().eq('id', department.id);
         toast.success('Département supprimé avec succès');

@@ -13,6 +13,8 @@ import { CustomPagination } from '../components/ui/CustomPagination';
 import { Tabs } from '../components/ui/tabs';
 import { useCategories } from '../hooks/useCategories';
 import { isWithinLast7Days } from '../utils/dateUtils';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 
 // Helper function to get date from one month ago
 const getOneMonthAgoDate = (): string => {
@@ -41,6 +43,7 @@ interface Teaching {
 }
 
 export default function AudioManagement() {
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [teachings, setTeachings] = useState<Teaching[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'teachings' | 'categories'>('teachings');
@@ -378,7 +381,7 @@ export default function AudioManagement() {
   };
 
   const handleDelete = async (teaching: Teaching) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet enseignement ?')) {
+    if (!await confirm('Êtes-vous sûr de vouloir supprimer cet enseignement ?')) {
       return;
     }
 
@@ -402,7 +405,7 @@ export default function AudioManagement() {
     }
   };
 
-  const handlePlayPreview = (fileUrl: string) => {
+  const handlePlayPreview = async (fileUrl: string) => {
     if (playingAudio === fileUrl) {
       // Stop playing
       audioElement?.pause();
@@ -426,7 +429,7 @@ export default function AudioManagement() {
     }
   };
 
-  const handleEdit = (teaching: Teaching) => {
+  const handleEdit = async (teaching: Teaching) => {
     setEditingTeaching(teaching);
     setFormData({
       title: teaching.title || '',
@@ -637,6 +640,7 @@ export default function AudioManagement() {
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Chargement des enseignements...</span>
         </div>
+      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }
