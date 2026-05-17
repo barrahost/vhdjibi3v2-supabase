@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, Info, CheckCircle2, Download, Phone, UserCheck, UserX, Shuffle, AlertTriangle } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, Info, CheckCircle2, Download, Phone, UserCheck, UserX, Shuffle, AlertTriangle, MoreVertical, X as XIcon } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { formatDate, formatDateForExcel } from '../utils/dateUtils';
@@ -44,6 +44,7 @@ export default function EvangelizedSoulManagement() {
   const [showDistributeModal, setShowDistributeModal] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
 
   const activeProfileType = (activeRole || userRole) as string;
   const activeBusinessProfiles = ((user as any)?.businessProfiles || []).filter(
@@ -380,6 +381,103 @@ export default function EvangelizedSoulManagement() {
     },
   ];
 
+
+  // ---- Mobile card renderer for CustomTable ----
+  const renderMobileCard = (s: EvangelizedSoul) => {
+    const isImported = !!s.importedToSoulId || s.status === 'imported';
+    const lastContact = lastContactMap.get(s.id) || null;
+    const initials = s.fullName
+      .split(' ')
+      .map((n: string) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+    return (
+      <div className="p-4">
+        {/* Top row: avatar + name + status */}
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-[#E1F5EE] text-[#0F6E56] flex items-center justify-center text-sm font-semibold flex-shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-900 text-sm leading-tight">{s.fullName}</p>
+              {s.nickname && <span className="text-xs text-gray-400">({s.nickname})</span>}
+            </div>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className={"text-xs px-1.5 py-0.5 rounded-full font-medium " + (s.gender === 'male' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700')}>
+                {s.gender === 'male' ? 'Homme' : 'Femme'}
+              </span>
+              {isImported ? (
+                <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                  <CheckCircle2 className="w-3 h-3" /> Reçue
+                </span>
+              ) : (
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">En suivi</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Info rows */}
+        <div className="space-y-1.5 mb-3">
+          {s.phone && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <span>{s.phone}</span>
+            </div>
+          )}
+          {s.location && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="text-gray-400 flex-shrink-0 text-xs">📍</span>
+              <span className="truncate">{s.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">Dernier contact :</span>
+            <LastContactBadge date={lastContact} />
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
+          {(isAdmin || isEvangelist) && !isImported && (
+            <button
+              onClick={e => { e.stopPropagation(); setInteractingSoul(s); }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+            >
+              <Phone className="w-3.5 h-3.5" /> Contacter
+            </button>
+          )}
+          {canImportToSouls && !isImported && (
+            <button
+              onClick={e => { e.stopPropagation(); setImporting(s); }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
+            >
+              <Download className="w-3.5 h-3.5" /> Recevoir
+            </button>
+          )}
+          {(isAdmin || isADN || isEvangelist) && (
+            <button
+              onClick={e => { e.stopPropagation(); setEditing(s); }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md"
+            >
+              <Pencil className="w-3.5 h-3.5" /> Modifier
+            </button>
+          )}
+          {isAdmin && !isImported && (
+            <button
+              onClick={e => { e.stopPropagation(); handleDelete(s.id); }}
+              className="flex items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded-md"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <div className="text-gray-500">Chargement des ames evangelisees...</div>
@@ -388,15 +486,16 @@ export default function EvangelizedSoulManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      {/* Header — desktop layout */}
+      <div className="hidden sm:flex sm:justify-between sm:items-center gap-3">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Megaphone className="w-7 h-7 text-[#00665C]" /> Ames evangelisees
+          <Megaphone className="w-7 h-7 text-[#00665C]" /> Âmes évangélisées
         </h1>
         <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && unassignedCount > 0 && (
             <button onClick={() => setShowDistributeModal(true)}
               className="flex items-center px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 border border-amber-400 rounded-md">
-              <Shuffle className="w-4 h-4 mr-1.5" /> Repartir ({unassignedCount} non attribuees)
+              <Shuffle className="w-4 h-4 mr-1.5" /> Répartir ({unassignedCount} non attribuées)
             </button>
           )}
           <button onClick={handleExport}
@@ -410,9 +509,61 @@ export default function EvangelizedSoulManagement() {
               data-tour="btn-add-evangelized-soul"
               className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md">
               <Plus className="w-4 h-4 mr-2" />
-              {showForm ? 'Masquer le formulaire' : 'Ajouter une ame evangelisee'}
+              {showForm ? 'Masquer' : 'Ajouter une âme'}
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Header — mobile layout */}
+      <div className="sm:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-[#00665C]" /> Âmes évangélisées
+          </h1>
+          <div className="flex items-center gap-2">
+            {canCreateEvangelized && (
+              <button onClick={() => setShowForm(!showForm)}
+                data-tour="btn-add-evangelized-soul"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md">
+                <Plus className="w-4 h-4" />
+                Ajouter
+              </button>
+            )}
+            <div className="relative">
+              <button
+                onClick={() => setShowMobileActions(v => !v)}
+                className="p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              {showMobileActions && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMobileActions(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border z-20 py-1">
+                    {isAdmin && unassignedCount > 0 && (
+                      <button onClick={() => { setShowDistributeModal(true); setShowMobileActions(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-amber-700 hover:bg-amber-50">
+                        <Shuffle className="w-4 h-4" /> Répartir ({unassignedCount} non attribuées)
+                      </button>
+                    )}
+                    <button onClick={() => { handleExport(); setShowMobileActions(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                      <FileSpreadsheet className="w-4 h-4 text-[#00665C]" /> Exporter Excel
+                    </button>
+                    {canCreateEvangelized && (
+                      <div className="px-2 py-1">
+                        <ImportEvangelizedSoulsFromExcel />
+                      </div>
+                    )}
+                    <div className="px-2 py-1">
+                      <DownloadTemplateButton />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -565,7 +716,7 @@ export default function EvangelizedSoulManagement() {
       )}
 
       <div className="bg-white rounded-lg border overflow-hidden">
-        <CustomTable columns={columns} data={paginated} />
+        <CustomTable columns={columns} data={paginated} mobileCard={renderMobileCard} />
         {paginated.length === 0 && (
           <div className="text-center py-10 text-gray-500">
             {hasActiveFilters ? "Aucune ame evangelisee ne correspond a vos filtres."

@@ -12,23 +12,25 @@ interface TableProps {
   columns: Column[];
   onRowClick?: (item: any) => void;
   className?: string;
+  /** Optional custom mobile card renderer — overrides the generic field list */
+  mobileCard?: (item: any) => ReactNode;
 }
 
-export function CustomTable({ data, columns, onRowClick, className = '' }: TableProps) {
-  // Afficher la vue mobile sur les petits écrans
+export function CustomTable({ data, columns, onRowClick, className = '', mobileCard }: TableProps) {
   return (
     <>
-      {/* Vue mobile */}
+      {/* Mobile view (< lg) */}
       <div className="lg:hidden">
         <MobileTableView
           data={data}
           columns={columns}
           onItemClick={onRowClick}
           className={className}
+          mobileCard={mobileCard}
         />
       </div>
 
-      {/* Vue desktop */}
+      {/* Desktop view (lg+) */}
       <div className="hidden lg:block">
         <div className={`bg-white rounded-lg shadow-sm border overflow-hidden ${className}`}>
           <div className="overflow-x-auto">

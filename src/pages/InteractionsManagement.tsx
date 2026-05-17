@@ -268,6 +268,73 @@ export default function InteractionsManagement() {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, selectedActorId]);
 
+
+  // ---- Mobile card renderer ----
+  const renderInteractionMobileCard = (interaction: any) => {
+    const soul = souls[interaction.soulId];
+    const actor = actors[interaction.shepherdId];
+    const typeIcons: Record<string, string> = {
+      call: '📞', visit: '🤝', sms: '💬', message: '✉️', other: '📝',
+    };
+    const typeLabels: Record<string, string> = {
+      call: 'Appel', visit: 'Visite', sms: 'SMS', message: 'Message', other: 'Autre',
+    };
+    const typeColors: Record<string, string> = {
+      call: 'bg-blue-100 text-blue-700',
+      visit: 'bg-green-100 text-green-700',
+      sms: 'bg-purple-100 text-purple-700',
+      message: 'bg-indigo-100 text-indigo-700',
+      other: 'bg-gray-100 text-gray-700',
+    };
+    return (
+      <div className="p-4">
+        {/* Top row: type badge + date */}
+        <div className="flex items-center justify-between mb-2.5">
+          <span className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold " + (typeColors[interaction.type] || 'bg-gray-100 text-gray-700')}>
+            <span>{typeIcons[interaction.type] || '📝'}</span>
+            {typeLabels[interaction.type] || interaction.type}
+          </span>
+          <span className="text-xs text-gray-400 font-medium">
+            {interaction.date instanceof Date
+              ? interaction.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+              : '—'}
+          </span>
+        </div>
+
+        {/* Soul */}
+        <div className="flex items-start gap-2 mb-2">
+          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Âme</span>
+          {soul ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#F2B636]/10 text-[#c8941a]">
+              {soul.fullName}
+            </span>
+          ) : (
+            <span className="text-xs text-gray-400 italic">Inconnue</span>
+          )}
+        </div>
+
+        {/* Actor */}
+        <div className="flex items-start gap-2 mb-2">
+          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">{actorColumnLabel}</span>
+          {actor ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">
+              {actor.fullName}
+            </span>
+          ) : (
+            <span className="text-xs text-gray-400 italic">Inconnu(e)</span>
+          )}
+        </div>
+
+        {/* Notes */}
+        {interaction.notes && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <p className="text-xs text-gray-500 line-clamp-2">{interaction.notes}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -278,9 +345,9 @@ export default function InteractionsManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {isEvangelistView ? 'Mes interactions' : 'Gestion des Interactions'}
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+          {isEvangelistView ? 'Mes interactions' : 'Gestion des interactions'}
         </h1>
       </div>
 
@@ -345,7 +412,7 @@ export default function InteractionsManagement() {
           </div>
         </div>
 
-        <CustomTable data={paginatedInteractions} columns={columns} />
+        <CustomTable data={paginatedInteractions} columns={columns} mobileCard={renderInteractionMobileCard} />
 
         {totalPages > 1 && (
           <CustomPagination

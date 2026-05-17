@@ -283,8 +283,9 @@ export default function EvangelistDashboard() {
           onClick={() => navigate('/ames-evangelisees')}
           className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Ajouter une âme évangélisée
+          <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
+          <span className="hidden sm:inline">Ajouter une âme évangélisée</span>
+          <span className="sm:hidden">Ajouter</span>
         </button>
       </div>
 
@@ -347,7 +348,7 @@ export default function EvangelistDashboard() {
                   .join('')
                   .toUpperCase();
                 return (
-                  <div key={soul.id} className="p-4 flex items-center gap-3">
+                  <div key={soul.id} className="p-3 sm:p-4 flex items-center gap-3 active:bg-gray-50">
                     <div className="w-8 h-8 rounded-full bg-[#E1F5EE] text-[#0F6E56] flex items-center justify-center text-xs font-medium flex-shrink-0">
                       {initials}
                     </div>
@@ -381,7 +382,7 @@ export default function EvangelistDashboard() {
         {/* Colonne droite */}
         <div className="space-y-4">
           {/* Activité mensuelle */}
-          <div className="bg-white rounded-lg border shadow-sm p-4">
+          <div className="bg-white rounded-lg border shadow-sm p-3 sm:p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">
               Activité des 6 derniers mois
             </h3>

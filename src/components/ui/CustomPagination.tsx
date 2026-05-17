@@ -1,3 +1,5 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -6,108 +8,97 @@ interface PaginationProps {
   itemsPerPage: number;
 }
 
-export function CustomPagination({ 
-  currentPage, 
-  totalPages, 
+export function CustomPagination({
+  currentPage,
+  totalPages,
   onPageChange,
   totalItems,
-  itemsPerPage 
+  itemsPerPage,
 }: PaginationProps) {
-  const startItem = ((currentPage - 1) * itemsPerPage) + 1;
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-  
-  // Calculate which page numbers to show
+
   const getPageNumbers = () => {
-    const maxPagesToShow = 5; // Show at most 5 page numbers at once
-    
+    const maxPagesToShow = 5;
     if (totalPages <= maxPagesToShow) {
-      // If we have fewer pages than the max, show all pages
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-    
-    // Calculate the range of pages to show, accounting for first and last pages
-    const maxPagesWithoutFirstLast = maxPagesToShow - 2; // Reserve space for first and last
-    
-    let startPage = Math.max(2, currentPage - Math.floor(maxPagesWithoutFirstLast / 2));
-    let endPage = Math.min(totalPages - 1, startPage + maxPagesWithoutFirstLast - 1);
-    
-    // Adjust the range if we're near the beginning or end
-    if (startPage <= 2) {
-      startPage = 2;
-      endPage = Math.min(totalPages - 1, startPage + maxPagesWithoutFirstLast - 1);
-    } else if (endPage >= totalPages - 1) {
-      endPage = totalPages - 1;
-      startPage = Math.max(2, endPage - maxPagesWithoutFirstLast + 1);
-    }
-    
-    // Create the array of page numbers
-    let pages = [];
-    
-    // Always add the first page
-    pages.push(1);
-    
-    // Add ellipsis if there's a gap after the first page
-    if (startPage > 2) {
-      pages.push('...');
-    }
-    
-    // Add the middle pages
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    
-    // Add ellipsis if there's a gap before the last page
-    if (endPage < totalPages - 1) {
-      pages.push('...');
-    }
-    
-    // Always add the last page if it's not already included
-    if (totalPages > 1) {
-      pages.push(totalPages);
-    }
-    
+    const maxMid = maxPagesToShow - 2;
+    let start = Math.max(2, currentPage - Math.floor(maxMid / 2));
+    let end = Math.min(totalPages - 1, start + maxMid - 1);
+    if (start <= 2) { start = 2; end = Math.min(totalPages - 1, start + maxMid - 1); }
+    else if (end >= totalPages - 1) { end = totalPages - 1; start = Math.max(2, end - maxMid + 1); }
+
+    const pages: (number | '...')[] = [1];
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('...');
+    if (totalPages > 1) pages.push(totalPages);
     return pages;
   };
-  
+
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="px-6 py-4 border-t">
-      <div className="flex items-center justify-between">
+    <div className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-white rounded-b-lg">
+      {/* Mobile: compact prev/next + page indicator */}
+      <div className="flex sm:hidden items-center justify-between gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex items-center gap-1 px-3 py-2 border rounded-md text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100"
+        >
+          <ChevronLeft className="w-4 h-4" /> Préc.
+        </button>
+        <span className="text-sm text-gray-600 font-medium">
+          {currentPage} / {totalPages}
+          <span className="text-gray-400 font-normal ml-1">({totalItems})</span>
+        </span>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex items-center gap-1 px-3 py-2 border rounded-md text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100"
+        >
+          Suiv. <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Desktop: full pagination */}
+      <div className="hidden sm:flex items-center justify-between">
         <div className="text-sm text-gray-500">
           Affichage de {startItem} à {endItem} sur {totalItems} résultats
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-1.5">
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-3 py-1 border rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="px-3 py-1.5 border rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-medium"
           >
             Précédent
           </button>
-          {pageNumbers.map((pageNumber, index) => (
+          {pageNumbers.map((pageNumber, index) =>
             pageNumber === '...' ? (
-              <span key={`ellipsis-${index}`} className="px-3 py-1 text-sm text-gray-500">
-                ...
+              <span key={`ellipsis-${index}`} className="px-3 py-1.5 text-sm text-gray-400">
+                …
               </span>
             ) : (
               <button
                 key={`page-${pageNumber}`}
                 onClick={() => onPageChange(Number(pageNumber))}
-                className={`px-3 py-1 border rounded-md text-sm ${
+                className={`px-3 py-1.5 border rounded-md text-sm font-medium ${
                   currentPage === pageNumber
-                    ? 'bg-[#00665C] text-white'
+                    ? 'bg-[#00665C] text-white border-[#00665C]'
                     : 'hover:bg-gray-50'
                 }`}
               >
                 {pageNumber}
               </button>
             )
-          ))}
+          )}
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 border rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="px-3 py-1.5 border rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 font-medium"
           >
             Suivant
           </button>

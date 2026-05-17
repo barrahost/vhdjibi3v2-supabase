@@ -50,20 +50,20 @@ export function StatCard({
       onClick={isClickable ? onClick : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
       className={`
-        bg-white p-6 rounded-lg shadow-sm border border-l-4 border-l-[#00665C] relative
+        bg-white p-3 sm:p-6 rounded-lg shadow-sm border border-l-4 border-l-[#00665C] relative
         ${isClickable ? 'cursor-pointer transition-all hover:shadow-md hover:border-l-[#F2B636] focus:outline-none focus:ring-2 focus:ring-[#00665C]/40' : ''}
         ${className}
       `}
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-base font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-semibold text-[#00665C]">{value}</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs sm:text-base font-medium text-gray-600 leading-tight">{title}</p>
+          <p className="text-2xl sm:text-3xl font-semibold text-[#00665C] mt-0.5">{value}</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             <span className="font-medium text-[#F2B636]">{trend}</span> {trendLabel}
           </p>
         </div>
-        <Icon className={`w-8 h-8 ${iconClassName}`} />
+        <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${iconClassName} flex-shrink-0`} />
       </div>
 
       {isClickable && linkLabel && (
