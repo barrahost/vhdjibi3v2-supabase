@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Users, UserCheck, Key, Star, User } from 'lucide-react';
+import { Shield, Users, UserCheck, Key, Star, User, Home, Heart } from 'lucide-react';
 import { ROLES, ROLE_PERMISSIONS, PERMISSIONS } from '../../constants/roles';
 
 interface RoleInfo {
@@ -43,6 +43,30 @@ const ROLE_INFO: Record<string, RoleInfo> = {
     icon: User,
     color: 'text-amber-600',
     bgColor: 'bg-amber-50'
+  },
+  [ROLES.DEPARTMENT_LEADER]: {
+    role: ROLES.DEPARTMENT_LEADER,
+    displayName: 'Responsable de Département',
+    description: 'Gestion de son département et de ses serviteurs',
+    icon: Users,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50'
+  },
+  [ROLES.FAMILY_LEADER]: {
+    role: ROLES.FAMILY_LEADER,
+    displayName: 'Responsable de Famille',
+    description: 'Suivi des âmes de sa famille de service',
+    icon: Home,
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50'
+  },
+  [ROLES.EVANGELIST]: {
+    role: ROLES.EVANGELIST,
+    displayName: 'Évangéliste',
+    description: 'Enregistrement et suivi des âmes évangélisées',
+    icon: Heart,
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50'
   }
 };
 
