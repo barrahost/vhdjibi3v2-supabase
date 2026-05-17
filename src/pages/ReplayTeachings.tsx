@@ -14,6 +14,15 @@ import {
   Heart, ListMusic, Layers,
 } from 'lucide-react';
 
+// ─── Pagination helper ────────────────────────────────────────────────────────
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+  if (current >= total - 3)
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  return [1, '...', current - 1, current, current + 1, '...', total];
+}
+
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const T = {
   light: {
@@ -71,7 +80,7 @@ interface Teaching {
 interface SavedPosition { time: number; duration: number; }
 type SortKey = 'date-desc' | 'date-asc' | 'title' | 'speaker';
 
-const ITEMS_STEP = 24;
+const PAGE_SIZE = 24;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function ReplayTeachings() {
@@ -105,8 +114,11 @@ export default function ReplayTeachings() {
   const [selectedTheme, setSelectedTheme]       = useState('');
   const [searchTerm, setSearchTerm]             = useState('');
   const [sortBy, setSortBy]                     = useState<SortKey>('date-desc');
-  const [visibleCount, setVisibleCount]         = useState(ITEMS_STEP);
+  const [page, setPage]                          = useState(1);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Reset page when any filter changes
+  useEffect(() => { setPage(1); }, [searchTerm, selectedCategory, selectedSpeaker, selectedTheme, sortBy, showFavoritesOnly, dateRange.startDate, dateRange.endDate]);
 
   // Persistence
   const [savedPositions, setSavedPositions] = useState<Record<string, SavedPosition>>(() => {
@@ -233,6 +245,9 @@ export default function ReplayTeachings() {
     });
   }, [filteredTeachings, sortBy, showFavoritesOnly, favorites]);
 
+  const totalPages       = Math.ceil(sortedTeachings.length / PAGE_SIZE);
+  const paginatedTeachings = sortedTeachings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   const recentlyPlayed = useMemo(() =>
     recentlyPlayedIds.map(id => teachings.find(t => t.id === id)).filter((t): t is Teaching => Boolean(t)),
     [recentlyPlayedIds, teachings],
@@ -260,7 +275,7 @@ export default function ReplayTeachings() {
     return shareTime > 5 ? `${base}&t=${Math.floor(shareTime)}` : base;
   }, [selectedTeaching, shareTime]);
 
-  const playerHeight = isAudioPlayerVisible ? 72 : 0;
+  const playerHeight = isAudioPlayerVisible ? 156 : 0;
 
   // ── Helpers ────────────────────────────────────────────────────
   const getProgressPercent = (t: Teaching): number | undefined => {
@@ -366,7 +381,7 @@ export default function ReplayTeachings() {
 
   const resetFilters = () => {
     setSelectedCategory(''); setSelectedSpeaker(''); setSelectedTheme('');
-    setSearchTerm(''); setShowFavoritesOnly(false); setVisibleCount(ITEMS_STEP);
+    setSearchTerm(''); setShowFavoritesOnly(false); setPage(1);
   };
 
   // ── Sidebar content ────────────────────────────────────────────
@@ -387,7 +402,7 @@ export default function ReplayTeachings() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: th.textMuted }} />
           <input type="text" placeholder="Rechercher..." value={searchTerm}
-            onChange={e => { setSearchTerm(e.target.value); setVisibleCount(ITEMS_STEP); }}
+            onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border-none outline-none"
             style={{ background: th.inputBg, color: th.inputText }} />
           {searchTerm && (
@@ -401,7 +416,7 @@ export default function ReplayTeachings() {
 
         {/* Favoris shortcut */}
         <button
-          onClick={() => { setShowFavoritesOnly(f => !f); setVisibleCount(ITEMS_STEP); }}
+          onClick={() => { setShowFavoritesOnly(f => !f); setPage(1); }}
           className="w-full text-left px-3 py-2 rounded-lg text-xs flex items-center gap-2 transition-colors"
           style={{
             background: showFavoritesOnly ? th.favBg : 'transparent',
@@ -424,7 +439,7 @@ export default function ReplayTeachings() {
           <ul className="space-y-0.5">
             {['', ...categories].map(cat => (
               <li key={cat || '__all__'}>
-                <button onClick={() => { setSelectedCategory(cat); setVisibleCount(ITEMS_STEP); }}
+                <button onClick={() => { setSelectedCategory(cat); setPage(1); }}
                   className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors"
                   style={{
                     background: selectedCategory === cat ? th.navActiveBg : 'transparent',
@@ -447,7 +462,7 @@ export default function ReplayTeachings() {
             <ul className="space-y-0.5">
               {['', ...themes].map(theme => (
                 <li key={theme || '__all_themes__'}>
-                  <button onClick={() => { setSelectedTheme(theme); setVisibleCount(ITEMS_STEP); }}
+                  <button onClick={() => { setSelectedTheme(theme); setPage(1); }}
                     className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors"
                     style={{
                       background: selectedTheme === theme ? th.navActiveBg : 'transparent',
@@ -469,7 +484,7 @@ export default function ReplayTeachings() {
             <ul className="space-y-0.5">
               {['', ...speakers].map(spk => (
                 <li key={spk || '__all_spk__'}>
-                  <button onClick={() => { setSelectedSpeaker(spk); setVisibleCount(ITEMS_STEP); }}
+                  <button onClick={() => { setSelectedSpeaker(spk); setPage(1); }}
                     className="w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors"
                     style={{
                       background: selectedSpeaker === spk ? th.navActiveBg : 'transparent',
@@ -649,7 +664,7 @@ export default function ReplayTeachings() {
           <div className="relative flex-1 max-w-md hidden lg:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: th.textMuted }} />
             <input type="text" placeholder="Titres, orateurs, thèmes..." value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setVisibleCount(ITEMS_STEP); }}
+              onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border-none outline-none"
               style={{ background: th.inputBg, color: th.inputText }} />
             {searchTerm && (
@@ -682,7 +697,7 @@ export default function ReplayTeachings() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: th.textMuted }} />
             <input type="text" placeholder="Rechercher..." value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setVisibleCount(ITEMS_STEP); }}
+              onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border-none outline-none"
               style={{ background: th.inputBg, color: th.inputText }} />
           </div>
@@ -693,7 +708,7 @@ export default function ReplayTeachings() {
           <div className="px-4 pt-3 pb-1 flex gap-2 overflow-x-auto scrollbar-hide">
             {['', ...categories].map(cat => (
               <button key={cat || '__all__'}
-                onClick={() => { setSelectedCategory(cat); setVisibleCount(ITEMS_STEP); }}
+                onClick={() => { setSelectedCategory(cat); setPage(1); }}
                 className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
                 style={{
                   background: selectedCategory === cat ? th.chipActive : th.chipBg,
@@ -796,7 +811,7 @@ export default function ReplayTeachings() {
                 </span>
               </div>
               {/* Sort selector */}
-              <select value={sortBy} onChange={e => { setSortBy(e.target.value as SortKey); setVisibleCount(ITEMS_STEP); }}
+              <select value={sortBy} onChange={e => { setSortBy(e.target.value as SortKey); setPage(1); }}
                 className="text-xs rounded-lg px-3 py-1.5 border-none outline-none cursor-pointer"
                 style={{ background: th.inputBg, color: th.inputText }}>
                 <option value="date-desc">Plus récents</option>
@@ -820,7 +835,7 @@ export default function ReplayTeachings() {
             ) : (
               <>
                 <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
-                  {sortedTeachings.slice(0, visibleCount).map(t => (
+                  {paginatedTeachings.map(t => (
                     <SpotifyCard key={t.id} isDark={isDark}
                       title={t.title} speaker={t.speaker} duration={t.duration}
                       category={t.category} theme={t.theme}
@@ -835,13 +850,45 @@ export default function ReplayTeachings() {
                     />
                   ))}
                 </div>
-                {visibleCount < sortedTeachings.length && (
-                  <div className="flex justify-center mt-8">
-                    <button onClick={() => setVisibleCount(c => c + ITEMS_STEP)}
-                      className="px-6 py-2.5 rounded-full text-sm font-medium transition-colors"
-                      style={{ background: th.loadMoreBg, color: th.loadMoreText, border: `1px solid ${th.loadMoreBorder}` }}>
-                      Voir plus ({sortedTeachings.length - visibleCount} restants)
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 mt-10 flex-wrap">
+                    {/* Previous */}
+                    <button
+                      onClick={() => { setPage(p => Math.max(1, p - 1)); mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      disabled={page === 1}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-base font-medium disabled:opacity-30 transition-colors"
+                      style={{ background: th.inputBg, color: th.textBody }}>
+                      ‹
                     </button>
+                    {/* Page numbers */}
+                    {getPageNumbers(page, totalPages).map((p, i) =>
+                      p === '...' ? (
+                        <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-sm"
+                              style={{ color: th.textMuted }}>…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => { setPage(p as number); mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          className="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors"
+                          style={{
+                            background: page === (p as number) ? th.accent : th.inputBg,
+                            color:      page === (p as number) ? '#ffffff' : th.textBody,
+                          }}>
+                          {p}
+                        </button>
+                      )
+                    )}
+                    {/* Next */}
+                    <button
+                      onClick={() => { setPage(p => Math.min(totalPages, p + 1)); mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      disabled={page === totalPages}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-base font-medium disabled:opacity-30 transition-colors"
+                      style={{ background: th.inputBg, color: th.textBody }}>
+                      ›
+                    </button>
+                    <span className="ml-1 text-xs" style={{ color: th.textMuted }}>
+                      {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedTeachings.length)} sur {sortedTeachings.length}
+                    </span>
                   </div>
                 )}
               </>
