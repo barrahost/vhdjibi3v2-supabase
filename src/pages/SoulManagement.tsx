@@ -534,7 +534,6 @@ export default function SoulManagement() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-gray-500">Chargement des ames...</div>
-      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }
@@ -740,6 +739,8 @@ export default function SoulManagement() {
           onImported={() => setReceivingEvangelizedSoul(null)}
         />
       )}
+
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }
