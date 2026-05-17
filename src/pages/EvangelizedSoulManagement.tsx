@@ -39,7 +39,13 @@ export default function EvangelizedSoulManagement() {
   const [importFilter, setImportFilter] = useState<'pending' | 'imported' | 'all'>('pending');
   const [attributionFilter, setAttributionFilter] = useState<'all' | 'unassigned'>('all');
   const [evangelistFilter, setEvangelistFilter] = useState<string>('');
-  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    return { startDate: fmt(start), endDate: fmt(end) };
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSoulIds, setSelectedSoulIds] = useState<string[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -211,11 +217,17 @@ export default function EvangelizedSoulManagement() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const hasActiveFilters = searchTerm !== '' || dateRange.startDate !== '' || dateRange.endDate !== '' ||
+  const isDefaultMonth = (() => {
+    const now = new Date();
+    const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const e = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    return dateRange.startDate === s && dateRange.endDate === e;
+  })();
+  const hasActiveFilters = searchTerm !== '' || !isDefaultMonth ||
     statusFilter !== 'active' || importFilter !== 'pending' || attributionFilter !== 'all' || evangelistFilter !== '';
   const activeFiltersCount = [
     searchTerm !== '',
-    dateRange.startDate !== '' || dateRange.endDate !== '',
+    !isDefaultMonth,
     statusFilter !== 'active',
     importFilter !== 'pending',
     attributionFilter !== 'all',
@@ -223,7 +235,12 @@ export default function EvangelizedSoulManagement() {
   ].filter(Boolean).length;
 
   const resetFilters = () => {
-    setSearchTerm(''); setDateRange({ startDate: '', endDate: '' });
+    setSearchTerm('');
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    setDateRange({ startDate: fmt(start), endDate: fmt(end) });
     setStatusFilter('active'); setImportFilter('pending');
     setAttributionFilter('all'); setEvangelistFilter(''); setSelectedSoulIds([]);
   };

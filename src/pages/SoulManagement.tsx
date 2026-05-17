@@ -37,7 +37,13 @@ type PersistedFilters = {
 const DEFAULT_FILTERS: PersistedFilters = {
   searchTerm: '',
   selectedShepherdId: null,
-  dateRange: { startDate: '', endDate: '' },
+  dateRange: (() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    return { startDate: fmt(start), endDate: fmt(end) };
+  })(),
   statusFilter: 'active',
   sortConfig: { field: 'fullName' as keyof Soul, direction: 'asc' },
   currentPage: 1,
@@ -98,16 +104,21 @@ export default function SoulManagement() {
     }
   }, [searchTerm, selectedShepherdId, dateRange, statusFilter, sortConfig, currentPage]);
 
+  const isDefaultMonth = (() => {
+    const now = new Date();
+    const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const e = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    return dateRange.startDate === s && dateRange.endDate === e;
+  })();
   const hasActiveFilters =
     searchTerm !== '' ||
     selectedShepherdId !== null ||
-    dateRange.startDate !== '' ||
-    dateRange.endDate !== '' ||
+    !isDefaultMonth ||
     statusFilter !== 'active';
   const activeFiltersCount = [
     searchTerm !== '',
     selectedShepherdId !== null,
-    dateRange.startDate !== '' || dateRange.endDate !== '',
+    !isDefaultMonth,
     statusFilter !== 'active',
     unassignedFamilyOnly,
   ].filter(Boolean).length;
@@ -115,7 +126,11 @@ export default function SoulManagement() {
   const resetAllFilters = () => {
     setSearchTerm('');
     setSelectedShepherdId(null);
-    setDateRange({ startDate: '', endDate: '' });
+    const _now = new Date();
+    const _start = new Date(_now.getFullYear(), _now.getMonth(), 1);
+    const _end = new Date(_now.getFullYear(), _now.getMonth() + 1, 0);
+    const _fmt = (d: Date) => d.toISOString().split('T')[0];
+    setDateRange({ startDate: _fmt(_start), endDate: _fmt(_end) });
     setStatusFilter('active');
     setSortConfig({ field: 'fullName' as keyof Soul, direction: 'asc' });
     setCurrentPage(1);
