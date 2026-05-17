@@ -181,7 +181,7 @@ export default function AudioManagement() {
         // Update existing teaching
         const updates: any = {
           date: new Date(formData.date),
-          updatedAt: new Date()
+          updated_at: new Date().toISOString()
         };
 
         // Only include fields that have changed
@@ -222,15 +222,14 @@ export default function AudioManagement() {
           audio.src = fileUrl;
           const duration = await getDuration;
           
-          updates.fileUrl = fileUrl;
+          updates.file_url = fileUrl;
           updates.duration = duration;
         }
 
         // Handle thumbnail upload if new thumbnail provided
         if (formData.thumbnail) {
           const thumbnail_url = await StorageService.uploadAudioFile(formData.thumbnail);
-          updates.thumbnailUrl = thumbnail_url; // Keep the original property name for database storage
-          updates.thumbnail_url = thumbnail_url; // Add the new property name for component display
+          updates.thumbnail_url = thumbnail_url; 
         }
 
         const { error: updateError } = await supabase.from('teachings').update(updates).eq('id', editingTeaching.id);
@@ -348,13 +347,9 @@ export default function AudioManagement() {
         category: formData.category,
         tags: formData.tags,
         duration,
-        fileUrl,
-        thumbnailUrl: thumbnailUrl || null,
+        file_url: fileUrl,
         thumbnail_url: thumbnailUrl || null,
         plays: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: 'system',
         status: 'active'
       });
       if (insertError) throw insertError;
@@ -462,7 +457,7 @@ export default function AudioManagement() {
       // Update all selected teachings at once
       const { error: bulkError } = await supabase
         .from('teachings')
-        .update({ category: bulkActionCategory, updatedAt: new Date() })
+        .update({ category: bulkActionCategory, updated_at: new Date().toISOString() })
         .in('id', [...selectedTeachings]);
       if (bulkError) throw bulkError;
 
