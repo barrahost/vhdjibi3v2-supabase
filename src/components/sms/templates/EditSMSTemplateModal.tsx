@@ -143,6 +143,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   };
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -251,5 +252,6 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
       </form>
     </Modal>
     <ConfirmModal {...confirmModalProps} />
+    </>
   );
 }
