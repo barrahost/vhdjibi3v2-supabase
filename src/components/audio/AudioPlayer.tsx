@@ -580,197 +580,176 @@ export function AudioPlayer({
     );
   }
 
-  // ========== DESKTOP MODE (unchanged) ==========
+  // ========== DESKTOP MODE — Style B sombre ==========
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-sm border-t shadow-2xl z-50 animate-slide-up">
-      <div className="space-y-6 p-6">
-        {/* Title and Thumbnail */}
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg ring-2 ring-white">
-              {thumbnailUrl ? (
-                <img
-                  src={thumbnailUrl}
-                  alt={title}
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00665C]/10 to-[#F2B636]/10">
-                  <Play className="w-10 h-10 text-[#00665C]" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="overflow-hidden">
-                <h3 className="text-xl font-bold text-gray-900 truncate transition-colors duration-200 hover:text-[#00665C]">
-                  {title}
-                </h3>
+    <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up" style={{ background: '#111827', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      {/* Progress bar — full width, top */}
+      <div
+        className="w-full cursor-pointer"
+        style={{ height: '3px', background: 'rgba(255,255,255,0.12)' }}
+        onClick={handleProgressClick}
+      >
+        <div
+          ref={progressBarRef}
+          style={{ height: '100%', background: 'rgba(255,255,255,0.85)', transition: 'width 0.3s linear', width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+
+        {/* Thumbnail + title */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-11 h-11 flex-shrink-0 rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            {thumbnailUrl ? (
+              <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Play className="w-5 h-5" style={{ color: '#F2B636' }} />
               </div>
-              <div className="mt-1">
-                <p className="text-base text-gray-600 font-medium truncate">
-                  {speaker}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleDownload}
-              className="p-3 text-gray-400 hover:text-[#00665C] rounded-full hover:bg-[#00665C]/10 transition-all duration-200 hover:scale-110 shadow-md hover:shadow-lg"
-              title="Télécharger l'audio"
-              disabled={!!error}
-            >
-              <Download className="w-6 h-6" />
-            </button>
-            {onShare && (
-              <button
-                onClick={handleShare}
-                className="p-3 text-gray-400 hover:text-[#00665C] rounded-full hover:bg-[#00665C]/10 transition-all duration-200 hover:scale-110 shadow-md hover:shadow-lg"
-                title="Partager"
-              >
-                <Share2 className="w-6 h-6" />
-              </button>
             )}
-            <button
-              onClick={onClose}
-              className="p-3 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-all duration-200 hover:scale-110 shadow-md hover:shadow-lg"
-              title="Fermer"
-            >
-              <X className="w-6 h-6" />
-            </button>
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold truncate" style={{ color: '#F9FAFB' }}>{title}</h3>
+            <p className="text-xs truncate mt-0.5" style={{ color: '#9CA3AF' }}>{speaker}</p>
           </div>
         </div>
 
-        {/* Error message */}
-        {error && (
-          <div className="flex items-center justify-center space-x-3 text-red-700 bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-xl border border-red-200 shadow-inner">
-            <AlertTriangle className="w-6 h-6 animate-pulse" />
-            <span className="text-base font-medium">{error}</span>
-          </div>
-        )}
-
-        {/* Audio visualization */}
-        <div className="max-w-7xl mx-auto relative">
-          <div
-            className="h-6 bg-gray-200 rounded-full cursor-pointer relative overflow-hidden"
-            onClick={handleProgressClick}
-          >
-            <div
-              ref={progressBarRef}
-              className="absolute top-0 left-0 h-full bg-[#00665C] rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
+        {/* Time */}
+        <span className="text-xs font-mono flex-shrink-0 hidden sm:block" style={{ color: '#6B7280', minWidth: '80px', textAlign: 'center' }}>
+          {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration))}
+        </span>
 
         {/* Controls */}
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="text-base font-mono text-gray-600 bg-gray-100 px-3 py-2 rounded-lg shadow-inner">
-            {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration))}
-          </div>
-
-          <div className="flex items-center space-x-6">
-            <button
-              onClick={onPrevious}
-              className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
-              title="Piste précédente"
-              disabled={!onPrevious || !!error}
-            >
-              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 20L9 12l10-8v16z" />
-                <line x1="5" y1="19" x2="5" y2="5" />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => handleSkip(-10)}
-              className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
-              title="Reculer de 10 secondes"
-              disabled={!!error}
-            >
-              <Rewind className="w-7 h-7" />
-            </button>
-
-            <button
-              onClick={togglePlayPause}
-              className="relative p-5 bg-gradient-to-r from-[#00665C] to-[#00665C]/90 text-white rounded-full hover:from-[#00665C]/90 hover:to-[#00665C] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl transform hover:scale-110 active:scale-95"
-              disabled={isLoading || !!error}
-              title={isPlaying ? 'Pause' : 'Lecture'}
-            >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-              {isPlaying ? (
-                <Pause className="w-8 h-8 relative z-10" />
-              ) : (
-                <Play className="w-8 h-8 relative z-10" />
-              )}
-            </button>
-
-            <button
-              onClick={() => handleSkip(10)}
-              className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
-              title="Avancer de 10 secondes"
-              disabled={!!error}
-            >
-              <FastForward className="w-7 h-7" />
-            </button>
-
-            <button
-              onClick={onNext}
-              className="p-3 text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00665C]/10 rounded-full hover:scale-110 shadow-md hover:shadow-lg"
-              title="Piste suivante"
-              disabled={!onNext || !!error}
-            >
-              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 4l10 8-10 8V4z" />
-                <line x1="19" y1="5" x2="19" y2="19" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Volume */}
-          <div className="hidden md:flex items-center space-x-3 bg-white px-4 py-3 rounded-xl shadow-md border border-gray-200">
-            <button
-              onClick={toggleMute}
-              className="text-gray-600 hover:text-[#00665C] transition-all duration-200 disabled:opacity-50 hover:scale-110"
-              disabled={!!error}
-            >
-              {isMuted ? (
-                <VolumeX className="w-6 h-6" />
-              ) : (
-                <Volume2 className="w-6 h-6" />
-              )}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.1}
-              value={isMuted ? 0 : volume}
-              onChange={(e) => handleVolumeChange(Number(e.target.value))}
-              className="volume-slider w-28"
-              style={{'--volume-percent': `${(isMuted ? 0 : volume) * 100}%`} as React.CSSProperties}
-              disabled={!!error}
-            />
-          </div>
-
-          {/* Speed Control */}
-          <div className="hidden md:flex items-center space-x-3 bg-white px-4 py-3 rounded-xl shadow-md border border-gray-200">
-            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Vitesse</span>
-            <select
-              value={playbackSpeed}
-              onChange={(e) => handleSpeedChange(Number(e.target.value))}
-              className="text-sm bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-[#00665C] rounded px-2 py-1"
-              disabled={!!error}
-            >
-              <option value={0.5}>0.5x</option>
-              <option value={0.75}>0.75x</option>
-              <option value={1.0}>1x</option>
-              <option value={1.25}>1.25x</option>
-              <option value={1.5}>1.5x</option>
-              <option value={2.0}>2x</option>
-            </select>
-          </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={onPrevious}
+            disabled={!onPrevious || !!error}
+            className="p-2 rounded-full transition-colors disabled:opacity-30"
+            style={{ color: '#D1D5DB' }}
+            title="Piste précédente"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 20L9 12l10-8v16z" /><line x1="5" y1="19" x2="5" y2="5" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleSkip(-10)}
+            disabled={!!error}
+            className="p-2 rounded-full transition-colors disabled:opacity-30"
+            style={{ color: '#D1D5DB' }}
+            title="Reculer 10s"
+          >
+            <Rewind className="w-5 h-5" />
+          </button>
+          <button
+            onClick={togglePlayPause}
+            disabled={isLoading || !!error}
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-50"
+            style={{ background: '#F2B636', color: '#111827' }}
+            title={isPlaying ? 'Pause' : 'Lecture'}
+          >
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+          </button>
+          <button
+            onClick={() => handleSkip(10)}
+            disabled={!!error}
+            className="p-2 rounded-full transition-colors disabled:opacity-30"
+            style={{ color: '#D1D5DB' }}
+            title="Avancer 10s"
+          >
+            <FastForward className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onNext}
+            disabled={!onNext || !!error}
+            className="p-2 rounded-full transition-colors disabled:opacity-30"
+            style={{ color: '#D1D5DB' }}
+            title="Piste suivante"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 4l10 8-10 8V4z" /><line x1="19" y1="5" x2="19" y2="19" />
+            </svg>
+          </button>
         </div>
+
+        {/* Volume */}
+        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={toggleMute}
+            disabled={!!error}
+            className="p-1.5 rounded-full transition-colors disabled:opacity-30"
+            style={{ color: '#9CA3AF' }}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.1}
+            value={isMuted ? 0 : volume}
+            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+            className="volume-slider w-20"
+            style={{ '--volume-percent': `${(isMuted ? 0 : volume) * 100}%` } as React.CSSProperties}
+            disabled={!!error}
+          />
+        </div>
+
+        {/* Speed */}
+        <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+          <select
+            value={playbackSpeed}
+            onChange={(e) => handleSpeedChange(Number(e.target.value))}
+            disabled={!!error}
+            className="text-xs rounded px-2 py-1 border-none focus:outline-none focus:ring-1 focus:ring-yellow-400 disabled:opacity-30"
+            style={{ background: 'rgba(255,255,255,0.08)', color: '#D1D5DB' }}
+          >
+            <option value={0.5}>0.5x</option>
+            <option value={0.75}>0.75x</option>
+            <option value={1.0}>1x</option>
+            <option value={1.25}>1.25x</option>
+            <option value={1.5}>1.5x</option>
+            <option value={2.0}>2x</option>
+          </select>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {error && (
+            <div className="flex items-center gap-1 text-xs px-2 py-1 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#FCA5A5' }}>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">{error}</span>
+            </div>
+          )}
+          <button
+            onClick={handleDownload}
+            disabled={!!error}
+            className="p-2 rounded-full transition-colors disabled:opacity-30"
+            style={{ color: '#9CA3AF' }}
+            title="Télécharger"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          {onShare && (
+            <button
+              onClick={handleShare}
+              className="p-2 rounded-full transition-colors"
+              style={{ color: '#9CA3AF' }}
+              title="Partager"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full transition-colors"
+            style={{ color: '#9CA3AF' }}
+            title="Fermer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
       </div>
     </div>
   );
