@@ -1,4 +1,4 @@
-<svg width="512" height="420" viewBox="0 0 512 420" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="530" viewBox="0 0 512 530" xmlns="http://www.w3.org/2000/svg">
 
   <!-- Cercle principal -->
   <circle cx="256" cy="200" r="190" fill="#00665C"/>
@@ -22,26 +22,21 @@
   <path d="M462,218 Q488,208 484,178 Q462,190 462,218 Z" fill="#00a070" opacity="0.6"/>
   <path d="M440,252 Q468,244 470,216 Q446,222 440,252 Z" fill="#00865C" opacity="0.55"/>
 
-  <!-- Halo doré (grand) -->
+  <!-- Halo doré -->
   <circle cx="256" cy="168" r="62" fill="none" stroke="#F2B636" stroke-width="7"/>
-
-  <!-- Tête berger (grande) -->
+  <!-- Tête berger -->
   <circle cx="256" cy="172" r="52" fill="white"/>
-
-  <!-- Corps/robe berger (très large, remplit le bas) -->
+  <!-- Corps/robe -->
   <path d="M200,218 Q256,242 312,218 L348,382 Q256,408 164,382 Z" fill="white"/>
-
   <!-- Accent doré manteau -->
   <path d="M202,222 Q256,244 310,222 L310,282 Q256,302 202,282 Z" fill="#F2B636" opacity="0.25"/>
-
-  <!-- Crosse (épaisse, grande, bien visible) -->
+  <!-- Crosse -->
   <path d="M196,248 Q146,224 116,192" fill="none" stroke="#F2B636" stroke-width="12" stroke-linecap="round"/>
   <path d="M116,192 Q88,160 106,132 Q124,104 154,122" fill="none" stroke="#F2B636" stroke-width="12" stroke-linecap="round"/>
 
-  <!-- ═══ BREBIS DROITE (grande, remplit la droite) ═══ -->
+  <!-- Brebis droite -->
   <ellipse cx="356" cy="320" rx="58" ry="36" fill="white"/>
   <circle cx="398" cy="295" r="30" fill="white"/>
-  <!-- Laine -->
   <circle cx="336" cy="298" r="20" fill="#f0f0f0"/>
   <circle cx="356" cy="286" r="20" fill="#f0f0f0"/>
   <circle cx="376" cy="288" r="20" fill="#f0f0f0"/>
@@ -49,19 +44,16 @@
   <circle cx="342" cy="316" r="18" fill="#f0f0f0"/>
   <circle cx="360" cy="310" r="18" fill="#f0f0f0"/>
   <circle cx="378" cy="308" r="18" fill="#f0f0f0"/>
-  <!-- Oeil -->
   <circle cx="396" cy="290" r="6.5" fill="#00665C"/>
   <circle cx="397.5" cy="288.5" r="2.5" fill="white"/>
-  <!-- Pattes -->
   <line x1="334" y1="354" x2="330" y2="382" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
   <line x1="350" y1="358" x2="346" y2="386" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
   <line x1="368" y1="358" x2="364" y2="386" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
   <line x1="386" y1="354" x2="382" y2="382" stroke="#bbb" stroke-width="8" stroke-linecap="round"/>
 
-  <!-- ═══ BREBIS GAUCHE (grande, remplit la gauche) ═══ -->
+  <!-- Brebis gauche -->
   <ellipse cx="158" cy="326" rx="54" ry="34" fill="white"/>
   <circle cx="116" cy="306" r="28" fill="white"/>
-  <!-- Laine -->
   <circle cx="122" cy="292" r="19" fill="#f0f0f0"/>
   <circle cx="140" cy="284" r="19" fill="#f0f0f0"/>
   <circle cx="158" cy="286" r="19" fill="#f0f0f0"/>
@@ -70,10 +62,8 @@
   <circle cx="146" cy="308" r="18" fill="#f0f0f0"/>
   <circle cx="164" cy="308" r="18" fill="#f0f0f0"/>
   <circle cx="182" cy="312" r="17" fill="#f0f0f0"/>
-  <!-- Oeil -->
   <circle cx="119" cy="300" r="6" fill="#00665C"/>
   <circle cx="120.5" cy="298.5" r="2.5" fill="white"/>
-  <!-- Pattes -->
   <line x1="124" y1="358" x2="120" y2="386" stroke="#bbb" stroke-width="7.5" stroke-linecap="round"/>
   <line x1="140" y1="362" x2="136" y2="390" stroke="#bbb" stroke-width="7.5" stroke-linecap="round"/>
   <line x1="156" y1="362" x2="152" y2="390" stroke="#bbb" stroke-width="7.5" stroke-linecap="round"/>
@@ -81,5 +71,36 @@
 
   <!-- Sol -->
   <ellipse cx="256" cy="390" rx="170" ry="12" fill="#00865C" opacity="0.45"/>
+
+  <!-- ═══ TEXTE SOUS LE CERCLE ═══ -->
+  <!-- Trait décoratif gauche -->
+  <line x1="60" y1="428" x2="178" y2="428" stroke="#F2B636" stroke-width="1.5"/>
+  <!-- Trait décoratif droit -->
+  <line x1="334" y1="428" x2="452" y2="428" stroke="#F2B636" stroke-width="1.5"/>
+
+  <!-- BERGERIE -->
+  <text x="256" y="424"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="44"
+    font-weight="700"
+    fill="#00665C"
+    letter-spacing="6">BERGERIE</text>
+
+  <!-- Petits points décoratifs -->
+  <circle cx="192" cy="456" r="3" fill="#F2B636"/>
+  <circle cx="320" cy="456" r="3" fill="#F2B636"/>
+
+  <!-- AGC -->
+  <text x="256" y="478"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="28"
+    font-weight="400"
+    fill="#F2B636"
+    letter-spacing="12">AGC</text>
+
+  <!-- Filet bas -->
+  <line x1="100" y1="496" x2="412" y2="496" stroke="#00665C" stroke-width="1" opacity="0.4"/>
 
 </svg>
