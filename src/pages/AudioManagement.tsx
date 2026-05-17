@@ -234,6 +234,7 @@ export default function AudioManagement() {
 
         const { error: updateError } = await supabase.from('teachings').update(updates).eq('id', editingTeaching.id);
         if (updateError) throw updateError;
+        await fetchTeachings();
         toast.success('Enseignement modifié avec succès');
         setShowForm(false);
         return;
@@ -356,6 +357,7 @@ export default function AudioManagement() {
       });
       if (insertError) throw insertError;
       
+      await fetchTeachings();
       toast.success('Enseignement ajouté avec succès');
       setShowForm(false);
       setFormData({
