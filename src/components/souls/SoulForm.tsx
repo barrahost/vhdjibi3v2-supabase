@@ -111,26 +111,26 @@ export default function SoulForm() {
         toast.error("Le lieu d'habitation est obligatoire");
         return;
       }
-      if (!formData.general.originSource) {
-        toast.error("La provenance de l'âme est obligatoire");
-        return;
-      }
+      // Si le champ n'est pas accessible (berger), on défaut à 'culte'
+      const effectiveOriginSource = formData.general.originSource || 'culte';
+
+      // Générer un ID unique pour l'âme
+      const soulId = `soul_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const soulData = {
-        fullName: formData.general.fullName.trim(),
+        id: soulId,
+        full_name: formData.general.fullName.trim(),
         nickname: formData.general.nickname.trim() || null,
         gender: formData.general.gender,
         phone: formData.general.phone,
-        isUndecided: formData.general.isUndecided,
+        is_undecided: formData.general.isUndecided,
         location: formData.general.location.trim(),
         coordinates: formData.general.coordinates,
-        firstVisitDate: new Date(formData.general.firstVisitDate),
-        shepherdId: formData.general.shepherdId,
-        originSource: formData.general.originSource,
-        serviceFamilyId: formData.general.serviceFamilyId || null,
-        spiritualProfile: formData.spiritual,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        first_visit_date: new Date(formData.general.firstVisitDate).toISOString(),
+        shepherd_id: formData.general.shepherdId || null,
+        origin_source: effectiveOriginSource,
+        service_family_id: formData.general.serviceFamilyId || null,
+        spiritual_profile: formData.spiritual,
         status: 'active',
       };
 
@@ -151,12 +151,18 @@ export default function SoulForm() {
         );
       }
 
-      const { data: insertedSoul, error: _insertErr } = await supabase
+      const { data: insertedSoul, error: insertErr } = await supabase
         .from('souls')
-        .insert({ ...soulData, createdBy: user.id, photoURL: photoURL || null })
+        .insert({ ...soulData, created_by: user.id, photo_url: photoURL || null })
         .select('id')
         .single();
-      const docRef = { id: insertedSoul?.id ?? '' };
+
+      if (insertErr) {
+        console.error('Supabase insert error:', insertErr);
+        throw new Error(insertErr.message || "Erreur lors de l'ajout de l'âme");
+      }
+
+      const docRef = { id: insertedSoul?.id ?? soulId };
 
       if (!docRef.id) {
         throw new Error("Erreur lors de l'ajout de l'âme");
@@ -185,7 +191,7 @@ export default function SoulForm() {
         await SMSService.sendSMS(
           soulData.phone.replace('+225', ''),
           template.content,
-          soulData.fullName,
+          soulData.full_name,
           soulData.nickname || undefined
         );
 
