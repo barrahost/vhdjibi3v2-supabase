@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward, X, Share2, Download, ChevronDown } from 'lucide-react';
+import {
+  Play, Pause, Volume2, VolumeX, AlertTriangle, Rewind, FastForward,
+  X, Share2, Download, ChevronDown, Timer, ListMusic,
+} from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
 import { supabase } from '../../lib/supabase';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -10,462 +13,417 @@ interface AudioPlayerProps {
   id: string;
   title: string;
   speaker: string;
-  thumbnailUrl?: string; // Keep this as thumbnailUrl since it's used in the props
+  thumbnailUrl?: string;
   onClose: () => void;
   onNext?: () => void;
   onPrevious?: () => void;
   onEnded?: () => void;
-  onShare?: () => void;
+  /** Called with current playback time so parent can share with timestamp */
+  onShare?: (currentTime: number) => void;
+  /** Called every ~5 s so parent can persist listening position */
+  onTimeUpdate?: (time: number, duration: number) => void;
+  /** Open the queue panel in parent */
+  onQueueOpen?: () => void;
+  /** Badge count shown on queue button */
+  queueCount?: number;
   initialPlayState?: boolean;
+  /** Seek to this position (seconds) on first load */
+  initialTime?: number;
 }
 
-export function AudioPlayer({ 
-  url, 
-  id, 
-  title, 
-  speaker, 
-  thumbnailUrl, 
-  onClose, 
-  onNext, 
-  onPrevious, 
-  onEnded, 
-  onShare, 
-  initialPlayState = false 
+export function AudioPlayer({
+  url, id, title, speaker, thumbnailUrl,
+  onClose, onNext, onPrevious, onEnded, onShare, onTimeUpdate, onQueueOpen,
+  queueCount = 0,
+  initialPlayState = false,
+  initialTime = 0,
 }: AudioPlayerProps) {
-  // Créer une référence audio persistante qui ne sera pas recréée à chaque changement d'URL
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  
-  // Ajout d'un état pour suivre si l'audio doit reprendre automatiquement après changement d'URL
+
+  // ── Audio element ─────────────────────────────────────────────
+  const audioRef         = useRef<HTMLAudioElement | null>(null);
+  const progressBarRef   = useRef<HTMLDivElement>(null);
+
+  // ── Stable refs (avoid re-running url effect) ─────────────────
+  const autoPlayRef      = useRef(initialPlayState);
+  const initialTimeRef   = useRef(initialTime);          // updated each render
+  const onTimeUpdateRef  = useRef(onTimeUpdate);
+  const onEndedRef       = useRef(onEnded);
+  const sleepOnEndRef    = useRef(false);
+  const lastSavedTimeRef = useRef(0);
+
+  // keep refs in sync
+  initialTimeRef.current  = initialTime;
+  onTimeUpdateRef.current = onTimeUpdate;
+  onEndedRef.current      = onEnded;
+
+  // ── Playback state ────────────────────────────────────────────
   const [shouldPlay, setShouldPlay] = useState(initialPlayState);
-  const [isPlaying, setIsPlaying] = useState(false); 
+  const [isPlaying, setIsPlaying]   = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [duration, setDuration]     = useState(0);
+  const [volume, setVolume]         = useState(1);
+  const [isMuted, setIsMuted]       = useState(false);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [error, setError]           = useState<string | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const playTrackedRef = useRef(false);
-  const [waveformPathData, setWaveformPathData] = useState<string>('');
-  const [loadingWaveform, setLoadingWaveform] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile       = useMediaQuery('(max-width: 768px)');
   const [isExpanded, setIsExpanded] = useState(false);
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
-  
-  // Gérer les propriétés de l'audio et les événements de base lors du premier montage
-  // Initialize audio element once and reuse it throughout the component's lifecycle
+
+  // ── Sleep timer ───────────────────────────────────────────────
+  const [sleepEndAt, setSleepEndAt]     = useState<number | null>(null);
+  const [sleepCountdown, setSleepCountdown] = useState('');
+  const [showSleepMenu, setShowSleepMenu]   = useState(false);
+  const [sleepOnEnd, setSleepOnEnd]         = useState(false);
+
+  const setSleepTimerTo = (minutes: number | null) => {
+    if (minutes === null) {
+      setSleepEndAt(null); setSleepCountdown(''); setSleepOnEnd(false);
+      sleepOnEndRef.current = false;
+      toast('Minuterie annulée');
+    } else if (minutes === 0) {
+      setSleepOnEnd(true); setSleepEndAt(null); setSleepCountdown('');
+      sleepOnEndRef.current = true;
+      toast('🌙 Arrêt à la fin du message');
+    } else {
+      const end = Date.now() + minutes * 60_000;
+      setSleepEndAt(end); setSleepOnEnd(false);
+      sleepOnEndRef.current = false;
+      toast(`🌙 Arrêt dans ${minutes} min`);
+    }
+    setShowSleepMenu(false);
+  };
+
+  // Sleep timer countdown + auto-pause
+  useEffect(() => {
+    if (!sleepEndAt) { setSleepCountdown(''); return; }
+    const id = setInterval(() => {
+      const rem = sleepEndAt - Date.now();
+      if (rem <= 0) {
+        audioRef.current?.pause();
+        setIsPlaying(false);
+        setSleepEndAt(null); setSleepCountdown('');
+        toast('🌙 Minuterie : lecture arrêtée');
+        clearInterval(id);
+      } else {
+        const m = Math.floor(rem / 60000);
+        const s = Math.floor((rem % 60000) / 1000);
+        setSleepCountdown(`${m}:${String(s).padStart(2, '0')}`);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [sleepEndAt]);
+
+  // ── Init audio element ────────────────────────────────────────
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
-    audio.volume = volume;
-    
-    // Store reference
+    audio.volume  = 1;
     audioRef.current = audio;
-    
-    // Cleanup on unmount
-    return () => {
-      audio.pause();
-      audio.src = '';
-    };
+    return () => { audio.pause(); audio.src = ''; };
   }, []);
-  
-  // Ref pour décider si on auto-joue après un changement d'URL (évite les dépendances instables)
-  const autoPlayRef = useRef(initialPlayState);
 
-  // Mettre à jour la source audio UNIQUEMENT quand l'URL change
-  // Volume et mute sont gérés par leur propre effet séparé — ne pas les mettre ici
+  // ── URL effect — only re-runs when URL changes ────────────────
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Décider si on doit reprendre la lecture (capture instantanée au moment du changement d'URL)
     autoPlayRef.current = initialPlayState || isPlaying;
-
-    setError(null);
-    setIsLoading(true);
+    lastSavedTimeRef.current = 0;
+    setError(null); setIsLoading(true); setCurrentTime(0); setDuration(0);
     playTrackedRef.current = false;
-
-    audio.src = url;
-    // Appliquer le volume courant sans passer par les deps
-    audio.volume = audio.muted ? 0 : audio.volume;
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
-      setIsLoading(false);
-      setError(null);
+      // Seek to saved/initial position
+      if (initialTimeRef.current > 0 && initialTimeRef.current < audio.duration * 0.95) {
+        audio.currentTime = initialTimeRef.current;
+        setCurrentTime(initialTimeRef.current);
+      }
     };
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
-      updateProgress();
+      if (progressBarRef.current && audio.duration) {
+        progressBarRef.current.style.width =
+          `${(audio.currentTime / audio.duration) * 100}%`;
+      }
+      // Throttle: save every 5 s
+      const floor = Math.floor(audio.currentTime);
+      if (floor - lastSavedTimeRef.current >= 5 && audio.duration) {
+        lastSavedTimeRef.current = floor;
+        onTimeUpdateRef.current?.(audio.currentTime, audio.duration);
+      }
     };
 
     const handleEnded = () => {
-      setIsPlaying(false);
-      setShouldPlay(false);
-      onEnded?.();
+      setIsPlaying(false); setShouldPlay(false);
+      if (sleepOnEndRef.current) {
+        sleepOnEndRef.current = false;
+        setSleepOnEnd(false);
+        toast('🌙 Lecture arrêtée (minuterie)');
+        return;
+      }
+      onEndedRef.current?.();
     };
 
     const handleCanPlay = () => {
       setIsLoading(false);
       if (autoPlayRef.current) {
-        autoPlayRef.current = false; // ne jouer qu'une fois
+        autoPlayRef.current = false;
         audio.play()
-          .then(() => {
-            setIsPlaying(true);
-            setShouldPlay(true);
-            playTrackedRef.current = true;
-          })
-          .catch(() => {
-            setIsPlaying(false);
-            setShouldPlay(false);
-          });
+          .then(() => { setIsPlaying(true); setShouldPlay(true); playTrackedRef.current = true; })
+          .catch(() => { setIsPlaying(false); setShouldPlay(false); });
       }
     };
 
     const handleError = () => {
       const msg = getErrorMessage(audio.error);
-      setError(msg);
-      setIsLoading(false);
-      setIsPlaying(false);
-      toast.error('Impossible de lire cet audio. Veuillez réessayer plus tard.');
+      setError(msg); setIsLoading(false); setIsPlaying(false);
+      toast.error('Impossible de lire cet audio.');
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
     audio.addEventListener('canplay', handleCanPlay);
-
+    audio.addEventListener('error', handleError);
+    audio.src = url;
     audio.load();
 
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
       audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleError);
     };
-  }, [url]); // ← UNIQUEMENT url : volume/mute/shouldPlay ont leur propre effet
-  
-  // Mettre à jour le volume quand il change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]);
+
+  // ── Volume / mute ─────────────────────────────────────────────
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
+    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
-  
-  // Mettre à jour la vitesse de lecture quand elle change
+
+  // ── Playback speed ────────────────────────────────────────────
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackSpeed;
-    }
+    if (audioRef.current) audioRef.current.playbackRate = playbackSpeed;
   }, [playbackSpeed]);
-  
-  const getErrorMessage = (error: MediaError | null): string => {
-    if (!error) return 'Erreur inconnue';
-    
-    switch (error.code) {
-      case MediaError.MEDIA_ERR_ABORTED:
-        return 'La lecture a été interrompue';
-      case MediaError.MEDIA_ERR_NETWORK:
-        return 'Erreur réseau lors du chargement';
-      case MediaError.MEDIA_ERR_DECODE:
-        return 'Impossible de décoder l\'audio';
-      case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-        return 'Format audio non supporté';
-      default:
-        return 'Erreur lors de la lecture';
+
+  // ── Keyboard shortcuts ────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+          (e.target as HTMLElement)?.isContentEditable) return;
+      if (error) return;
+      switch (e.key) {
+        case ' ': case 'Spacebar': e.preventDefault(); togglePlayPause(); break;
+        case 'ArrowLeft':  e.preventDefault(); handleSkip(-10); break;
+        case 'ArrowRight': e.preventDefault(); handleSkip(10);  break;
+        case 'ArrowUp':    e.preventDefault(); handleVolumeChange(Math.min(1, volume + 0.1)); break;
+        case 'ArrowDown':  e.preventDefault(); handleVolumeChange(Math.max(0, volume - 0.1)); break;
+        case 'n': case 'N': if (onNext)     { e.preventDefault(); onNext(); }     break;
+        case 'p': case 'P': if (onPrevious) { e.preventDefault(); onPrevious(); } break;
+        case 'm': case 'M': e.preventDefault(); toggleMute(); break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, currentTime, duration, volume, isMuted, onNext, onPrevious, error]);
+
+  // ── Helpers ───────────────────────────────────────────────────
+  const getErrorMessage = (err: MediaError | null): string => {
+    if (!err) return 'Erreur inconnue';
+    switch (err.code) {
+      case MediaError.MEDIA_ERR_ABORTED:        return 'Lecture interrompue';
+      case MediaError.MEDIA_ERR_NETWORK:        return 'Erreur réseau';
+      case MediaError.MEDIA_ERR_DECODE:         return 'Décodage impossible';
+      case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: return 'Format non supporté';
+      default: return 'Erreur lecture';
     }
   };
-  
-  const updateProgress = () => {
-    if (!audioRef.current || !progressBarRef.current) return;
-    
-    const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-    progressBarRef.current.style.width = `${progress}%`;
-  };
-  
+
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!audioRef.current) return;
-    
-    const bounds = e.currentTarget.getBoundingClientRect();
-    const percent = (e.clientX - bounds.left) / bounds.width;
-    const newTime = percent * audioRef.current.duration;
-    
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
+    const b = e.currentTarget.getBoundingClientRect();
+    const t = ((e.clientX - b.left) / b.width) * audioRef.current.duration;
+    audioRef.current.currentTime = t;
+    setCurrentTime(t);
   };
-  
+
   const togglePlayPause = () => {
     if (!audioRef.current || error) return;
-    
-    try {
-      if (isPlaying) {
-        // Si on met en pause
-        audioRef.current.pause();
-        setIsPlaying(false);
-        setShouldPlay(false);
-      } else {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          // Track play count when user explicitly starts playing
-          if (!playTrackedRef.current) {
-            supabase.from('teachings').select('plays').eq('id', id).single().then(({ data }) => { if (data) supabase.from('teachings').update({ plays: (data.plays || 0) + 1 }).eq('id', id).then(() => {}); });
-            playTrackedRef.current = true;
-            console.log("Tracking play count for:", id);
-
-            // Persist locally for "Récemment écoutés"
-            try {
-              const key = 'recently_played';
-              const stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-              const updated = [id, ...stored.filter((v) => v !== id)].slice(0, 5);
-              localStorage.setItem(key, JSON.stringify(updated));
-              window.dispatchEvent(new Event('recently_played:updated'));
-            } catch {
-              // ignore localStorage errors
-            }
-          }
-          
-          playPromise
-            .then(() => {
-              setIsPlaying(true);
-              setShouldPlay(true);
-            })
-            .catch(error => {
-              console.error('Error playing audio:', error);
-              toast.error('Erreur lors de la lecture');
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false); setShouldPlay(false);
+    } else {
+      const p = audioRef.current.play();
+      if (p !== undefined) {
+        if (!playTrackedRef.current) {
+          supabase.from('teachings').select('plays').eq('id', id).single()
+            .then(({ data }) => {
+              if (data) supabase.from('teachings').update({ plays: (data.plays || 0) + 1 }).eq('id', id).then(() => {});
             });
+          playTrackedRef.current = true;
+          try {
+            const stored: string[] = JSON.parse(localStorage.getItem('recently_played') || '[]');
+            const updated = [id, ...stored.filter(v => v !== id)].slice(0, 10);
+            localStorage.setItem('recently_played', JSON.stringify(updated));
+            window.dispatchEvent(new Event('recently_played:updated'));
+          } catch { /* ignore */ }
         }
+        p.then(() => { setIsPlaying(true); setShouldPlay(true); })
+         .catch(() => toast.error('Erreur lors de la lecture'));
       }
-    } catch (err) {
-      console.error('Error toggling play/pause:', err);
-      toast.error('Erreur lors de la lecture');
     }
   };
-  
-  const handleSkip = (seconds: number) => {
+
+  const handleSkip = (secs: number) => {
     if (!audioRef.current) return;
-    
-    const newTime = Math.max(0, Math.min(currentTime + seconds, duration));
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
+    const t = Math.max(0, Math.min(currentTime + secs, duration));
+    audioRef.current.currentTime = t;
+    setCurrentTime(t);
   };
-  
-  const handleVolumeChange = (newVolume: number) => {
+
+  const handleVolumeChange = (v: number) => {
     if (!audioRef.current) return;
-    
-    audioRef.current.volume = newVolume;
-    setVolume(newVolume);
-    setIsMuted(newVolume === 0);
+    audioRef.current.volume = v; setVolume(v); setIsMuted(v === 0);
   };
-  
+
   const toggleMute = () => {
     if (!audioRef.current) return;
-    
-    if (isMuted) {
-      audioRef.current.volume = volume || 1;
-      setIsMuted(false);
-    } else {
-      audioRef.current.volume = 0;
-      setIsMuted(true);
-    }
+    if (isMuted) { audioRef.current.volume = volume || 1; setIsMuted(false); }
+    else         { audioRef.current.volume = 0;           setIsMuted(true);  }
   };
 
-  // Keyboard shortcuts (desktop): Space, ←/→, ↑/↓, N, P, M
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      // Skip when typing in inputs/textareas/selects or contentEditable
-      if (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        target?.isContentEditable
-      ) return;
-      if (error) return;
-
-      switch (e.key) {
-        case ' ':
-        case 'Spacebar':
-          e.preventDefault();
-          togglePlayPause();
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          handleSkip(-10);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          handleSkip(10);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          handleVolumeChange(Math.min(1, volume + 0.1));
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          handleVolumeChange(Math.max(0, volume - 0.1));
-          break;
-        case 'n':
-        case 'N':
-          if (onNext) { e.preventDefault(); onNext(); }
-          break;
-        case 'p':
-        case 'P':
-          if (onPrevious) { e.preventDefault(); onPrevious(); }
-          break;
-        case 'm':
-        case 'M':
-          e.preventDefault();
-          toggleMute();
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, currentTime, duration, volume, isMuted, onNext, onPrevious, error]);
-  
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onShare) {
-      onShare();
-    }
+    onShare?.(audioRef.current?.currentTime ?? 0);
   };
-  
-  const handleSpeedChange = (speed: number) => {
-    setPlaybackSpeed(speed);
-    toast.success(`Vitesse de lecture: ${speed}x`);
+
+  const handleSpeedChange = (s: number) => {
+    setPlaybackSpeed(s);
+    toast.success(`Vitesse : ${s}x`);
   };
 
   const handleDownload = async () => {
     try {
-      toast.loading('Préparation du téléchargement...', { id: 'download' });
-      const response = await fetch(url);
-      const blob = await response.blob();
-      
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${title.replace(/[^a-zA-Z0-9\s]/g, '_')}.mp3`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-      
-      toast.success('Téléchargement démarré', { id: 'download' });
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Erreur lors du téléchargement', { id: 'download' });
-    }
+      toast.loading('Préparation...', { id: 'dl' });
+      const blob = await (await fetch(url)).blob();
+      const link = Object.assign(document.createElement('a'), {
+        href: window.URL.createObjectURL(blob),
+        download: `${title.replace(/[^a-zA-Z0-9\s]/g, '_')}.mp3`,
+      });
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      toast.success('Téléchargement démarré', { id: 'dl' });
+    } catch { toast.error('Erreur téléchargement', { id: 'dl' }); }
   };
-  
-  // ========== MOBILE: COMPACT MODE ==========
+
+  // ── Sleep timer dropdown (shared between layouts) ─────────────
+  const SleepMenu = () => (
+    <div className="absolute bottom-full mb-2 right-0 rounded-xl shadow-2xl overflow-hidden z-50"
+         style={{ background: '#1f2937', minWidth: '170px', border: '1px solid rgba(255,255,255,0.08)' }}>
+      {[15, 30, 45, 60].map(m => (
+        <button key={m} onClick={() => setSleepTimerTo(m)}
+          className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
+          style={{ color: '#D1D5DB' }}>
+          {m} minutes
+        </button>
+      ))}
+      <button onClick={() => setSleepTimerTo(0)}
+        className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
+        style={{ color: '#D1D5DB', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        Fin du message
+      </button>
+      {(sleepEndAt !== null || sleepOnEnd) && (
+        <button onClick={() => setSleepTimerTo(null)}
+          className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
+          style={{ color: '#f87171', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          Annuler la minuterie
+        </button>
+      )}
+    </div>
+  );
+
+  // ========== MOBILE: COMPACT ==========
   if (isMobile && !isExpanded) {
     return (
       <div
         onClick={() => setIsExpanded(true)}
         className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl z-50 animate-slide-up cursor-pointer"
-        role="button"
-        aria-label="Agrandir le lecteur"
+        role="button" aria-label="Agrandir le lecteur"
       >
         <div className="flex items-center gap-3 px-3 py-2 h-16">
           <div className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
-            {thumbnailUrl ? (
-              <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-[#00665C]/10">
-                <Play className="w-5 h-5 text-[#00665C]" />
-              </div>
-            )}
+            {thumbnailUrl
+              ? <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center bg-[#00665C]/10">
+                  <Play className="w-5 h-5 text-[#00665C]" /></div>}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
             <p className="text-xs text-gray-500 truncate">{speaker}</p>
           </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleSkip(-10); }}
-            className="p-2 text-gray-600 hover:text-[#00665C] disabled:opacity-50"
-            disabled={!!error}
-            aria-label="Reculer 10 secondes"
-          >
+          <button onClick={e => { e.stopPropagation(); handleSkip(-10); }}
+            className="p-2 text-gray-600 disabled:opacity-50" disabled={!!error}>
             <Rewind className="w-5 h-5" />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}
+          <button onClick={e => { e.stopPropagation(); togglePlayPause(); }}
             className="p-2 bg-[#00665C] text-white rounded-full disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center"
-            disabled={isLoading || !!error}
-            aria-label={isPlaying ? 'Pause' : 'Lecture'}
-          >
+            disabled={isLoading || !!error}>
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
           </button>
         </div>
-        {/* Fine progress bar */}
         <div className="absolute bottom-0 left-0 h-0.5 bg-[#00665C]" style={{ width: `${progressPercent}%` }} />
       </div>
     );
   }
 
-  // ========== MOBILE: EXPANDED MODE ==========
+  // ========== MOBILE: EXPANDED ==========
   if (isMobile && isExpanded) {
     return (
       <>
         <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setIsExpanded(false)} />
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl animate-slide-up" style={{ height: '90vh' }}>
           <div className="flex flex-col h-full overflow-y-auto">
-            {/* Header bar with handle and close */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
               <div className="w-10" />
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="p-2 text-gray-500 hover:text-gray-900"
-                aria-label="Réduire le lecteur"
-              >
+              <button onClick={() => setIsExpanded(false)} className="p-2 text-gray-500">
                 <ChevronDown className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Cover */}
             <div className="flex justify-center px-6 pt-4">
               <div className="w-48 h-48 rounded-2xl overflow-hidden bg-gray-100 shadow-xl">
-                {thumbnailUrl ? (
-                  <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00665C]/10 to-[#F2B636]/10">
-                    <Play className="w-16 h-16 text-[#00665C]" />
-                  </div>
-                )}
+                {thumbnailUrl
+                  ? <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00665C]/10 to-[#F2B636]/10">
+                      <Play className="w-16 h-16 text-[#00665C]" /></div>}
               </div>
             </div>
 
-            {/* Title */}
             <div className="px-6 pt-6 text-center">
               <h2 className="text-lg font-bold text-gray-900 line-clamp-2">{title}</h2>
               <p className="text-sm text-gray-600 mt-1">{speaker}</p>
             </div>
 
             {error && (
-              <div className="mx-6 mt-4 flex items-center justify-center gap-2 text-red-700 bg-red-50 p-3 rounded-lg border border-red-200">
+              <div className="mx-6 mt-4 flex items-center gap-2 text-red-700 bg-red-50 p-3 rounded-lg border border-red-200">
                 <AlertTriangle className="w-5 h-5" />
                 <span className="text-sm">{error}</span>
               </div>
             )}
 
-            {/* Progress */}
             <div className="px-6 pt-6">
-              <div
-                className="h-2 bg-gray-200 rounded-full cursor-pointer relative overflow-hidden"
-                onClick={handleProgressClick}
-              >
-                <div
-                  className="absolute top-0 left-0 h-full bg-[#00665C] rounded-full"
-                  style={{ width: `${progressPercent}%` }}
-                />
+              <div className="h-2 bg-gray-200 rounded-full cursor-pointer relative overflow-hidden"
+                   onClick={handleProgressClick}>
+                <div className="absolute top-0 left-0 h-full bg-[#00665C] rounded-full"
+                     style={{ width: `${progressPercent}%` }} />
               </div>
               <div className="flex justify-between text-xs font-mono text-gray-500 mt-2">
                 <span>{formatDuration(Math.floor(currentTime))}</span>
@@ -473,96 +431,86 @@ export function AudioPlayer({
               </div>
             </div>
 
-            {/* Controls */}
             <div className="flex items-center justify-center gap-4 px-6 pt-6">
-              <button
-                onClick={onPrevious}
-                disabled={!onPrevious || !!error}
-                className="p-2 text-gray-700 disabled:opacity-30"
-                aria-label="Précédent"
-              >
+              <button onClick={onPrevious} disabled={!onPrevious || !!error}
+                className="p-2 text-gray-700 disabled:opacity-30">
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 20L9 12l10-8v16z" />
-                  <line x1="5" y1="19" x2="5" y2="5" />
+                  <path d="M19 20L9 12l10-8v16z" /><line x1="5" y1="19" x2="5" y2="5" />
                 </svg>
               </button>
-              <button
-                onClick={() => handleSkip(-10)}
-                disabled={!!error}
-                className="p-3 text-gray-700 disabled:opacity-30"
-                aria-label="Reculer 10s"
-              >
+              <button onClick={() => handleSkip(-10)} disabled={!!error}
+                className="p-3 text-gray-700 disabled:opacity-30">
                 <Rewind className="w-8 h-8" />
               </button>
-              <button
-                onClick={togglePlayPause}
-                disabled={isLoading || !!error}
-                className="p-5 bg-[#00665C] text-white rounded-full shadow-lg disabled:opacity-50 min-w-[64px] min-h-[64px] flex items-center justify-center"
-                aria-label={isPlaying ? 'Pause' : 'Lecture'}
-              >
+              <button onClick={togglePlayPause} disabled={isLoading || !!error}
+                className="p-5 bg-[#00665C] text-white rounded-full shadow-lg disabled:opacity-50 min-w-[64px] min-h-[64px] flex items-center justify-center">
                 {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
               </button>
-              <button
-                onClick={() => handleSkip(10)}
-                disabled={!!error}
-                className="p-3 text-gray-700 disabled:opacity-30"
-                aria-label="Avancer 10s"
-              >
+              <button onClick={() => handleSkip(10)} disabled={!!error}
+                className="p-3 text-gray-700 disabled:opacity-30">
                 <FastForward className="w-8 h-8" />
               </button>
-              <button
-                onClick={onNext}
-                disabled={!onNext || !!error}
-                className="p-2 text-gray-700 disabled:opacity-30"
-                aria-label="Suivant"
-              >
+              <button onClick={onNext} disabled={!onNext || !!error}
+                className="p-2 text-gray-700 disabled:opacity-30">
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 4l10 8-10 8V4z" />
-                  <line x1="19" y1="5" x2="19" y2="19" />
+                  <path d="M5 4l10 8-10 8V4z" /><line x1="19" y1="5" x2="19" y2="19" />
                 </svg>
               </button>
             </div>
 
-            {/* Speed selector */}
+            {/* Speed */}
             <div className="flex items-center justify-center gap-2 pt-6 px-6">
-              {[1, 1.25, 1.5, 2].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleSpeedChange(s)}
+              {[1, 1.25, 1.5, 2].map(s => (
+                <button key={s} onClick={() => handleSpeedChange(s)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
-                    playbackSpeed === s
-                      ? 'bg-[#00665C] text-white border-[#00665C]'
-                      : 'bg-white text-gray-700 border-gray-200'
-                  }`}
-                >
-                  {s}x
-                </button>
+                    playbackSpeed === s ? 'bg-[#00665C] text-white border-[#00665C]' : 'bg-white text-gray-700 border-gray-200'
+                  }`}>{s}x</button>
               ))}
             </div>
 
-            {/* Bottom actions */}
+            {/* Sleep timer (mobile) */}
+            <div className="flex items-center justify-center gap-3 pt-4 px-6">
+              <span className="text-xs text-gray-500">Minuterie :</span>
+              {[15, 30, 60].map(m => (
+                <button key={m} onClick={() => setSleepTimerTo(m)}
+                  className={`px-3 py-1 text-xs rounded-full border ${
+                    sleepEndAt && Math.round((sleepEndAt - Date.now()) / 60000) <= m && Math.round((sleepEndAt - Date.now()) / 60000) > m - 15
+                      ? 'bg-[#F2B636] text-gray-900 border-[#F2B636]'
+                      : 'bg-white text-gray-700 border-gray-200'
+                  }`}>{m}m</button>
+              ))}
+              {(sleepEndAt !== null || sleepOnEnd) && (
+                <button onClick={() => setSleepTimerTo(null)} className="text-xs text-red-500 underline">Annuler</button>
+              )}
+            </div>
+            {sleepCountdown && (
+              <p className="text-center text-xs text-amber-600 font-mono pt-1">🌙 {sleepCountdown}</p>
+            )}
+
             <div className="flex items-center justify-center gap-6 pt-6 pb-8 px-6">
-              <button
-                onClick={handleDownload}
-                disabled={!!error}
-                className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#00665C] disabled:opacity-50"
-              >
+              <button onClick={handleDownload} disabled={!!error}
+                className="flex flex-col items-center gap-1 text-gray-600 disabled:opacity-50">
                 <Download className="w-6 h-6" />
                 <span className="text-xs">Télécharger</span>
               </button>
               {onShare && (
-                <button
-                  onClick={handleShare}
-                  className="flex flex-col items-center gap-1 text-gray-600 hover:text-[#00665C]"
-                >
+                <button onClick={handleShare} className="flex flex-col items-center gap-1 text-gray-600">
                   <Share2 className="w-6 h-6" />
                   <span className="text-xs">Partager</span>
                 </button>
               )}
-              <button
-                onClick={onClose}
-                className="flex flex-col items-center gap-1 text-gray-600 hover:text-red-500"
-              >
+              {onQueueOpen && (
+                <button onClick={onQueueOpen} className="flex flex-col items-center gap-1 text-gray-600 relative">
+                  <ListMusic className="w-6 h-6" />
+                  {queueCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#F2B636] text-gray-900 rounded-full text-[9px] font-bold flex items-center justify-center">
+                      {queueCount}
+                    </span>
+                  )}
+                  <span className="text-xs">File</span>
+                </button>
+              )}
+              <button onClick={onClose} className="flex flex-col items-center gap-1 text-gray-600">
                 <X className="w-6 h-6" />
                 <span className="text-xs">Fermer</span>
               </button>
@@ -573,33 +521,28 @@ export function AudioPlayer({
     );
   }
 
-  // ========== DESKTOP MODE — Style B sombre ==========
+  // ========== DESKTOP ==========
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up" style={{ background: '#111827', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-      {/* Progress bar — full width, top */}
-      <div
-        className="w-full cursor-pointer"
-        style={{ height: '3px', background: 'rgba(255,255,255,0.12)' }}
-        onClick={handleProgressClick}
-      >
-        <div
-          ref={progressBarRef}
-          style={{ height: '100%', background: 'rgba(255,255,255,0.85)', transition: 'width 0.3s linear', width: `${progressPercent}%` }}
-        />
+    <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up"
+         style={{ background: '#111827', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      {/* Progress bar top */}
+      <div className="w-full cursor-pointer" style={{ height: '3px', background: 'rgba(255,255,255,0.12)' }}
+           onClick={handleProgressClick}>
+        <div ref={progressBarRef}
+             style={{ height: '100%', background: 'rgba(255,255,255,0.85)',
+                      transition: 'width 0.3s linear', width: `${progressPercent}%` }} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
 
         {/* Thumbnail + title */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-11 h-11 flex-shrink-0 rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            {thumbnailUrl ? (
-              <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Play className="w-5 h-5" style={{ color: '#F2B636' }} />
-              </div>
-            )}
+          <div className="w-11 h-11 flex-shrink-0 rounded-lg overflow-hidden"
+               style={{ background: 'rgba(255,255,255,0.08)' }}>
+            {thumbnailUrl
+              ? <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center">
+                  <Play className="w-5 h-5" style={{ color: '#F2B636' }} /></div>}
           </div>
           <div className="min-w-0">
             <h3 className="text-sm font-semibold truncate" style={{ color: '#F9FAFB' }}>{title}</h3>
@@ -608,57 +551,34 @@ export function AudioPlayer({
         </div>
 
         {/* Time */}
-        <span className="text-xs font-mono flex-shrink-0 hidden sm:block" style={{ color: '#6B7280', minWidth: '80px', textAlign: 'center' }}>
+        <span className="text-xs font-mono flex-shrink-0 hidden sm:block"
+              style={{ color: '#6B7280', minWidth: '90px', textAlign: 'center' }}>
           {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration))}
         </span>
 
-        {/* Controls */}
+        {/* Transport controls */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={onPrevious}
-            disabled={!onPrevious || !!error}
-            className="p-2 rounded-full transition-colors disabled:opacity-30"
-            style={{ color: '#D1D5DB' }}
-            title="Piste précédente"
-          >
+          <button onClick={onPrevious} disabled={!onPrevious || !!error}
+            className="p-2 rounded-full disabled:opacity-30" style={{ color: '#D1D5DB' }} title="Précédent">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 20L9 12l10-8v16z" /><line x1="5" y1="19" x2="5" y2="5" />
             </svg>
           </button>
-          <button
-            onClick={() => handleSkip(-10)}
-            disabled={!!error}
-            className="p-2 rounded-full transition-colors disabled:opacity-30"
-            style={{ color: '#D1D5DB' }}
-            title="Reculer 10s"
-          >
+          <button onClick={() => handleSkip(-10)} disabled={!!error}
+            className="p-2 rounded-full disabled:opacity-30" style={{ color: '#D1D5DB' }} title="Reculer 10s">
             <Rewind className="w-5 h-5" />
           </button>
-          <button
-            onClick={togglePlayPause}
-            disabled={isLoading || !!error}
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-50"
-            style={{ background: '#F2B636', color: '#111827' }}
-            title={isPlaying ? 'Pause' : 'Lecture'}
-          >
+          <button onClick={togglePlayPause} disabled={isLoading || !!error}
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+            style={{ background: '#F2B636', color: '#111827' }} title={isPlaying ? 'Pause' : 'Lecture'}>
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
           </button>
-          <button
-            onClick={() => handleSkip(10)}
-            disabled={!!error}
-            className="p-2 rounded-full transition-colors disabled:opacity-30"
-            style={{ color: '#D1D5DB' }}
-            title="Avancer 10s"
-          >
+          <button onClick={() => handleSkip(10)} disabled={!!error}
+            className="p-2 rounded-full disabled:opacity-30" style={{ color: '#D1D5DB' }} title="Avancer 10s">
             <FastForward className="w-5 h-5" />
           </button>
-          <button
-            onClick={onNext}
-            disabled={!onNext || !!error}
-            className="p-2 rounded-full transition-colors disabled:opacity-30"
-            style={{ color: '#D1D5DB' }}
-            title="Piste suivante"
-          >
+          <button onClick={onNext} disabled={!onNext || !!error}
+            className="p-2 rounded-full disabled:opacity-30" style={{ color: '#D1D5DB' }} title="Suivant">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 4l10 8-10 8V4z" /><line x1="19" y1="5" x2="19" y2="19" />
             </svg>
@@ -667,36 +587,22 @@ export function AudioPlayer({
 
         {/* Volume */}
         <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={toggleMute}
-            disabled={!!error}
-            className="p-1.5 rounded-full transition-colors disabled:opacity-30"
-            style={{ color: '#9CA3AF' }}
-          >
+          <button onClick={toggleMute} disabled={!!error}
+            className="p-1.5 rounded-full disabled:opacity-30" style={{ color: '#9CA3AF' }}>
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.1}
-            value={isMuted ? 0 : volume}
-            onChange={(e) => handleVolumeChange(Number(e.target.value))}
-            className="volume-slider w-20"
-            style={{ '--volume-percent': `${(isMuted ? 0 : volume) * 100}%` } as React.CSSProperties}
-            disabled={!!error}
-          />
+          <input type="range" min={0} max={1} step={0.1} value={isMuted ? 0 : volume}
+            onChange={e => handleVolumeChange(Number(e.target.value))}
+            className="volume-slider w-20" disabled={!!error}
+            style={{ '--volume-percent': `${(isMuted ? 0 : volume) * 100}%` } as React.CSSProperties} />
         </div>
 
         {/* Speed */}
-        <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-          <select
-            value={playbackSpeed}
-            onChange={(e) => handleSpeedChange(Number(e.target.value))}
+        <div className="hidden lg:flex items-center flex-shrink-0">
+          <select value={playbackSpeed} onChange={e => handleSpeedChange(Number(e.target.value))}
             disabled={!!error}
-            className="text-xs rounded px-2 py-1 border-none focus:outline-none focus:ring-1 focus:ring-yellow-400 disabled:opacity-30"
-            style={{ background: 'rgba(255,255,255,0.08)', color: '#D1D5DB' }}
-          >
+            className="text-xs rounded px-2 py-1 border-none focus:outline-none disabled:opacity-30"
+            style={{ background: 'rgba(255,255,255,0.08)', color: '#D1D5DB' }}>
             <option value={0.5}>0.5x</option>
             <option value={0.75}>0.75x</option>
             <option value={1.0}>1x</option>
@@ -706,43 +612,60 @@ export function AudioPlayer({
           </select>
         </div>
 
+        {/* Sleep timer */}
+        <div className="relative hidden lg:block flex-shrink-0">
+          <button
+            onClick={() => setShowSleepMenu(s => !s)}
+            className="p-2 rounded-full flex items-center gap-1 transition-colors"
+            style={{ color: (sleepEndAt !== null || sleepOnEnd) ? '#F2B636' : '#9CA3AF' }}
+            title="Minuterie d'arrêt">
+            <Timer className="w-4 h-4" />
+            {sleepCountdown && <span className="text-xs font-mono">{sleepCountdown}</span>}
+          </button>
+          {showSleepMenu && <SleepMenu />}
+        </div>
+
+        {/* Queue */}
+        {onQueueOpen && (
+          <div className="relative hidden md:block flex-shrink-0">
+            <button onClick={onQueueOpen}
+              className="p-2 rounded-full transition-colors" style={{ color: '#9CA3AF' }}
+              title="File de lecture">
+              <ListMusic className="w-4 h-4" />
+              {queueCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full text-[9px] font-bold flex items-center justify-center"
+                      style={{ background: '#F2B636', color: '#111827' }}>
+                  {queueCount}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {error && (
-            <div className="flex items-center gap-1 text-xs px-2 py-1 rounded" style={{ background: 'rgba(239,68,68,0.15)', color: '#FCA5A5' }}>
+            <div className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                 style={{ background: 'rgba(239,68,68,0.15)', color: '#FCA5A5' }}>
               <AlertTriangle className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">{error}</span>
             </div>
           )}
-          <button
-            onClick={handleDownload}
-            disabled={!!error}
-            className="p-2 rounded-full transition-colors disabled:opacity-30"
-            style={{ color: '#9CA3AF' }}
-            title="Télécharger"
-          >
+          <button onClick={handleDownload} disabled={!!error}
+            className="p-2 rounded-full disabled:opacity-30" style={{ color: '#9CA3AF' }} title="Télécharger">
             <Download className="w-4 h-4" />
           </button>
           {onShare && (
-            <button
-              onClick={handleShare}
-              className="p-2 rounded-full transition-colors"
-              style={{ color: '#9CA3AF' }}
-              title="Partager"
-            >
+            <button onClick={handleShare}
+              className="p-2 rounded-full" style={{ color: '#9CA3AF' }} title="Partager">
               <Share2 className="w-4 h-4" />
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full transition-colors"
-            style={{ color: '#9CA3AF' }}
-            title="Fermer"
-          >
+          <button onClick={onClose}
+            className="p-2 rounded-full" style={{ color: '#9CA3AF' }} title="Fermer">
             <X className="w-4 h-4" />
           </button>
         </div>
-
       </div>
     </div>
   );
