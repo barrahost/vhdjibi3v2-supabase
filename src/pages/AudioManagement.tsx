@@ -398,6 +398,7 @@ export default function AudioManagement() {
       const { error: deleteError } = await supabase.from('teachings').delete().eq('id', teaching.id);
       if (deleteError) throw deleteError;
 
+      setTeachings(prev => prev.filter(t => t.id !== teaching.id));
       toast.success('Enseignement supprimé avec succès');
     } catch (error) {
       console.error('Error deleting teaching:', error);

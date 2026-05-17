@@ -237,6 +237,7 @@ export default function EvangelizedSoulManagement() {
     try {
       const { error } = await supabase.from('evangelized_souls').delete().eq('id', id);
       if (error) throw error;
+      setSouls(prev => prev.filter(s => s.id !== id));
       toast.success('Ame supprimee');
     } catch { toast.error('Erreur lors de la suppression'); }
   };

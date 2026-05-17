@@ -97,6 +97,7 @@ export default function BirthdayList() {
           .eq('id', birthdayId);
 
         if (error) throw error;
+        setBirthdays(prev => prev.filter(b => b.id !== birthdayId));
         toast.success('Anniversaire supprimé avec succès');
       } catch (error) {
         console.error('Error deleting birthday:', error);

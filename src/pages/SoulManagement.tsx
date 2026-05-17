@@ -377,6 +377,7 @@ export default function SoulManagement() {
       try {
         const { error } = await supabase.from('souls').delete().eq('id', soulId);
         if (error) throw error;
+        setSouls(prev => prev.filter(s => s.id !== soulId));
         toast.success('Ame supprimee avec succes');
       } catch (error) {
         console.error('Error deleting soul:', error);

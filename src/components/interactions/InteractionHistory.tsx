@@ -80,6 +80,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
       try {
         const { error } = await supabase.from('interactions').delete().eq('id', interactionId);
         if (error) throw error;
+        setInteractions(prev => prev.filter(i => i.id !== interactionId));
         toast.success('Interaction supprimée avec succès');
       } catch (error) {
         console.error('Error deleting interaction:', error);
