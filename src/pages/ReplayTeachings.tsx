@@ -988,7 +988,7 @@ export default function ReplayTeachings() {
               </button>
             </div>
             <div className="space-y-3 text-sm" style={{ color: th.textBody }}>
-              <p>Retrouvez tous les moments forts de la cellule : prédications, adorations, et plus encore.</p>
+              <p>Retrouvez tous les enseignements et moments forts de l'Assemblée Vases d'honneur — Grâce confondante (Angré Djibi 3) : prédications, adorations, sainte cène et plus encore.</p>
               <p>Filtrez, ajoutez aux favoris, composez votre file de lecture et reprenez là où vous vous étiez arrêté.</p>
             </div>
             <button onClick={() => setShowInfoModal(false)}
