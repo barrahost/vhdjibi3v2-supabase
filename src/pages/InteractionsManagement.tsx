@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, MessageCircle, Phone, Users, ChevronDown } from 'lucide-react';
+import { Search, MessageCircle, Phone, Users, ChevronDown, Trash2 } from 'lucide-react';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { CustomTable } from '../components/ui/CustomTable';
 import { formatDate } from '../utils/dateUtils';
@@ -10,6 +10,8 @@ import { PERMISSIONS } from '../constants/roles';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { isShepherdUser, isEvangelistUser } from '../utils/roleHelpers';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -36,9 +38,29 @@ export default function InteractionsManagement() {
   });
 
   const isAdminView = hasPermission(PERMISSIONS.MANAGE_USERS);
+  const { confirm, confirmModalProps } = useConfirmModal();
   const isEvangelistView = activeRole === 'evangelist';
 
   const actorColumnLabel = isEvangelistView ? 'Evangeliste' : isAdminView ? 'Intervenant(e)' : 'Berger(e)';
+
+  const handleDeleteInteraction = async (interaction: any) => {
+    const label = interaction.notes ? `"${interaction.notes.substring(0, 40)}..."` : `du ${interaction.date instanceof Date ? interaction.date.toLocaleDateString('fr-FR') : interaction.date}`;
+    const ok = await confirm(`Supprimer cette interaction ${label} ?`, {
+      title: 'Supprimer l\'interaction',
+      confirmLabel: 'Supprimer',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const { error } = await supabase.from('interactions').delete().eq('id', interaction.id);
+      if (error) throw error;
+      setInteractions(prev => prev.filter(i => i.id !== interaction.id));
+      toast.success('Interaction supprimée');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
 
   const columns = [
     {
@@ -103,7 +125,23 @@ export default function InteractionsManagement() {
           {value}
         </div>
       )
-    }
+    },
+    ...(isAdminView ? [{
+      key: 'id',
+      title: 'Actions',
+      render: (_: string, row: any) => {
+        const soulKnown = !!souls[row.soulId];
+        return (
+          <button
+            onClick={() => handleDeleteInteraction(row)}
+            title={soulKnown ? 'Supprimer' : 'Supprimer (âme inconnue)'}
+            className={"p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" + (!soulKnown ? " ring-1 ring-red-300" : "")}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        );
+      }
+    }] : []),
   ];
 
   // Load actor list for admin filter (shepherds + evangelists)
@@ -426,6 +464,7 @@ export default function InteractionsManagement() {
           />
         )}
       </div>
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }
