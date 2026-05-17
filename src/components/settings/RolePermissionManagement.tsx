@@ -214,21 +214,25 @@ export default function RolePermissionManagement() {
           <h3 className="font-medium text-gray-900 mb-2">Statistiques des rôles</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="text-center">
-              <div className="font-semibold text-[#00665C]">4</div>
+              <div className="font-semibold text-[#00665C]">{Object.keys(ROLE_INFO).length}</div>
               <div className="text-gray-600">Rôles total</div>
             </div>
             <div className="text-center">
               <div className="font-semibold text-[#00665C]">
-                {Object.keys(PERMISSIONS).length - 1}
+                {Object.keys(PERMISSIONS).filter(k => k !== 'ALL').length}
               </div>
               <div className="text-gray-600">Permissions définies</div>
             </div>
             <div className="text-center">
-              <div className="font-semibold text-[#00665C]">1</div>
+              <div className="font-semibold text-[#00665C]">
+                {Object.values(ROLE_PERMISSIONS).filter(perms => (perms as readonly string[]).includes(PERMISSIONS.ALL)).length}
+              </div>
               <div className="text-gray-600">Rôle avec accès total</div>
             </div>
             <div className="text-center">
-              <div className="font-semibold text-[#00665C]">3</div>
+              <div className="font-semibold text-[#00665C]">
+                {Object.values(ROLE_PERMISSIONS).filter(perms => !(perms as readonly string[]).includes(PERMISSIONS.ALL)).length}
+              </div>
               <div className="text-gray-600">Rôles opérationnels</div>
             </div>
           </div>
