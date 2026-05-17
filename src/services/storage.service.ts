@@ -203,8 +203,8 @@ export class StorageService {
         });
 
       if (error) {
-        console.error('Upload error:', error);
-        throw new Error('Erreur lors du téléchargement du fichier audio');
+        console.error('Upload error details:', JSON.stringify(error));
+        throw new Error(`Erreur storage: ${error.message || error.error || JSON.stringify(error)}`);
       }
 
       // Générer l'URL publique
