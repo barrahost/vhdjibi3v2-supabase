@@ -405,6 +405,39 @@ export default function AudioManagement() {
     }
   };
 
+
+  const handleBulkDelete = async () => {
+    if (selectedTeachings.size === 0) return;
+    const count = selectedTeachings.size;
+    const confirmed = await confirm(
+      `Êtes-vous sûr de vouloir supprimer définitivement ${count} audio${count > 1 ? 's' : ''} ? Cette action est irréversible.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const ids = [...selectedTeachings];
+      const toDelete = teachings.filter(t => ids.includes(t.id));
+
+      // Delete storage files
+      await Promise.allSettled(
+        toDelete.flatMap(t => [
+          t.fileUrl || t.file_url ? StorageService.deleteAudioFile(t.fileUrl || t.file_url) : Promise.resolve(),
+          t.thumbnail_url ? StorageService.deleteAudioFile(t.thumbnail_url) : Promise.resolve(),
+        ])
+      );
+
+      const { error } = await supabase.from('teachings').delete().in('id', ids);
+      if (error) throw error;
+
+      setTeachings(prev => prev.filter(t => !ids.includes(t.id)));
+      setSelectedTeachings(new Set());
+      toast.success(`${count} audio${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''} avec succès`);
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   const handlePlayPreview = async (fileUrl: string) => {
     if (playingAudio === fileUrl) {
       // Stop playing
@@ -640,7 +673,6 @@ export default function AudioManagement() {
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Chargement des enseignements...</span>
         </div>
-      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }
@@ -816,12 +848,21 @@ export default function AudioManagement() {
                   </button>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedTeachings(new Set())}
-                className="text-[#00665C] hover:text-[#00665C]/70"
-              >
-                Annuler
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md flex items-center space-x-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Supprimer la sélection</span>
+                </button>
+                <button
+                  onClick={() => setSelectedTeachings(new Set())}
+                  className="text-[#00665C] hover:text-[#00665C]/70"
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
           )}
 
@@ -1033,6 +1074,7 @@ export default function AudioManagement() {
           </div>
         </form>
       </Modal>
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }
