@@ -94,12 +94,12 @@ export default function EvangelizedSoulManagement() {
     const ids = [...new Set(souls.map(s => s.evangelistId).filter(Boolean))] as string[];
     if (ids.length === 0) { setEvangelistNames({}); return; }
     try {
-      const { data, error } = await supabase.from('users').select('id, fullName').in('id', ids);
+      const { data, error } = await supabase.from('users').select('id, full_name').in('id', ids);
       const names: Record<string, string> = {};
       if (!error && data) {
-        data.forEach((u: any) => { names[u.id] = u.fullName || 'Evangeliste introuvable'; });
+        data.forEach((u: any) => { names[u.id] = u.full_name || u.fullName || ''; });
       }
-      ids.forEach(id => { if (!names[id]) names[id] = 'Evangeliste introuvable'; });
+      ids.forEach(id => { if (!names[id]) names[id] = 'Non assigné'; });
       setEvangelistNames(names);
     } catch {
       const names: Record<string, string> = {};

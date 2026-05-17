@@ -37,7 +37,7 @@ export default function AttendanceView() {
         const soul = souls[value];
         return soul ? (
           <div>
-            <span className="font-medium text-gray-900">{soul.fullName}</span>
+            <span className="font-medium text-gray-900">{soul.full_name || soul.fullName}</span>
             <span className="ml-2 text-sm text-gray-500">{soul.phone}</span>
           </div>
         ) : (
@@ -113,7 +113,7 @@ export default function AttendanceView() {
       if (uniqueSoulIds.length > 0) {
         const { data: soulsResult } = await supabase
           .from('souls')
-          .select('id, fullName, phone')
+          .select('id, full_name, phone')
           .in('id', uniqueSoulIds);
         (soulsResult || []).forEach((s: any) => { soulsData[s.id] = s; });
       }
@@ -121,7 +121,7 @@ export default function AttendanceView() {
       if (uniqueShepherdIds.length > 0) {
         const { data: shepherdsResult } = await supabase
           .from('users')
-          .select('id, fullName')
+          .select('id, full_name')
           .in('id', uniqueShepherdIds);
         (shepherdsResult || []).forEach((s: any) => { shepherdsData[s.id] = s; });
       }
@@ -154,7 +154,7 @@ export default function AttendanceView() {
   const filteredAttendances = attendances.filter(attendance => {
     const soul = souls[attendance.soulId];
     if (!soul) return false;
-    return soul.fullName.toLowerCase().includes(searchTerm.toLowerCase());
+    return (soul.full_name || soul.fullName || '').toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   // Pagination

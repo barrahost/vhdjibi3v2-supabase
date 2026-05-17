@@ -50,7 +50,7 @@ export default function SMSManagement() {
           // Récupérer les âmes assignées
           const { data: soulsData } = await supabase
             .from('souls')
-            .select('id, fullName, nickname, phone')
+            .select('id, full_name, nickname, phone')
             .eq('shepherd_id', currentShepherdId)
             .eq('status', 'active');
 

@@ -113,14 +113,14 @@ export default function InteractionsManagement() {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('id, fullName, role')
+          .select('id, full_name, role')
           .eq('status', 'active');
         if (error) throw error;
         const list: Actor[] = (data || [])
           .filter((d: any) => isShepherdUser(d) || isEvangelistUser(d))
           .map((d: any) => ({
             id: d.id,
-            fullName: d.fullName,
+            fullName: d.full_name || d.fullName || '',
             role: isEvangelistUser(d) ? 'evangelist' : (d.role || 'shepherd'),
           }));
         list.sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -187,8 +187,8 @@ export default function InteractionsManagement() {
       const soulsData: Record<string, any> = {};
       if (uniqueSoulIds.length > 0) {
         const [soulsResult, evangelizedResult] = await Promise.all([
-          supabase.from('souls').select('id, fullName').in('id', uniqueSoulIds),
-          supabase.from('evangelized_souls').select('id, fullName').in('id', uniqueSoulIds),
+          supabase.from('souls').select('id, full_name').in('id', uniqueSoulIds),
+          supabase.from('evangelized_souls').select('id, full_name').in('id', uniqueSoulIds),
         ]);
         (soulsResult.data || []).forEach((s: any) => {
           soulsData[s.id] = { id: s.id, fullName: s.full_name || s.fullName, collection: 'souls' };
