@@ -11,6 +11,7 @@ import { OfflineIndicator } from './OfflineIndicator';
 import { OnboardingTour } from '../onboarding/OnboardingTour';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { BackToTop } from './BackToTop';
+import { PWAInstallBanner } from './PWAInstallBanner';
 import { Footer } from './Footer';
 import { SMSStatusBanner } from '../sms/SMSStatusBanner';
 
@@ -114,6 +115,7 @@ export default function Layout() {
       {/* Offline indicator */}
       <OfflineIndicator />
       <BackToTop />
+      <PWAInstallBanner />
 
       {/* Tour d'onboarding */}
       {isTourActive && tourRole && (
