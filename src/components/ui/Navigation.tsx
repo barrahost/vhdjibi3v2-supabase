@@ -13,6 +13,7 @@ import {
   UserCog,
   Map,
   Settings,
+  Bug,
   Users,
   FileText,
   BarChart,
@@ -432,6 +433,16 @@ export default function Navigation({ onItemClick }: NavigationProps) {
           label: 'Paramètres',
           href: '/parametres',
           icon: <Settings className="w-5 h-5" />
+        });
+      }
+
+      // Bug reports — visible uniquement pour super_admin
+      if (userRole === 'super_admin') {
+        configChildren.push({
+          id: 'bug-reports',
+          label: 'Signalements de bugs',
+          href: '/bug-reports',
+          icon: <Bug className="w-5 h-5" />
         });
       }
 

@@ -33,6 +33,7 @@ const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
 const ShepherdReminders = lazy(() => import('./pages/ShepherdReminders'));
 const SMSManagement = lazy(() => import('./pages/SMSManagement'));
 const SMSTemplatesManagement = lazy(() => import('./pages/SMSTemplatesManagement'));
+const BugReports = lazy(() => import('./pages/BugReports'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const SoulMapPage = lazy(() => import('./pages/SoulMap'));
 const LegalNotice = lazy(() => import('./pages/LegalNotice'));
@@ -294,6 +295,13 @@ function AppContent() {
           <Route path="/audio" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_AUDIO]}>
               <AudioManagement />
+            </PrivateRoute>
+          } />
+
+          {/* Bug Reports */}
+          <Route path="bug-reports" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS]}>
+              <BugReports />
             </PrivateRoute>
           } />
 
