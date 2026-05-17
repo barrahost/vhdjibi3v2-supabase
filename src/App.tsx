@@ -55,7 +55,11 @@ function PageLoader() {
 }
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <PageLoader />;
+  }
 
   return (
     <>
