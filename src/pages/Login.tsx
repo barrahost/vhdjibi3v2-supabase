@@ -69,9 +69,38 @@ export default function Login() {
 
         {/* Logo + titre + verset */}
         <div className="sm:mx-auto sm:w-full sm:max-w-xl">
-          <div className="flex flex-col items-center">
-            <Logo className="h-56 w-auto mb-2" />
-            <blockquote className="mt-4 text-center">
+          <div className="flex flex-col items-center gap-0">
+            {/* Badge circulaire */}
+            <Logo className="h-36 w-auto" />
+
+            {/* Nom de l'application en HTML (rendu fiable cross-browser) */}
+            <h1
+              className="mt-3 text-3xl font-bold text-[#00665C] tracking-wide text-center"
+              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+            >
+              AGC Bergerie
+            </h1>
+
+            {/* Séparateur doré */}
+            <div className="flex items-center gap-2 my-2 w-48">
+              <div className="flex-1 h-px bg-[#F2B636] opacity-70" />
+              <div className="w-2 h-2 rounded-full bg-[#F2B636]" />
+              <div className="flex-1 h-px bg-[#F2B636] opacity-70" />
+            </div>
+
+            {/* Sous-titre */}
+            <p
+              className="text-[11px] tracking-[3px] text-[#C4A020] uppercase text-center"
+              style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+            >
+              Assemblée Grâce Confondante
+            </p>
+
+            {/* Barre rouge signature */}
+            <div className="mt-1 self-end mr-6 w-12 h-1 bg-[#A32035] rounded" />
+
+            {/* Verset */}
+            <blockquote className="mt-5 text-center">
               <p className="text-sm italic text-[#00665C]/80">« {verse.text} »</p>
               <cite className="text-xs text-gray-400 not-italic mt-1 block">{verse.ref}</cite>
             </blockquote>
