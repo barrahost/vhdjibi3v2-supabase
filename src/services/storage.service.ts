@@ -63,8 +63,6 @@ export class StorageService {
       return finalUrl;
     } catch (error) {
       console.error('Error uploading profile photo:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du téléchargement de la photo';
-      toast.error(errorMessage);
       throw error instanceof Error ? error : new Error('Erreur lors du téléchargement de la photo');
     }
   }
@@ -219,8 +217,6 @@ export class StorageService {
       return publicUrl;
     } catch (error) {
       console.error('Error uploading audio file:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du téléchargement du fichier audio';
-      toast.error(errorMessage);
       throw error instanceof Error ? error : new Error('Erreur lors du téléchargement du fichier audio');
     }
   }
