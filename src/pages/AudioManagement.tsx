@@ -87,7 +87,6 @@ export default function AudioManagement() {
         .from('teachings')
         .select('*')
         .eq('church_id', getChurchId())
-        .eq('church_id', getChurchId())
         .eq('status', 'active')
         .order('date', { ascending: false });
 
