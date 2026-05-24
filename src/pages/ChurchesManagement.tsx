@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmModal } from '../hooks/useConfirmModal';
-import ConfirmModal from '../components/ui/ConfirmModal';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Building2, Plus, Edit2, Trash2, Globe, Phone, Mail, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
