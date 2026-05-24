@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import UserSelect from '../components/auth/UserSelect';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/ui/Logo';
-import { Eye, EyeOff, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, FileText, Loader2, AlertCircle, Building2, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ChangelogModal } from '../components/ui/ChangelogModal';
 import { UserType } from '../types/user.types';
@@ -15,6 +15,13 @@ const VERSES = [
   { text: "Que votre lumière brille devant les hommes.", ref: "Matthieu 5:16" },
   { text: "C'est par la grâce que vous êtes sauvés, par le moyen de la foi.", ref: "Éphésiens 2:8" },
 ];
+
+/** Détecte si on est sur le domaine super admin */
+function isSuperAdminDomain(): boolean {
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  return parts.length >= 3 && parts[0] === 'bergerie-adm';
+}
 
 export default function Login() {
   const [password, setPassword] = useState('');
@@ -28,12 +35,15 @@ export default function Login() {
 
   const navigate = useNavigate();
   const { user, login } = useAuth();
+  const superAdmin = isSuperAdminDomain();
 
   useEffect(() => {
-    if (user) navigate('/');
-  }, [user, navigate]);
+    if (user) {
+      // Sur le domaine super admin → rediriger vers gestion des églises
+      navigate(superAdmin ? '/churches' : '/');
+    }
+  }, [user, navigate, superAdmin]);
 
-  // Réinitialiser l'erreur dès que l'utilisateur modifie un champ
   const handlePhoneChange = (phone: string, type: UserType) => {
     setSelectedPhone(phone);
     setUserType(type);
@@ -51,9 +61,15 @@ export default function Login() {
     setError('');
     setIsLoading(true);
     try {
-      await login(selectedPhone, password);
+      const loggedUser = await login(selectedPhone, password);
+      // Sur le domaine super admin, vérifier que c'est bien un super_admin
+      if (superAdmin && loggedUser?.role !== 'super_admin') {
+        setError('Accès réservé au super administrateur.');
+        setIsLoading(false);
+        return;
+      }
       toast.success('Connexion réussie');
-      navigate('/');
+      navigate(superAdmin ? '/churches' : '/');
     } catch {
       setError('Identifiant ou mot de passe incorrect. Vérifiez vos informations et réessayez.');
     } finally {
@@ -63,6 +79,103 @@ export default function Login() {
 
   const verse = VERSES[verseIndex];
 
+  // ============================================================
+  // SUPER ADMIN LOGIN PAGE
+  // ============================================================
+  if (superAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col justify-center py-8 px-4">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          {/* Header super admin */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="bg-[#00665C]/20 border border-[#00665C]/40 rounded-2xl p-4 mb-4">
+              <ShieldCheck className="w-12 h-12 text-[#00665C]" />
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-wide">
+              Administration Centrale
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              Gestion multi-églises — Accès restreint
+            </p>
+            <div className="flex items-center gap-2 mt-3 bg-[#00665C]/10 border border-[#00665C]/30 rounded-full px-4 py-1.5">
+              <Building2 className="w-3.5 h-3.5 text-[#00665C]" />
+              <span className="text-xs text-[#00665C] font-medium">bergerie-adm.evdh.org</span>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Compte administrateur
+                </label>
+                <UserSelect
+                  value={selectedPhone}
+                  onChange={handlePhoneChange}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={handlePasswordChange}
+                    autoComplete="current-password"
+                    required
+                    placeholder="••••••••"
+                    className={`appearance-none block w-full px-4 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] text-base transition-colors ${
+                      error ? 'border-red-500 bg-red-900/20' : 'border-gray-700'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-300"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-sm text-red-400">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={!selectedPhone || !password || isLoading}
+                className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg text-base font-medium transition-all duration-200 ${
+                  !selectedPhone || !password || isLoading
+                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#00665C] hover:bg-[#00665C]/80 text-white shadow-lg shadow-[#00665C]/20'
+                }`}
+              >
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isLoading ? 'Connexion...' : 'Accéder au panneau admin'}
+              </button>
+            </form>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-gray-600">
+            Accès réservé aux super administrateurs autorisés
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // CHURCH LOGIN PAGE (normale)
+  // ============================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#00665C]/10 to-[#F2B636]/10">
       <div className="flex min-h-screen flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
@@ -70,10 +183,8 @@ export default function Login() {
         {/* Logo + titre + verset */}
         <div className="sm:mx-auto sm:w-full sm:max-w-xl">
           <div className="flex flex-col items-center gap-0">
-            {/* Badge circulaire */}
             <Logo className="h-36 w-auto" />
 
-            {/* Nom de l'application en HTML (rendu fiable cross-browser) */}
             <h1
               className="mt-3 text-3xl font-bold text-[#00665C] tracking-wide text-center"
               style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
@@ -81,14 +192,12 @@ export default function Login() {
               AGC Bergerie
             </h1>
 
-            {/* Séparateur doré */}
             <div className="flex items-center gap-2 my-2 w-48">
               <div className="flex-1 h-px bg-[#F2B636] opacity-70" />
               <div className="w-2 h-2 rounded-full bg-[#F2B636]" />
               <div className="flex-1 h-px bg-[#F2B636] opacity-70" />
             </div>
 
-            {/* Sous-titre */}
             <p
               className="text-[11px] tracking-[3px] text-[#C4A020] uppercase text-center"
               style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
@@ -96,10 +205,8 @@ export default function Login() {
               Assemblée Grâce Confondante
             </p>
 
-            {/* Barre rouge signature */}
             <div className="mt-1 self-end mr-6 w-12 h-1 bg-[#A32035] rounded" />
 
-            {/* Verset */}
             <blockquote className="mt-5 text-center">
               <p className="text-sm italic text-[#00665C]/80">« {verse.text} »</p>
               <cite className="text-xs text-gray-400 not-italic mt-1 block">{verse.ref}</cite>
@@ -112,7 +219,6 @@ export default function Login() {
           <div className="bg-white py-10 px-6 sm:px-12 shadow-2xl rounded-xl border border-gray-100">
             <form onSubmit={handleSubmit} className="space-y-6">
 
-              {/* Sélecteur utilisateur */}
               <div>
                 <label className="block text-base font-medium text-gray-700 mb-2">
                   Sélectionner un utilisateur
@@ -123,7 +229,6 @@ export default function Login() {
                 />
               </div>
 
-              {/* Mot de passe */}
               <div>
                 <label className="block text-base font-medium text-gray-700 mb-2">
                   Mot de passe
@@ -151,7 +256,6 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Erreur inline persistante */}
               {error && (
                 <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -159,7 +263,6 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Bouton */}
               <div className="pt-2">
                 <button
                   type="submit"
@@ -175,7 +278,6 @@ export default function Login() {
                 </button>
               </div>
 
-              {/* Aide */}
               <p className="text-center text-xs text-gray-400">
                 Problème de connexion ? Contactez votre administrateur.
               </p>
