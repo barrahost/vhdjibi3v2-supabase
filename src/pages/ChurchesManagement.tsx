@@ -156,7 +156,20 @@ export default function ChurchesManagement() {
           modules: form.modules,
         });
         if (error) throw error;
-        toast.success('Église créée avec succès');
+        // Configurer automatiquement le DNS + custom domain Cloudflare
+        try {
+          const { data: fnData, error: fnError } = await supabase.functions.invoke('setup-church-domain', {
+            body: { slug: form.slug.trim() },
+          });
+          if (fnError || !fnData?.ok) {
+            console.warn('DNS auto-setup partiel:', fnData?.results || fnError);
+            toast.success('Église créée ✓ — Configuration DNS en cours (vérifiez Cloudflare si besoin)');
+          } else {
+            toast.success(`Église créée ✓ — ${fnData.subdomain} configuré automatiquement`);
+          }
+        } catch {
+          toast.success('Église créée ✓ — Configuration DNS manuelle requise');
+        }
       }
       await fetchChurches();
       setShowForm(false);
