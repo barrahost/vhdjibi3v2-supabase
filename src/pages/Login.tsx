@@ -108,11 +108,18 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Compte administrateur
+                  Numéro de téléphone
                 </label>
-                <UserSelect
+                <input
+                  type="tel"
                   value={selectedPhone}
-                  onChange={handlePhoneChange}
+                  onChange={e => { setSelectedPhone(e.target.value); setError(''); }}
+                  placeholder="+33 6 00 00 00 00"
+                  autoComplete="tel"
+                  required
+                  className={`appearance-none block w-full px-4 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] text-base transition-colors ${
+                    error ? 'border-red-500 bg-red-900/20' : 'border-gray-700'
+                  }`}
                 />
               </div>
 
