@@ -32,7 +32,8 @@ export class StorageService {
       // Créer un nom de fichier unique
       const fileExt = file.name.split('.').pop() || 'jpg';
       const timestamp = Date.now();
-      const filePath = `profiles/${userId}/photo-${timestamp}.${fileExt}`;
+      const churchId = getChurchId();
+      const filePath = `profiles/${churchId}/${userId}/photo-${timestamp}.${fileExt}`;
 
       // Upload du fichier
       const { data, error } = await supabase.storage
@@ -190,7 +191,8 @@ export class StorageService {
       // Créer un nom de fichier unique
       const fileExt = file.name.split('.').pop() || 'mp3';
       const timestamp = Date.now();
-      const prefix = isImageFile ? 'audio/thumbnails/' : 'audio/files/';
+      const churchId = getChurchId();
+      const prefix = isImageFile ? `audio/${churchId}/thumbnails/` : `audio/${churchId}/files/`;
       const filePath = `${prefix}${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
       // Upload du fichier
