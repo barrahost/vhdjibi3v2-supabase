@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useChurch } from '../contexts/ChurchContext';
 import UserSelect from '../components/auth/UserSelect';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/ui/Logo';
@@ -36,6 +37,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const superAdmin = isSuperAdminDomain();
+  const { church } = useChurch();
 
   useEffect(() => {
     if (user) {
@@ -196,7 +198,7 @@ export default function Login() {
               className="mt-3 text-3xl font-bold text-[#00665C] tracking-wide text-center"
               style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
             >
-              AGC Bergerie
+              {church?.shortName || church?.name || 'AGC Bergerie'}
             </h1>
 
             <div className="flex items-center gap-2 my-2 w-48">
@@ -209,7 +211,7 @@ export default function Login() {
               className="text-[11px] tracking-[3px] text-[#C4A020] uppercase text-center"
               style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
             >
-              Assemblée Grâce Confondante
+              {church?.name || 'Assemblée Grâce Confondante'}
             </p>
 
             <div className="mt-1 self-end mr-6 w-12 h-1 bg-[#A32035] rounded" />
@@ -294,7 +296,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} Vases d'Honneur Assemblée Grâce Confondante. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} {church?.copyrightName || church?.name || "Vases d'Honneur Assemblée Grâce Confondante"}. Tous droits réservés.</p>
           <button
             onClick={() => setIsChangelogOpen(true)}
             className="mt-1 text-xs text-gray-400 hover:text-[#00665C] transition-colors flex items-center justify-center mx-auto"

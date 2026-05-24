@@ -11,6 +11,8 @@ export interface Church {
   id: string;
   name: string;
   slug: string;
+  shortName: string | null;
+  copyrightName: string | null;
   logoUrl: string | null;
   primaryColor: string;
   address: string | null;
@@ -63,6 +65,8 @@ function mapRow(data: Record<string, unknown>): Church {
     id: data.id as string,
     name: data.name as string,
     slug: data.slug as string,
+    shortName: (data.short_name as string) ?? null,
+    copyrightName: (data.copyright_name as string) ?? null,
     logoUrl: (data.logo_url as string) ?? null,
     primaryColor: (data.primary_color as string) || '#00665C',
     address: (data.address as string) ?? null,
@@ -141,6 +145,8 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
             id: 'bergerie',
             name: 'Assemblee Grace Confondante',
             slug: 'bergerie',
+            shortName: 'AGC Bergerie',
+            copyrightName: "Vases d'Honneur Assemblee Grace Confondante",
             logoUrl: null,
             primaryColor: '#00665C',
             address: null,

@@ -27,6 +27,8 @@ interface Church {
 const EMPTY_FORM = {
   name: '',
   slug: '',
+  short_name: '',
+  copyright_name: '',
   primary_color: '#00665C',
   address: '',
   phone: '',
@@ -90,6 +92,8 @@ export default function ChurchesManagement() {
     setForm({
       name: c.name,
       slug: c.slug,
+      short_name: (c as any).short_name || '',
+      copyright_name: (c as any).copyright_name || '',
       primary_color: c.primary_color || '#00665C',
       address: c.address || '',
       phone: c.phone || '',
@@ -122,6 +126,8 @@ export default function ChurchesManagement() {
           .update({
             name: form.name.trim(),
             slug: form.slug.trim(),
+            short_name: (form as any).short_name?.trim() || null,
+            copyright_name: (form as any).copyright_name?.trim() || null,
             primary_color: form.primary_color,
             address: form.address.trim() || null,
             phone: form.phone.trim() || null,
@@ -140,6 +146,8 @@ export default function ChurchesManagement() {
           id,
           name: form.name.trim(),
           slug: form.slug.trim(),
+          short_name: (form as any).short_name?.trim() || null,
+          copyright_name: (form as any).copyright_name?.trim() || null,
           primary_color: form.primary_color,
           address: form.address.trim() || null,
           phone: form.phone.trim() || null,
@@ -332,6 +340,34 @@ export default function ChurchesManagement() {
               </div>
 
               {/* Color */}
+              {/* Nom court (page de login) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom court <span className="text-gray-400 font-normal">(affiché sur la page de connexion)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: AGC Bergerie"
+                  value={(form as any).short_name || ''}
+                  onChange={e => setForm(prev => ({ ...prev, short_name: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]"
+                />
+              </div>
+
+              {/* Copyright */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom copyright <span className="text-gray-400 font-normal">(pied de page)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: Vases d'Honneur Assemblée Grâce Confondante"
+                  value={(form as any).copyright_name || ''}
+                  onChange={e => setForm(prev => ({ ...prev, copyright_name: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Couleur principale</label>
                 <div className="flex items-center gap-3">
