@@ -155,7 +155,7 @@ export default function ChurchesManagement() {
   };
 
   const handleDelete = async (church: Church) => {
-    if (church.slug === 'agc') {
+    if (church.slug === 'bergerie') {
       toast.error("L'église AGC ne peut pas être supprimée");
       return;
     }

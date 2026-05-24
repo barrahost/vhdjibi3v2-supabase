@@ -43,8 +43,8 @@ function getSlugFromHostname(hostname: string): string | null {
   const parts = hostname.split('.');
   if (parts.length >= 3) {
     const subdomain = parts[0];
-    if (subdomain === 'bergerie') return null; // super admin
-    return subdomain;
+    if (subdomain === 'bergerie-adm') return null; // super admin domain
+    return subdomain; // 'bergerie' → AGC, 'sion' → autre église, etc.
   }
   return null; // root domain = super admin
 }
@@ -53,8 +53,10 @@ function isSuperAdmin(hostname: string): boolean {
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
     return false; // dev = church mode
   }
-  const slug = getSlugFromHostname(hostname);
-  return slug === null;
+  const parts = hostname.split('.');
+  if (parts.length >= 3 && parts[0] === 'bergerie-adm') return true;
+  // root domain evdh.org also = super admin
+  return parts.length < 3;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +87,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const effectiveSlug = slug || 'agc'; // localhost → AGC par défaut
+    const effectiveSlug = slug || 'bergerie'; // localhost → AGC par défaut
 
     supabase
       .from('churches')
@@ -99,9 +101,9 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
           // Fallback : utiliser AGC
           setCurrentChurchId(data.id);
         setChurch({
-            id: 'agc',
+            id: 'bergerie',
             name: 'Assemblée Grâce Confondante',
-            slug: 'agc',
+            slug: 'bergerie',
             logoUrl: null,
             primaryColor: '#00665C',
             address: null,
@@ -127,7 +129,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
-  const churchId = church?.id || (superAdminDomain ? '' : 'agc');
+  const churchId = church?.id || (superAdminDomain ? '' : 'bergerie');
 
   return (
     <ChurchContext.Provider

@@ -4,7 +4,7 @@
  * Peut être utilisé dans les pages, composants ET services sans hook React.
  */
 
-let _churchId: string = 'agc';
+let _churchId: string = 'bergerie';
 
 /** Appelé par ChurchProvider une fois l'église chargée */
 export function setCurrentChurchId(id: string): void {

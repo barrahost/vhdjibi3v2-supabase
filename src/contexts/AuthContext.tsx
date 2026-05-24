@@ -15,13 +15,13 @@ import toast from 'react-hot-toast';
 function getCurrentChurchId(): string {
   const hostname = window.location.hostname;
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
-    return 'agc'; // dev
+    return 'bergerie'; // dev → AGC
   }
   const parts = hostname.split('.');
   if (parts.length >= 3) {
     const subdomain = parts[0];
-    if (subdomain === 'bergerie') return ''; // super admin
-    return subdomain;
+    if (subdomain === 'bergerie-adm') return ''; // super admin domain
+    return subdomain; // 'bergerie' → AGC, autre slug → autre église
   }
   return ''; // root domain = super admin
 }

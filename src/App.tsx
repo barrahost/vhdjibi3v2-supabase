@@ -72,6 +72,9 @@ function AppContent() {
     const slug = hostname.split('.')[0];
     return <ChurchNotFound slug={slug} />;
   }
+  
+  // On super admin domain, only super_admin can access
+  // Other roles see an access denied page (handled per-route via PrivateRoute)
 
   return (
     <>
