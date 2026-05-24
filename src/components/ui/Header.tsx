@@ -4,6 +4,7 @@ import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ProfileSwitcher } from './ProfileSwitcher';
+import { ChurchSelector } from './ChurchSelector';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -58,7 +59,7 @@ export function Header() {
   const getRoleLabel = () => {
     const role = activeRole || userRole;
     switch (role) {
-      case 'super_admin': return 'Super Admin';
+      case 'super_admin': return 'Super Admin Central';
       case 'admin': return 'Administrateur';
       case 'shepherd': return 'Berger(e)';
       case 'adn': return 'ADN';
@@ -85,7 +86,10 @@ export function Header() {
 
   return (
     <header className="bg-white border-b px-6 py-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
+        {/* Sélecteur d'église (super admin central uniquement) */}
+        <ChurchSelector />
+
         <div className="flex-1" />
 
         <div className="flex items-center space-x-4">

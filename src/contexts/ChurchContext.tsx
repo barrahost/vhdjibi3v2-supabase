@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { getChurchId } from '../lib/churchId';
 import { setCurrentChurchId } from '../lib/churchId';
 
 // ---------------------------------------------------------------------------
@@ -23,40 +22,49 @@ interface ChurchContextType {
   churchId: string;
   loading: boolean;
   isSuperAdminDomain: boolean;
+  // Super admin only
+  allChurches: Church[];
+  selectedChurchId: string;
+  setSelectedChurchId: (id: string) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Extrait le slug depuis le hostname.
- * agc.evdh.org       → 'agc'
- * bergerie.evdh.org  → null  (super admin domain)
- * evdh.org           → null  (super admin domain)
- * localhost          → null  (dev → fallback 'agc')
- */
 function getSlugFromHostname(hostname: string): string | null {
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
-    return null; // dev
+    return null;
   }
   const parts = hostname.split('.');
   if (parts.length >= 3) {
     const subdomain = parts[0];
-    if (subdomain === 'bergerie-adm') return null; // super admin domain
-    return subdomain; // 'bergerie' → AGC, 'sion' → autre église, etc.
+    if (subdomain === 'bergerie-adm') return null;
+    return subdomain;
   }
-  return null; // root domain = super admin
+  return null;
 }
 
 function isSuperAdmin(hostname: string): boolean {
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
-    return false; // dev = church mode
+    return false;
   }
   const parts = hostname.split('.');
   if (parts.length >= 3 && parts[0] === 'bergerie-adm') return true;
-  // root domain evdh.org also = super admin
   return parts.length < 3;
+}
+
+function mapRow(data: Record<string, unknown>): Church {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    slug: data.slug as string,
+    logoUrl: (data.logo_url as string) ?? null,
+    primaryColor: (data.primary_color as string) || '#00665C',
+    address: (data.address as string) ?? null,
+    phone: (data.phone as string) ?? null,
+    email: (data.email as string) ?? null,
+    status: data.status as string,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -64,9 +72,12 @@ function isSuperAdmin(hostname: string): boolean {
 // ---------------------------------------------------------------------------
 const ChurchContext = createContext<ChurchContextType>({
   church: null,
-  churchId: 'agc',
+  churchId: 'bergerie',
   loading: true,
   isSuperAdminDomain: false,
+  allChurches: [],
+  selectedChurchId: '',
+  setSelectedChurchId: () => {},
 });
 
 // ---------------------------------------------------------------------------
@@ -75,19 +86,39 @@ const ChurchContext = createContext<ChurchContextType>({
 export function ChurchProvider({ children }: { children: React.ReactNode }) {
   const [church, setChurch] = useState<Church | null>(null);
   const [loading, setLoading] = useState(true);
+  const [allChurches, setAllChurches] = useState<Church[]>([]);
+  const [selectedChurchId, _setSelectedChurchId] = useState<string>('');
 
   const hostname = window.location.hostname;
   const slug = getSlugFromHostname(hostname);
   const superAdminDomain = isSuperAdmin(hostname);
 
+  /** Change selected church + update the module singleton so all queries auto-filter */
+  const setSelectedChurchId = (id: string) => {
+    _setSelectedChurchId(id);
+    setCurrentChurchId(id);
+  };
+
   useEffect(() => {
     if (superAdminDomain) {
-      // Domaine super admin — pas de church context nécessaire
-      setLoading(false);
+      supabase
+        .from('churches')
+        .select('*')
+        .eq('status', 'active')
+        .order('name')
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const churches = data.map(mapRow);
+            setAllChurches(churches);
+            _setSelectedChurchId(churches[0].id);
+            setCurrentChurchId(churches[0].id);
+          }
+          setLoading(false);
+        });
       return;
     }
 
-    const effectiveSlug = slug || 'bergerie'; // localhost → AGC par défaut
+    const effectiveSlug = slug || 'bergerie';
 
     supabase
       .from('churches')
@@ -97,12 +128,10 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
       .single()
       .then(({ data, error }) => {
         if (error || !data) {
-          console.error(`Église "${effectiveSlug}" introuvable:`, error);
-          // Fallback : utiliser AGC
-          setCurrentChurchId(data.id);
-        setChurch({
+          console.error(`Eglise "${effectiveSlug}" introuvable:`, error);
+          const fallback: Church = {
             id: 'bergerie',
-            name: 'Assemblée Grâce Confondante',
+            name: 'Assemblee Grace Confondante',
             slug: 'bergerie',
             logoUrl: null,
             primaryColor: '#00665C',
@@ -110,26 +139,18 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
             phone: null,
             email: null,
             status: 'active',
-          });
+          };
+          setCurrentChurchId('bergerie');
+          setChurch(fallback);
         } else {
           setCurrentChurchId(data.id);
-        setChurch({
-            id: data.id,
-            name: data.name,
-            slug: data.slug,
-            logoUrl: data.logo_url,
-            primaryColor: data.primary_color || '#00665C',
-            address: data.address,
-            phone: data.phone,
-            email: data.email,
-            status: data.status,
-          });
+          setChurch(mapRow(data));
         }
         setLoading(false);
       });
   }, []);
 
-  const churchId = church?.id || (superAdminDomain ? '' : 'bergerie');
+  const churchId = church?.id || (superAdminDomain ? selectedChurchId : 'bergerie');
 
   return (
     <ChurchContext.Provider
@@ -138,6 +159,9 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         churchId,
         loading,
         isSuperAdminDomain: superAdminDomain,
+        allChurches,
+        selectedChurchId,
+        setSelectedChurchId,
       }}
     >
       {children}
