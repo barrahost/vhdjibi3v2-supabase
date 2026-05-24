@@ -15,6 +15,10 @@ export function SMSStatusBanner() {
   const { status, smsCount, refresh } = useSMSStatus();
   const [dismissed, setDismissed] = useState(false);
 
+  // Ne jamais afficher sur le domaine super admin
+  const _isSuperAdminDomain = window.location.hostname.split('.')[0] === 'bergerie-adm';
+  if (_isSuperAdminDomain) return null;
+
   // Ne rien afficher si tout va bien, ou pendant le chargement, ou si fermé
   if (status === 'loading' || status === 'ok') return null;
   if (status === 'low' && dismissed) return null;

@@ -118,7 +118,7 @@ export function Header() {
               )}
             </div>
             <div className="text-left">
-              <p className="text-sm font-medium text-gray-900">{userFullName || 'Utilisateur'}</p>
+              <p className="text-sm font-medium text-gray-900">{userFullName || getRoleLabel()}</p>
               <p className="text-xs text-gray-500">{getRoleLabel()}</p>
             </div>
           </button>
