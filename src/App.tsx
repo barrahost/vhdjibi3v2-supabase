@@ -321,6 +321,11 @@ function AppContent() {
             </PrivateRoute>
           } />
 
+          {/* Gestion des églises — super admin central uniquement */}
+          <Route path="churches" element={
+            <ChurchesManagement />
+          } />
+
           {/* Route par défaut */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
