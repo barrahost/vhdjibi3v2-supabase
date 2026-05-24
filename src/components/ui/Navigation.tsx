@@ -23,7 +23,8 @@ import {
   Headphones,
   User,
   Shield,
-  Megaphone
+  Megaphone,
+  Building2
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -433,6 +434,18 @@ export default function Navigation({ onItemClick }: NavigationProps) {
           label: 'Paramètres',
           href: '/parametres',
           icon: <Settings className="w-5 h-5" />
+        });
+      }
+
+      // Gestion des églises — super admin central uniquement (bergerie-adm)
+      const _hostname = window.location.hostname;
+      const _isSuperAdminNav = _hostname.split('.')[0] === 'bergerie-adm';
+      if (_isSuperAdminNav && userRole === 'super_admin') {
+        configChildren.push({
+          id: 'churches',
+          label: 'Gestion des Églises',
+          href: '/churches',
+          icon: <Building2 className="w-5 h-5" />
         });
       }
 
