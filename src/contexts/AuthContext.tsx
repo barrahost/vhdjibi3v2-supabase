@@ -239,40 +239,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Attempting login with:', { phone: formattedPhone, passwordLength: password.length });
 
-      // Query Supabase: users + admins (filtrés par church_id)
+      // ---------------------------------------------------------------
+      // Séparation stricte par domaine :
+      //   bergerie-adm.evdh.org → UNIQUEMENT table admins (super admin central)
+      //   [slug].evdh.org        → UNIQUEMENT table users  (admin d'église)
+      // ---------------------------------------------------------------
       const churchId = getCurrentChurchId();
-      const [usersRes, adminsRes] = await Promise.all([
-        churchId
-          ? supabase
-              .from('users')
-              .select('*')
-              .eq('church_id', getChurchId())
-              .in('phone', phoneCandidates)
-              .eq('status', 'active')
-              .eq('church_id', churchId)
-          : supabase
-              .from('users')
-              .select('*')
-              .eq('church_id', getChurchId())
-              .in('phone', phoneCandidates)
-              .eq('status', 'active'),
-        supabase
-          .from('admins')
-          .select('*')
-          .in('phone', phoneCandidates)
-          .eq('role', 'super_admin')
-          .eq('status', 'active'),
-      ]);
+      const isSuperAdminDomain = churchId === '';
 
       type Candidate = { data: any; collectionName: 'users' | 'admins' };
       const candidateMap = new Map<string, Candidate>();
 
-      (usersRes.data || []).forEach((row: any) => {
-        candidateMap.set(`users:${row.id}`, { data: mapUserRow(row), collectionName: 'users' });
-      });
-      (adminsRes.data || []).forEach((row: any) => {
-        candidateMap.set(`admins:${row.id}`, { data: mapAdminRow(row), collectionName: 'admins' });
-      });
+      if (isSuperAdminDomain) {
+        // Domaine super admin central : cherche uniquement dans admins
+        const { data: adminsData } = await supabase
+          .from('admins')
+          .select('*')
+          .in('phone', phoneCandidates)
+          .eq('role', 'super_admin')
+          .eq('status', 'active');
+        (adminsData || []).forEach((row: any) => {
+          candidateMap.set(`admins:${row.id}`, { data: mapAdminRow(row), collectionName: 'admins' });
+        });
+      } else {
+        // Domaine d'église : cherche uniquement dans users (filtrés par church_id)
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('*')
+          .in('phone', phoneCandidates)
+          .eq('church_id', churchId)
+          .eq('status', 'active');
+        (usersData || []).forEach((row: any) => {
+          candidateMap.set(`users:${row.id}`, { data: mapUserRow(row), collectionName: 'users' });
+        });
+      }
 
       const candidateDocs = Array.from(candidateMap.values());
 
