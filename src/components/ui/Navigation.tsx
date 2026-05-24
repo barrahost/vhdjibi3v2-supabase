@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChurch } from '../../contexts/ChurchContext';
 import { ROLES, PERMISSIONS } from '../../constants/roles';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAdminNotifications } from '../../hooks/useAdminNotifications';
@@ -41,6 +42,7 @@ interface NavigationProps {
 export default function Navigation({ onItemClick }: NavigationProps) {
   const { userRole, activeRole, additionalMenus } = useAuth();
   const { hasPermission } = usePermissions();
+  const { hasModule } = useChurch();
 
   const { alerts } = useAdminNotifications();
 
@@ -178,7 +180,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     if (hasPermission(PERMISSIONS.MANAGE_SOULS) || hasPermission(PERMISSIONS.MANAGE_USERS)) {
       const soulsChildren = [];
       
-      if (hasPermission(PERMISSIONS.MANAGE_SOULS)) {
+      if (hasPermission(PERMISSIONS.MANAGE_SOULS) && hasModule('souls')) {
         soulsChildren.push(
           {
             id: 'souls',
@@ -197,7 +199,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
         );
       }
 
-      if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST) {
+      if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && hasModule('evangelization')) {
         soulsChildren.push({
           id: 'evangelized-souls-admin',
           label: 'Âmes évangélisées',
@@ -207,7 +209,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
         });
       }
 
-      if (hasPermission(PERMISSIONS.MANAGE_USERS)) {
+      if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasModule('users')) {
         soulsChildren.push({
           id: 'users',
           label: 'Utilisateurs',
@@ -216,7 +218,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
         });
       }
 
-      if (hasPermission(PERMISSIONS.MANAGE_SERVANTS)) {
+      if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) && hasModule('servants')) {
         soulsChildren.push({
           id: 'servants-admin',
           label: 'Serviteurs',
@@ -237,7 +239,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Build tracking & interactions menu (for admins)
-    if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasPermission(PERMISSIONS.VIEW_STATS)) {
+    if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasPermission(PERMISSIONS.VIEW_STATS) && (hasModule('interactions') || hasModule('attendance') || hasModule('spiritual_progression'))) {
       items.push({
         id: 'tracking-interactions',
         label: 'Suivi & Interactions',
@@ -278,7 +280,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Statistiques dédiées (Admin/ADN avec VIEW_STATS)
-    if (hasPermission(PERMISSIONS.VIEW_STATS) && activeRole !== ROLES.EVANGELIST && activeRole !== ROLES.SHEPHERD && activeRole !== ROLES.DEPARTMENT_LEADER) {
+    if (hasPermission(PERMISSIONS.VIEW_STATS) && activeRole !== ROLES.EVANGELIST && activeRole !== ROLES.SHEPHERD && activeRole !== ROLES.DEPARTMENT_LEADER && hasModule('statistics')) {
       items.push({
         id: 'statistics',
         label: 'Statistiques',
@@ -313,7 +315,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Menu évangéliste : âmes évangélisées + interactions
-    if (activeRole === ROLES.EVANGELIST && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS)) {
+    if (activeRole === ROLES.EVANGELIST && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
       items.push({
         id: 'evangelized-souls',
         label: 'Âmes évangélisées',
@@ -333,7 +335,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Replay des enseignements - accessible à tous les utilisateurs authentifiés
-    if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS)) {
+    if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && hasModule('audio')) {
       items.push({
         id: 'replay-teachings-public',
         label: 'Replay des enseignements',
@@ -346,7 +348,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     if (hasPermission(PERMISSIONS.MANAGE_AUDIO) || hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) {
       const contentChildren = [];
       
-      if (hasPermission(PERMISSIONS.MANAGE_AUDIO)) {
+      if (hasPermission(PERMISSIONS.MANAGE_AUDIO) && hasModule('audio')) {
         contentChildren.push({
           id: 'audio',
           label: 'Gestion audio',
@@ -355,7 +357,7 @@ export default function Navigation({ onItemClick }: NavigationProps) {
         });
       }
 
-      if (hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) {
+      if (hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES) && hasModule('sms')) {
         contentChildren.push(
           {
             id: 'sms-admin',
@@ -383,34 +385,40 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     }
 
     // Outils pastoraux (Carte des âmes, Anniversaires)
-    if (hasPermission(PERMISSIONS.VIEW_STATS)) {
-      items.push({
-        id: 'pastoral-tools',
-        label: 'Outils pastoraux',
-        icon: <Map className="w-5 h-5" />,
-        children: [
-          {
-            id: 'soul-map',
-            label: 'Carte des âmes',
-            href: '/carte',
-            icon: <Map className="w-5 h-5" />
-          },
-          {
-            id: 'birthdays',
-            label: 'Anniversaires',
-            href: '/anniversaires',
-            icon: <Cake className="w-5 h-5" />,
-            badge: alertCount('upcoming_birthday')
-          }
-        ]
-      });
+    if (hasPermission(PERMISSIONS.VIEW_STATS) && (hasModule('soul_map') || hasModule('birthdays'))) {
+      const pastoralChildren = [];
+      if (hasModule('soul_map')) {
+        pastoralChildren.push({
+          id: 'soul-map',
+          label: 'Carte des âmes',
+          href: '/carte',
+          icon: <Map className="w-5 h-5" />
+        });
+      }
+      if (hasModule('birthdays')) {
+        pastoralChildren.push({
+          id: 'birthdays',
+          label: 'Anniversaires',
+          href: '/anniversaires',
+          icon: <Cake className="w-5 h-5" />,
+          badge: alertCount('upcoming_birthday')
+        });
+      }
+      if (pastoralChildren.length > 0) {
+        items.push({
+          id: 'pastoral-tools',
+          label: 'Outils pastoraux',
+          icon: <Map className="w-5 h-5" />,
+          children: pastoralChildren
+        });
+      }
     }
 
     // Configuration (Départements, Familles, Paramètres, Rôles)
     if (hasPermission(PERMISSIONS.MANAGE_DEPARTMENTS) || hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.MANAGE_FAMILIES) || hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)) {
       const configChildren = [];
 
-      if (hasPermission(PERMISSIONS.MANAGE_DEPARTMENTS)) {
+      if (hasPermission(PERMISSIONS.MANAGE_DEPARTMENTS) && hasModule('departments')) {
         configChildren.push({
           id: 'departments',
           label: 'Départements',

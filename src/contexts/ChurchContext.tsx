@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { setCurrentChurchId } from '../lib/churchId';
+import { ChurchModules, DEFAULT_MODULES, isModuleEnabled } from '../lib/churchModules';
+export { isModuleEnabled };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -15,6 +17,7 @@ export interface Church {
   phone: string | null;
   email: string | null;
   status: string;
+  modules: ChurchModules;
 }
 
 interface ChurchContextType {
@@ -22,6 +25,8 @@ interface ChurchContextType {
   churchId: string;
   loading: boolean;
   isSuperAdminDomain: boolean;
+  modules: ChurchModules;
+  hasModule: (key: string) => boolean;
   // Super admin only
   allChurches: Church[];
   selectedChurchId: string;
@@ -64,6 +69,7 @@ function mapRow(data: Record<string, unknown>): Church {
     phone: (data.phone as string) ?? null,
     email: (data.email as string) ?? null,
     status: data.status as string,
+    modules: (data.modules as ChurchModules) ?? DEFAULT_MODULES,
   };
 }
 
@@ -75,6 +81,8 @@ const ChurchContext = createContext<ChurchContextType>({
   churchId: 'bergerie',
   loading: true,
   isSuperAdminDomain: false,
+  modules: DEFAULT_MODULES,
+  hasModule: () => true,
   allChurches: [],
   selectedChurchId: '',
   setSelectedChurchId: () => {},
@@ -106,7 +114,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('status', 'active')
         .order('name')
-        .then(({ data, error }) => {
+        .then(({ data, error }: { data: Record<string, unknown>[] | null, error: unknown }) => {
           if (!error && data && data.length > 0) {
             const churches = data.map(mapRow);
             setAllChurches(churches);
@@ -126,7 +134,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
       .eq('slug', effectiveSlug)
       .eq('status', 'active')
       .single()
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: Record<string, unknown> | null, error: unknown | null }) => {
         if (error || !data) {
           console.error(`Eglise "${effectiveSlug}" introuvable:`, error);
           const fallback: Church = {
@@ -139,11 +147,12 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
             phone: null,
             email: null,
             status: 'active',
+            modules: DEFAULT_MODULES,
           };
           setCurrentChurchId('bergerie');
           setChurch(fallback);
         } else {
-          setCurrentChurchId(data.id);
+          setCurrentChurchId(data.id as string);
           setChurch(mapRow(data));
         }
         setLoading(false);
@@ -152,6 +161,9 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
 
   const churchId = church?.id || (superAdminDomain ? selectedChurchId : 'bergerie');
 
+  const modules = church?.modules ?? DEFAULT_MODULES;
+  const hasModule = (key: string) => isModuleEnabled(modules, key);
+
   return (
     <ChurchContext.Provider
       value={{
@@ -159,6 +171,8 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         churchId,
         loading,
         isSuperAdminDomain: superAdminDomain,
+        modules,
+        hasModule,
         allChurches,
         selectedChurchId,
         setSelectedChurchId,

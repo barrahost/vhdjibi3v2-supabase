@@ -3,8 +3,9 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmModal } from '../hooks/useConfirmModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Building2, Plus, Edit2, Trash2, Globe, Phone, Mail, MapPin, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, Globe, Phone, Mail, MapPin, CheckCircle, XCircle, Puzzle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { MODULE_DEFINITIONS, DEFAULT_MODULES, ChurchModules } from '../lib/churchModules';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,6 +14,7 @@ interface Church {
   id: string;
   name: string;
   slug: string;
+  modules?: ChurchModules;
   logo_url: string | null;
   primary_color: string;
   address: string | null;
@@ -30,6 +32,7 @@ const EMPTY_FORM = {
   phone: '',
   email: '',
   status: 'active' as 'active' | 'inactive',
+  modules: { ...DEFAULT_MODULES } as ChurchModules,
 };
 
 // ---------------------------------------------------------------------------
@@ -44,6 +47,7 @@ export default function ChurchesManagement() {
   const [editingChurch, setEditingChurch] = useState<Church | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [modulesOpen, setModulesOpen] = useState(false);
 
   // Only super_admin can access this page
   if (userRole !== 'super_admin') {
@@ -77,6 +81,7 @@ export default function ChurchesManagement() {
   const openAdd = () => {
     setEditingChurch(null);
     setForm(EMPTY_FORM);
+    setModulesOpen(false);
     setShowForm(true);
   };
 
@@ -90,7 +95,9 @@ export default function ChurchesManagement() {
       phone: c.phone || '',
       email: c.email || '',
       status: c.status,
+      modules: { ...DEFAULT_MODULES, ...(c.modules || {}) },
     });
+    setModulesOpen(false);
     setShowForm(true);
   };
 
@@ -120,6 +127,7 @@ export default function ChurchesManagement() {
             phone: form.phone.trim() || null,
             email: form.email.trim() || null,
             status: form.status,
+            modules: form.modules,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingChurch.id);
@@ -137,6 +145,7 @@ export default function ChurchesManagement() {
           phone: form.phone.trim() || null,
           email: form.email.trim() || null,
           status: form.status,
+          modules: form.modules,
         });
         if (error) throw error;
         toast.success('Église créée avec succès');
@@ -384,6 +393,62 @@ export default function ChurchesManagement() {
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
+            </div>
+
+            {/* Modules */}
+            <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setModulesOpen(o => !o)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700"
+              >
+                <span className="flex items-center gap-2">
+                  <Puzzle className="w-4 h-4 text-[#00665C]" />
+                  Modules activés
+                  <span className="text-xs text-gray-400 font-normal">
+                    ({Object.values(form.modules).filter(Boolean).length}/{Object.keys(form.modules).length} actifs)
+                  </span>
+                </span>
+                <span className="text-gray-400">{modulesOpen ? '▲' : '▼'}</span>
+              </button>
+              {modulesOpen && (
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(['pastoral', 'administration', 'communication', 'statistiques'] as const).map(cat => {
+                    const catModules = MODULE_DEFINITIONS.filter(m => m.category === cat);
+                    return (
+                      <div key={cat}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </p>
+                        <div className="space-y-2">
+                          {catModules.map(mod => (
+                            <label key={mod.key} className="flex items-start gap-3 cursor-pointer group">
+                              <div className="relative flex-shrink-0 mt-0.5">
+                                <input
+                                  type="checkbox"
+                                  checked={form.modules[mod.key] !== false}
+                                  onChange={e => setForm(prev => ({
+                                    ...prev,
+                                    modules: { ...prev.modules, [mod.key]: e.target.checked }
+                                  }))}
+                                  className="sr-only"
+                                />
+                                <div className={`w-9 h-5 rounded-full transition-colors ${form.modules[mod.key] !== false ? 'bg-[#00665C]' : 'bg-gray-200'}`}>
+                                  <div className={`w-3.5 h-3.5 bg-white rounded-full shadow transform transition-transform mt-0.75 ${form.modules[mod.key] !== false ? 'translate-x-4' : 'translate-x-0.5'}`} style={{marginTop:'3px', marginLeft: form.modules[mod.key] !== false ? '18px' : '2px'}} />
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{mod.icon} {mod.label}</p>
+                                <p className="text-xs text-gray-400">{mod.description}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Buttons */}
