@@ -234,8 +234,10 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
           ...r,
         } as User));
 
-        // Super admins
-        if (filter === 'all' || filter === 'admins') {
+        // Super admins — uniquement sur bergerie-adm, jamais sur les domaines d'église
+        const hostname = window.location.hostname;
+        const isSuperAdminDomain = hostname.split('.')[0] === 'bergerie-adm';
+        if (isSuperAdminDomain && (filter === 'all' || filter === 'admins')) {
           const { data: adminsRaw } = await supabase
             .from('admins')
             .select('*')

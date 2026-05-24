@@ -84,12 +84,17 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
         .eq('status', 'active')
         .order('full_name', { ascending: true });
 
-      // Charger les administrateurs depuis Supabase
-      const { data: adminsRaw } = await supabase
-        .from('admins')
-        .select('id, full_name, phone, role, email, status')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
+      // Charger les administrateurs — uniquement sur bergerie-adm, jamais sur les domaines d'église
+      const _isSuperAdminDomain = window.location.hostname.split('.')[0] === 'bergerie-adm';
+      let adminsRaw: any[] | null = null;
+      if (_isSuperAdminDomain) {
+        const { data } = await supabase
+          .from('admins')
+          .select('id, full_name, phone, role, email, status')
+          .eq('status', 'active')
+          .order('full_name', { ascending: true });
+        adminsRaw = data;
+      }
 
       const mapRow = (row: any): User | null => {
         const phoneValidation = validatePhoneNumber(row.phone as string);
