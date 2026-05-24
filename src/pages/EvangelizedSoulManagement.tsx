@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import * as XLSX from 'xlsx';
 import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, Info, CheckCircle2, Download, Phone, UserCheck, UserX, Shuffle, AlertTriangle, MoreVertical, X as XIcon } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
@@ -91,7 +92,7 @@ export default function EvangelizedSoulManagement() {
     const ids = [...new Set(souls.map(s => s.evangelistId).filter(Boolean))] as string[];
     if (ids.length === 0) { setEvangelistNames({}); return; }
     try {
-      const { data, error } = await supabase.from('users').select('id, full_name').in('id', ids);
+      const { data, error } = await supabase.from('users').select('id, full_name').eq('church_id', getChurchId()).in('id', ids);
       const names: Record<string, string> = {};
       if (!error && data) {
         data.forEach((u: any) => { names[u.id] = u.full_name || u.fullName || ''; });
@@ -109,7 +110,7 @@ export default function EvangelizedSoulManagement() {
     if (!userId) return;
     setLoading(true);
     try {
-      let q = supabase.from('evangelized_souls').select('*').order('created_at', { ascending: false });
+      let q = supabase.from('evangelized_souls').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
       if (!isAdmin && !isADN) {
         q = q.eq('evangelist_id', userId);
       } else {
@@ -175,6 +176,8 @@ export default function EvangelizedSoulManagement() {
       const { data } = await supabase
         .from('interactions')
         .select('soul_id, date')
+        .eq('church_id', getChurchId())
+        .eq('church_id', getChurchId())
         .in('soul_id', soulIds)
         .order('date', { ascending: false });
       const map = new Map<string, Date>();

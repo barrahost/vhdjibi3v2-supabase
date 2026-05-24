@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function DepartmentForm() {
   const [formData, setFormData] = useState({
@@ -22,17 +23,18 @@ export default function DepartmentForm() {
       }
 
       // Vérifier si le nom existe déjà
-      const { data: nameData } = await supabase.from('departments').select('id').eq('name', formData.name.trim()).limit(1);
+      const { data: nameData } = await supabase.from('departments').select('id').eq('church_id', getChurchId()).eq('name', formData.name.trim()).limit(1);
       if (nameData && nameData.length > 0) {
         toast.error('Un département avec ce nom existe déjà');
         return;
       }
 
       // Récupérer l'ordre le plus élevé
-      const { data: orderData } = await supabase.from('departments').select('order').order('order', { ascending: false }).limit(1);
+      const { data: orderData } = await supabase.from('departments').select('order').eq('church_id', getChurchId()).order('order', { ascending: false }).limit(1);
       const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
       const { error: _insertErr } = await supabase.from('departments').insert({
+        church_id: getChurchId(),
         ...formData,
         name: formData.name.trim(),
         leader: formData.leader.trim(), // Ajout du leader

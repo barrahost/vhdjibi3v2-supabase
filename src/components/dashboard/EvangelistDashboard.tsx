@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { StatCard } from './stats/StatCard';
 import InteractionModal from '../interactions/InteractionModal';
 import {
@@ -50,6 +51,7 @@ export default function EvangelistDashboard() {
         const { data: userData, error } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('id', userId)
           .eq('status', 'active')
           .single();
@@ -100,10 +102,12 @@ export default function EvangelistDashboard() {
           supabase
             .from('evangelized_souls')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('evangelist_id', evangelistId),
           supabase
             .from('interactions')
             .select('id, soul_id, date')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', evangelistId),
         ]);
 

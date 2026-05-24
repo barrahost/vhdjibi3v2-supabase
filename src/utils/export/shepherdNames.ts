@@ -1,5 +1,6 @@
 import { Soul } from '../../types/database.types';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export async function getShepherdNames(souls: Soul[]): Promise<Record<string, string>> {
   const shepherdNames: Record<string, string> = {};
@@ -10,7 +11,7 @@ export async function getShepherdNames(souls: Soul[]): Promise<Record<string, st
 
     try {
       // Chercher dans la collection users
-      const userDoc = await supabase.from('users').select('*').eq('id', shepherdId).single();
+      const userDoc = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('id', shepherdId).single();
       if (userDoc.exists()) {
         shepherdNames[shepherdId] = userDoc.data().fullName;
       } else {

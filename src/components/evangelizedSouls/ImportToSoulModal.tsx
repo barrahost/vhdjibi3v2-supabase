@@ -8,6 +8,7 @@ import { EvangelizedSoul } from '../../types/evangelized.types';
 import { Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface Props {
   soul: EvangelizedSoul;

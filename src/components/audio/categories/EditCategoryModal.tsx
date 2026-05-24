@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../../ui/Modal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 interface Category {
   id: string;

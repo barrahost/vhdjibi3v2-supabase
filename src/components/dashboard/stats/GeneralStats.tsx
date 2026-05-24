@@ -6,6 +6,7 @@ import { isShepherdUser } from '../../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 import { SoulEvolutionChart } from './SoulEvolutionChart';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 export function GeneralStats() {
   const [stats, setStats] = useState({
@@ -19,8 +20,8 @@ export function GeneralStats() {
     const fetchStats = async () => {
       try {
         const [{ data: soulsRaw, error: soulsErr }, { data: usersRaw, error: usersErr }] = await Promise.all([
-          supabase.from('souls').select('id, shepherd_id, is_undecided, status, gender'),
-          supabase.from('users').select('id, role, status').eq('status', 'active'),
+          supabase.from('souls').select('id, shepherd_id, is_undecided, status, gender').eq('church_id', getChurchId()),
+          supabase.from('users').select('id, role, status').eq('church_id', getChurchId()).eq('status', 'active'),
         ]);
 
         if (soulsErr) throw soulsErr;

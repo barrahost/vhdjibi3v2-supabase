@@ -10,6 +10,7 @@ import { Users, UserCheck, UserPlus, Crown, Download } from 'lucide-react';
 import { ImportServantsModal } from './ImportServantsModal';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface Department {
   id: string;
@@ -54,7 +55,7 @@ export default function DepartmentLeaderDashboard() {
         }
         
         // Get department details
-        const { data: deptRows } = await supabase.from('departments').select('id, name, description').eq('id', deptLeaderProfile.departmentId).limit(1);
+        const { data: deptRows } = await supabase.from('departments').select('id, name, description').eq('church_id', getChurchId()).eq('id', deptLeaderProfile.departmentId).limit(1);
         if (deptRows && deptRows.length > 0) {
           const d = deptRows[0];
           setDepartment({ id: d.id, name: d.name, description: d.description });
@@ -73,7 +74,7 @@ export default function DepartmentLeaderDashboard() {
     if (!department?.id) return;
 
     const loadServants = async () => {
-      const { data } = await supabase.from('servants').select('*').eq('department_id', department.id).eq('status', 'active');
+      const { data } = await supabase.from('servants').select('*').eq('church_id', getChurchId()).eq('department_id', department.id).eq('status', 'active');
       const servantsData = (data ?? []).map((r: any) => ({
         id: r.id,
         fullName: r.full_name || '',

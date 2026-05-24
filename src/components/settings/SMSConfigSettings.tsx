@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { Save, MessageSquare, Key, DollarSign, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSMSStatus } from '../../hooks/useSMSStatus';
@@ -35,6 +36,7 @@ export default function SMSConfigSettings() {
         const { data, error } = await supabase
           .from('app_settings')
           .select('value')
+          .eq('church_id', getChurchId())
           .eq('key', 'sms')
           .single();
         if (!error && data?.value) {

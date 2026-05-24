@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '../../utils/dateUtils';
@@ -32,11 +33,11 @@ export function AdminDashboard() {
         const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0);
 
         const [soulsRes, evangelizedRes, interactionsRes, recentSoulsRes, recentInterRes] = await Promise.all([
-          supabase.from('souls').select('id,shepherd_id,service_family_id,is_undecided').eq('status', 'active'),
-          supabase.from('evangelized_souls').select('id,imported_to_soul_id').neq('status', 'imported'),
-          supabase.from('interactions').select('id,date').gte('date', weekStart.toISOString()),
-          supabase.from('souls').select('id,full_name,location,shepherd_id,created_at').eq('status', 'active').order('created_at', { ascending: false }).limit(5),
-          supabase.from('interactions').select('id,type,date,soul_id').order('date', { ascending: false }).limit(5),
+          supabase.from('souls').select('id,shepherd_id,service_family_id,is_undecided').eq('church_id', getChurchId()).eq('status', 'active'),
+          supabase.from('evangelized_souls').select('id,imported_to_soul_id').eq('church_id', getChurchId()).neq('status', 'imported'),
+          supabase.from('interactions').select('id,date').eq('church_id', getChurchId()).gte('date', weekStart.toISOString()),
+          supabase.from('souls').select('id,full_name,location,shepherd_id,created_at').eq('church_id', getChurchId()).eq('status', 'active').order('created_at', { ascending: false }).limit(5),
+          supabase.from('interactions').select('id,type,date,soul_id').eq('church_id', getChurchId()).order('date', { ascending: false }).limit(5),
         ]);
 
         if (cancelled) return;

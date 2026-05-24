@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
 import { Search, Filter, ChevronDown, ChevronUp, TrendingUp, Heart, Droplets, BookOpen, Users2, Briefcase } from 'lucide-react';
 import { ProgressionTimeline } from '../components/souls/progression/ProgressionTimeline';
@@ -50,6 +51,7 @@ export default function SpiritualProgression() {
       let queryBuilder = supabase
         .from('souls')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
 
       if (selectedShepherdId) {

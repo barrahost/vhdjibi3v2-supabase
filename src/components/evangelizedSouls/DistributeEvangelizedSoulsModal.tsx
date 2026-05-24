@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Users, CheckSquare, Square, Shuffle, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EvangelistWithLoad {
   id: string;
@@ -106,6 +107,7 @@ export default function DistributeEvangelizedSoulsModal({
       const { data: soulsData } = await supabase
         .from('evangelized_souls')
         .select('id, evangelist_id')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
       const unassigned = (soulsData ?? []).filter((d: any) => !d.evangelist_id).map((d: any) => d.id);
       setUnassignedIds(unassigned);
@@ -122,6 +124,7 @@ export default function DistributeEvangelizedSoulsModal({
       const { data: usersData } = await supabase
         .from('users')
         .select('id, full_name, phone, role, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
       const evList: EvangelistWithLoad[] = [];
       (usersData ?? []).forEach((d: any) => {

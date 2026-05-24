@@ -4,6 +4,7 @@ import { SMSService } from '../../services/sms.service';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 const MAX_SMS_LENGTH = 125; // Reduced to 125 to allow for appending user info
 
@@ -23,7 +24,7 @@ export function SMSTest() {
         const storedUser = localStorage.getItem('user');
         const userId = storedUser ? JSON.parse(storedUser).id : null;
         if (!userId) return;
-        const { data } = await supabase.from('users').select('full_name, phone').eq('id', userId).single();
+        const { data } = await supabase.from('users').select('full_name, phone').eq('church_id', getChurchId()).eq('id', userId).single();
         if (data) {
           setUserInfo({ fullName: data.full_name || '', phone: data.phone || '' });
         }

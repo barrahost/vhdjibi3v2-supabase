@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { useSearchParams } from 'react-router-dom';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { formatDateForInput, isWithinLast7Days } from '../utils/dateUtils';
@@ -156,7 +157,7 @@ export default function ReplayTeachings() {
   // ── Fetch ──────────────────────────────────────────────────────
   const fetchTeachings = async () => {
     try {
-      let q = supabase.from('teachings').select('*').eq('status', 'active').order('date', { ascending: false });
+      let q = supabase.from('teachings').select('*').eq('church_id', getChurchId()).eq('status', 'active').order('date', { ascending: false });
       if (dateRange.startDate && dateRange.endDate) {
         q = q.gte('date', new Date(dateRange.startDate).toISOString())
              .lte('date', new Date(dateRange.endDate).toISOString());

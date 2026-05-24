@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import type { Soul } from '../types/database.types';
 import { formatDate } from '../utils/dateUtils';
 import { AlertTriangle, ChevronDown, ChevronUp, MessageCircle, Users, Clock } from 'lucide-react';
@@ -40,6 +41,7 @@ export default function ShepherdReminders() {
         const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('status', 'active');
 
         if (usersError) throw usersError;
@@ -60,6 +62,7 @@ export default function ShepherdReminders() {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', shepherd.id)
             .eq('status', 'active');
 
@@ -83,6 +86,7 @@ export default function ShepherdReminders() {
           const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', shepherd.id);
 
           if (interactionsError) throw interactionsError;

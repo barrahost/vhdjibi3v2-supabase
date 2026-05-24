@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { CheckCircle2, Plus, List } from 'lucide-react';
@@ -59,6 +60,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
     try {
       setSubmitting(true);
       const { error: insertError } = await supabase.from('evangelized_souls').insert({
+        church_id: getChurchId(),
         id: crypto.randomUUID(),
         full_name: data.fullName.trim(),
         nickname: data.nickname.trim() || null,

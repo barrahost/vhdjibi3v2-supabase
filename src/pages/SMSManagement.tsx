@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
@@ -36,6 +37,7 @@ export default function SMSManagement() {
         const { data: usersData } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('id', (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })())
           .eq('status', 'active');
 
@@ -51,6 +53,7 @@ export default function SMSManagement() {
           const { data: soulsData } = await supabase
             .from('souls')
             .select('id, full_name, nickname, phone')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', currentShepherdId)
             .eq('status', 'active');
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 interface ServantStatus {
   isServant: boolean;
@@ -26,6 +27,7 @@ export function useServantStatus(userEmail: string | undefined): ServantStatus {
         const { data, error } = await supabase
           .from('servants')
           .select('id, is_head, department_id')
+          .eq('church_id', getChurchId())
           .eq('email', userEmail)
           .limit(1);
 

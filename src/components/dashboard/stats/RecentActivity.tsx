@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { formatDate } from '../../../utils/dateUtils';
 import { Soul, Interaction } from '../../../types/database.types';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 export function RecentActivity() {
   const [recentSouls, setRecentSouls] = useState<Soul[]>([]);
@@ -10,8 +11,8 @@ export function RecentActivity() {
   useEffect(() => {
     const fetchRecentActivity = async () => {
       const [{ data: soulsRaw }, { data: interactionsRaw }] = await Promise.all([
-        supabase.from('souls').select('id, full_name, location, shepherd_id').order('created_at', { ascending: false }).limit(5),
-        supabase.from('interactions').select('id, type, date, notes, soul_id, shepherd_id').order('date', { ascending: false }).limit(5),
+        supabase.from('souls').select('id, full_name, location, shepherd_id').eq('church_id', getChurchId()).order('created_at', { ascending: false }).limit(5),
+        supabase.from('interactions').select('id, type, date, notes, soul_id, shepherd_id').eq('church_id', getChurchId()).order('date', { ascending: false }).limit(5),
       ]);
 
       setRecentSouls((soulsRaw ?? []).map((r: any) => ({

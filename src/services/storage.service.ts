@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
 
 export class StorageService {

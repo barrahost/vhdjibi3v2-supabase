@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface ServiceFamily {
   id: string;
@@ -67,7 +68,7 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
       }
 
       if (formData.name.trim() !== family.name) {
-        const { data: nameData } = await supabase.from('service_families').select('id').eq('name', formData.name.trim()).limit(1);
+        const { data: nameData } = await supabase.from('service_families').select('id').eq('church_id', getChurchId()).eq('name', formData.name.trim()).limit(1);
         if (nameData && nameData.length > 0) {
           toast.error('Une famille avec ce nom existe déjà');
           return;

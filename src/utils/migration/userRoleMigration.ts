@@ -1,5 +1,6 @@
 import { BusinessProfile } from '../../types/businessProfile.types';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export class UserRoleMigration {
   static convertRoleToBusinessProfiles(role: string): BusinessProfile[] {
@@ -37,7 +38,7 @@ export class UserRoleMigration {
   static async migrateAllUsers(): Promise<{ migrated: number; errors: string[] }> {
     const results = { migrated: 0, errors: [] as string[] };
     try {
-      const { data: users, error } = await supabase.from('users').select('id, role, business_profiles');
+      const { data: users, error } = await supabase.from('users').select('id, role, business_profiles').eq('church_id', getChurchId());
       if (error) throw error;
 
       for (const user of users || []) {

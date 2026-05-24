@@ -13,6 +13,7 @@ import { StorageService } from '../../services/storage.service';
 import { isShepherdUser } from '../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EditSoulModalProps {
   soul: Soul;
@@ -57,6 +58,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           const { data: rows } = await supabase
             .from('users')
             .select('id, role')
+            .eq('church_id', getChurchId())
             .eq('id', currentUserId)
             .eq('status', 'active')
             .limit(1);

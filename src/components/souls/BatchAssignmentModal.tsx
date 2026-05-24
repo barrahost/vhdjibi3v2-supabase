@@ -12,6 +12,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Users, UserCheck, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface BatchAssignmentModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
     supabase
       .from('souls')
       .select('id, full_name, shepherd_id, status, created_at')
+      .eq('church_id', getChurchId())
       .eq('status', 'active')
       .is('shepherd_id', null)
       .then(({ data }) => {
@@ -53,6 +55,7 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
     supabase
       .from('users')
       .select('id, full_name, role')
+      .eq('church_id', getChurchId())
       .eq('status', 'active')
       .in('role', ['shepherd', 'intern', 'admin'])
       .then(({ data }) => {

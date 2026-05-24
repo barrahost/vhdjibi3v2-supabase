@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function ServiceFamilyForm() {
   const [formData, setFormData] = useState({
@@ -39,19 +40,20 @@ export default function ServiceFamilyForm() {
         return;
       }
 
-      const { data: nameData } = await supabase.from('service_families').select('id').eq('name', formData.name.trim()).limit(1);
+      const { data: nameData } = await supabase.from('service_families').select('id').eq('church_id', getChurchId()).eq('name', formData.name.trim()).limit(1);
       if (nameData && nameData.length > 0) {
         toast.error('Une famille avec ce nom existe déjà');
         return;
       }
 
-      const { data: orderData } = await supabase.from('service_families').select('order').order('order', { ascending: false }).limit(1);
+      const { data: orderData } = await supabase.from('service_families').select('order').eq('church_id', getChurchId()).order('order', { ascending: false }).limit(1);
       const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
       // Récupérer le nom du responsable pour le champ legacy `leader`
       const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
 
       const { error: _insertErr } = await supabase.from('service_families').insert({
+        church_id: getChurchId(),
         name: formData.name.trim(),
         description: formData.description.trim(),
         leader: leaderUser?.fullName || '', // legacy compat

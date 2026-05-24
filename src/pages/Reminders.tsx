@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { useAuth } from '../contexts/AuthContext';
 import { Soul, Interaction } from '../types/database.types';
 import { Calendar } from '../components/reminders/Calendar';
@@ -28,6 +29,7 @@ export default function Reminders() {
         const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .eq('status', 'active');
 
@@ -42,6 +44,7 @@ export default function Reminders() {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', shepherdId)
             .eq('status', 'active');
 
@@ -57,6 +60,7 @@ export default function Reminders() {
           const { data: interactionsData, error: interactionsError } = await supabase
             .from('interactions')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', shepherdId);
 
           if (interactionsError) throw interactionsError;

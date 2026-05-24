@@ -2,6 +2,7 @@ import { Servant, ServantFormData, ServantSourceType } from '../types/servant.ty
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export interface ImportResult {
   imported: number;
@@ -64,6 +65,7 @@ export class ServantService {
         const { data: dup } = await supabase
           .from('servants')
           .select('id')
+          .eq('church_id', getChurchId())
           .eq('source_type', data.sourceType)
           .eq('source_id', data.sourceId)
           .eq('department_id', data.departmentId)
@@ -76,6 +78,7 @@ export class ServantService {
         const { data: phoneSnap } = await supabase
           .from('servants')
           .select('id')
+          .eq('church_id', getChurchId())
           .eq('phone', data.phone)
           .eq('department_id', data.departmentId)
           .limit(1);
@@ -88,6 +91,7 @@ export class ServantService {
           const { data: globalSnap } = await supabase
             .from('servants')
             .select('department_id')
+            .eq('church_id', getChurchId())
             .eq('phone', data.phone)
             .eq('status', 'active');
           const otherDepts = (globalSnap ?? []).filter(d => d.department_id !== data.departmentId);
@@ -104,6 +108,7 @@ export class ServantService {
         const { data: headSnap } = await supabase
           .from('servants')
           .select('id')
+          .eq('church_id', getChurchId())
           .eq('department_id', data.departmentId)
           .eq('is_head', true)
           .eq('status', 'active')
@@ -151,6 +156,7 @@ export class ServantService {
       const { data, error } = await supabase
         .from('servants')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('id', id)
         .single();
       if (error) {
@@ -183,6 +189,7 @@ export class ServantService {
           const { data: phoneSnap } = await supabase
             .from('servants')
             .select('id')
+            .eq('church_id', getChurchId())
             .eq('phone', formattedPhone)
             .limit(1);
           if (phoneSnap && phoneSnap.length > 0 && phoneSnap[0].id !== id) {
@@ -199,6 +206,7 @@ export class ServantService {
           const { data: emailSnap } = await supabase
             .from('servants')
             .select('id')
+            .eq('church_id', getChurchId())
             .eq('email', formattedEmail)
             .limit(1);
           if (emailSnap && emailSnap.length > 0 && emailSnap[0].id !== id) {
@@ -214,6 +222,7 @@ export class ServantService {
         const { data: headSnap } = await supabase
           .from('servants')
           .select('id')
+          .eq('church_id', getChurchId())
           .eq('department_id', newDepartmentId)
           .eq('is_head', true)
           .eq('status', 'active')
@@ -273,6 +282,7 @@ export class ServantService {
       const { data, error } = await supabase
         .from('servants')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
       if (error) throw error;
       return (data ?? []).map(rowToServant);
@@ -290,6 +300,7 @@ export class ServantService {
       const { data, error } = await supabase
         .from('servants')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('department_id', departmentId)
         .eq('status', 'active');
       if (error) throw error;
@@ -308,6 +319,7 @@ export class ServantService {
       const { data, error } = await supabase
         .from('servants')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('department_id', departmentId)
         .eq('is_head', true)
         .eq('status', 'active')
@@ -332,6 +344,7 @@ export class ServantService {
       const { data: currentHead } = await supabase
         .from('servants')
         .select('id')
+        .eq('church_id', getChurchId())
         .eq('department_id', departmentId)
         .eq('is_head', true)
         .eq('status', 'active')
@@ -364,6 +377,7 @@ export class ServantService {
       const { data, error } = await supabase
         .from('servants')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('is_shepherd', true)
         .eq('status', 'active');
       if (error) throw error;
@@ -427,6 +441,7 @@ export class ServantService {
       const { data } = await supabase
         .from('servants')
         .select('source_id')
+        .eq('church_id', getChurchId())
         .eq('department_id', departmentId)
         .eq('source_type', sourceType)
         .in('source_id', chunk);
@@ -449,6 +464,7 @@ export class ServantService {
       const { data: souls } = await supabase
         .from('souls')
         .select('*')
+        .eq('church_id', getChurchId())
         .in('id', chunk);
       if (error) throw error;
 
@@ -462,6 +478,7 @@ export class ServantService {
 
         try {
           const { error: insertErr } = await supabase.from('servants').insert({
+        church_id: getChurchId(),
             id: crypto.randomUUID(),
             full_name: (soul.full_name || '').trim(),
             nickname: soul.nickname?.trim() || null,
@@ -506,6 +523,7 @@ export class ServantService {
       const { data: users } = await supabase
         .from('users')
         .select('*')
+        .eq('church_id', getChurchId())
         .in('id', chunk);
       if (error) throw error;
 
@@ -523,6 +541,7 @@ export class ServantService {
             !!(user.business_profiles?.some?.((p: any) => p?.type === 'shepherd'));
 
           const { error: insertErr } = await supabase.from('servants').insert({
+        church_id: getChurchId(),
             id: crypto.randomUUID(),
             full_name: (user.full_name || '').trim(),
             nickname: user.nickname?.trim() || null,

@@ -3,6 +3,7 @@ import { StatCard } from './StatCard';
 import { Clock, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 export function RetentionStats() {
   const [stats, setStats] = useState({
@@ -17,6 +18,7 @@ export function RetentionStats() {
         const { data: soulsRaw, error } = await supabase
           .from('souls')
           .select('id, first_visit_date, shepherd_id')
+          .eq('church_id', getChurchId())
           .eq('status', 'active')
           .not('shepherd_id', 'is', null);
 

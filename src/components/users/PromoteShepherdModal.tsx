@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal';
 import { UserCircle, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface Department {
   id: string;
@@ -37,7 +38,7 @@ export default function PromoteShepherdModal({
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const { data: deptData, error: deptErr } = await supabase.from('departments').select('*').eq('status', 'active').order('order', { ascending: true });
+        const { data: deptData, error: deptErr } = await supabase.from('departments').select('*').eq('church_id', getChurchId()).eq('status', 'active').order('order', { ascending: true });
         if (deptErr) throw deptErr;
         setDepartments((deptData ?? []) as Department[]);
       } catch (error) {

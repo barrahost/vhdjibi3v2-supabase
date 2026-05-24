@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export interface AdminAlert {
   type: 'no_shepherd' | 'undecided' | 'pending_evangelized' | 'no_family' | 'upcoming_birthday';
@@ -34,7 +35,8 @@ export function useAdminNotifications(): AdminNotificationsResult {
         // 1. Toutes les âmes actives (une seule requête pour tout)
         const { data: allSouls } = await supabase
           .from('souls')
-          .select('id, full_name, shepherd_id, is_undecided, service_family_id, status');
+          .select('id, full_name, shepherd_id, is_undecided, service_family_id, status')
+          .eq('church_id', getChurchId());
 
         if (soulsErr) throw soulsErr;
         const activeSouls = (allSouls || []).filter((s: any) => s.status === 'active');
@@ -80,6 +82,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         const { data: evangelizedData } = await supabase
           .from('evangelized_souls')
           .select('id, full_name, status, imported_to_soul_id')
+          .eq('church_id', getChurchId())
           .neq('status', 'imported');
 
         if (evangErr) throw evangErr;
@@ -96,7 +99,8 @@ export function useAdminNotifications(): AdminNotificationsResult {
         // 6. Anniversaires dans les 7 prochains jours (table birthdays)
         const { data: birthdaysData } = await supabase
           .from('birthdays')
-          .select('id, full_name, birth_date, soul_id');
+          .select('id, full_name, birth_date, soul_id')
+          .eq('church_id', getChurchId());
 
         if (!bdErr && birthdaysData) {
           const today = new Date();

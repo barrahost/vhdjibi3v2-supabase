@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EvangelistOption {
   id: string;
@@ -21,6 +22,7 @@ function Options() {
         const { data, error } = await supabase
           .from('users')
           .select('id, full_name, role')
+          .eq('church_id', getChurchId())
           .eq('status', 'active')
           .eq('role', 'evangelist');
 

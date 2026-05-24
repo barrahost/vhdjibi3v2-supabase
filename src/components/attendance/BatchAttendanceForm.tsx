@@ -4,6 +4,7 @@ import { formatDateForInput } from '../../utils/dateUtils';
 import { CheckSquare, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function BatchAttendanceForm() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ export default function BatchAttendanceForm() {
         const { data: userData, error: userErr } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .single();
 
@@ -42,6 +44,7 @@ export default function BatchAttendanceForm() {
         const soulsQuery = supabase
           .from('souls')
           .select('id, full_name')
+          .eq('church_id', getChurchId())
           .eq('status', 'active');
         if (!isAdmin) soulsQuery.eq('shepherd_id', currentUserId);
 
@@ -75,6 +78,7 @@ export default function BatchAttendanceForm() {
       const selectedDate = new Date(date).toISOString();
       await Promise.all(selectedSouls.map(soul =>
         supabase.from('attendances').insert({
+        church_id: getChurchId(),
           id: crypto.randomUUID(),
           soul_id: soul.id,
           shepherd_id: shepherdId,

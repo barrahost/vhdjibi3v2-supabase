@@ -7,6 +7,7 @@ import EditAttendanceModal from './EditAttendanceModal';
 import { AttendanceRecord, Soul } from '../../types/attendance.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function AttendanceList() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export default function AttendanceList() {
         const { data: userRows, error: userErr } = await supabase
           .from('users')
           .select('id, role')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .limit(1);
 
@@ -57,6 +59,7 @@ export default function AttendanceList() {
         const attQuery = supabase
           .from('attendances')
           .select('*')
+          .eq('church_id', getChurchId())
           .order('date', { ascending: false });
         if (!isAdminUser) attQuery.eq('shepherd_id', shepherdId);
 
@@ -80,6 +83,7 @@ export default function AttendanceList() {
           const { data: soulsRows } = await supabase
             .from('souls')
             .select('id, full_name, phone, location, gender')
+            .eq('church_id', getChurchId())
             .in('id', soulIds);
           (soulsRows ?? []).forEach((s: any) => {
             soulsData[s.id] = {
@@ -105,6 +109,7 @@ export default function AttendanceList() {
               const { data: freshRows } = await supabase
                 .from('attendances')
                 .select('*')
+                .eq('church_id', getChurchId())
                 .eq('shepherd_id', shepherdId)
                 .order('date', { ascending: false });
               const fresh: AttendanceRecord[] = (freshRows ?? []).map((doc: any) => ({

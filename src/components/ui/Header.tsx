@@ -6,6 +6,7 @@ import { NotificationBell } from '../notifications/NotificationBell';
 import { ProfileSwitcher } from './ProfileSwitcher';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export function Header() {
   const { user, userRole, activeRole, logout } = useAuth();
@@ -25,6 +26,7 @@ export function Header() {
         const { data: userRows } = await supabase
           .from('users')
           .select('full_name, photo_url')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .limit(1);
 

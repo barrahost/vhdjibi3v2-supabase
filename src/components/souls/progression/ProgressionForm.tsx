@@ -9,6 +9,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { Separator } from '../../ui/separator';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 interface ProgressionFormProps {
   value: SpiritualProfile;
@@ -29,11 +30,11 @@ export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: Progres
     const loadData = async () => {
       try {
         // Charger les départements actifs
-        const { data: deptData } = await supabase.from('departments').select('id, name').order('order', { ascending: true });
+        const { data: deptData } = await supabase.from('departments').select('id, name').eq('church_id', getChurchId()).order('order', { ascending: true });
         setDepartments((deptData ?? []).map((r: any) => ({ id: r.id, name: r.name })));
 
         // Charger les familles de service actives
-        const { data: familiesData } = await supabase.from('service_families').select('id, name').eq('status', 'active').order('order', { ascending: true });
+        const { data: familiesData } = await supabase.from('service_families').select('id, name').eq('church_id', getChurchId()).eq('status', 'active').order('order', { ascending: true });
         setServiceFamilies((familiesData ?? []).map((r: any) => ({ id: r.id, name: r.name })));
 
       } catch (error) {

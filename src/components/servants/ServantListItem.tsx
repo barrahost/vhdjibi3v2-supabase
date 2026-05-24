@@ -2,6 +2,7 @@ import { Servant } from '../../types/servant.types';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 

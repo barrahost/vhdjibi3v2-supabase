@@ -4,6 +4,7 @@ import { SMS_VARIABLES } from '../../../types/sms.types';
 import { MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 const MAX_LENGTH = 125; // Reduced to 125 to allow for appending user info
 
@@ -22,7 +23,7 @@ export default function SMSTemplateForm() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const { data: snapshot } = await supabase.from('sms_categories').select('id, name, status').in('status', ['active', 'inactive']).order('name', { ascending: true });
+        const { data: snapshot } = await supabase.from('sms_categories').select('id, name, status').eq('church_id', getChurchId()).in('status', ['active', 'inactive']).order('name', { ascending: true });
         setCategories((snapshot ?? []).map((r: any) => ({ id: r.id, name: r.name, status: r.status })));
       } catch (error) {
         console.error('Error loading categories:', error);

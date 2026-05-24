@@ -13,6 +13,7 @@ import { Checkbox } from '../../ui/checkbox';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 interface ServantPromotionFormProps {
   soul: Soul;
@@ -47,7 +48,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
 
   // Charger les départements disponibles
   useEffect(() => {
-    supabase.from('departments').select('*').eq('status', 'active').order('order', { ascending: true })
+    supabase.from('departments').select('*').eq('church_id', getChurchId()).eq('status', 'active').order('order', { ascending: true })
       .then(({ data }) => setDepartments((data ?? []) as Department[]));
   }, []);
 

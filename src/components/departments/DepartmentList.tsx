@@ -6,6 +6,7 @@ import EditDepartmentModal from './EditDepartmentModal';
 import { Search, MoveUp, MoveDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function DepartmentList() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -15,7 +16,7 @@ export default function DepartmentList() {
 
   useEffect(() => {
     const loadDepts = async () => {
-      const { data } = await supabase.from('departments').select('*').order('order', { ascending: true });
+      const { data } = await supabase.from('departments').select('*').eq('church_id', getChurchId()).order('order', { ascending: true });
       setDepartments((data ?? []) as Department[]);
     };
     loadDepts();

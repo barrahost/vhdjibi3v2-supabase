@@ -5,6 +5,7 @@ import { SMSService } from '../../services/sms.service';
 import { SMSTemplate } from '../../types/sms.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 const MAX_SMS_LENGTH = 125;
 
@@ -55,6 +56,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
         const { data: rows } = await supabase
           .from('users')
           .select('full_name, phone')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .limit(1);
 
@@ -149,7 +151,8 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
           const { error: insertErr } = await supabase.from('interactions').insert(smsInteractionData);
           if (insertErr) {
             if (insertErr.code === 'PGRST204' || insertErr.message?.includes('source_collection')) {
-              const { error: retryErr } = await supabase.from('interactions').insert({ ...smsInteractionData, source_collection: undefined });
+              const { error: retryErr } = await supabase.from('interactions').insert({
+        church_id: getChurchId(), ...smsInteractionData, source_collection: undefined });
               if (retryErr) throw retryErr;
             } else {
               throw insertErr;
@@ -184,7 +187,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
 
       let actorSnapshotName: string | null = null;
       try {
-        const { data: actorSnap } = await supabase.from('users').select('full_name').eq('id', shepherdId).limit(1).single();
+        const { data: actorSnap } = await supabase.from('users').select('full_name').eq('church_id', getChurchId()).eq('id', shepherdId).limit(1).single();
         actorSnapshotName = actorSnap?.full_name || null;
       } catch (_) {}
 
@@ -208,6 +211,7 @@ export default function InteractionForm({ soulId, shepherdId, onSuccess, onClose
         // Fallback: retry without source_collection if column doesn't exist yet
         if (insertErr.code === 'PGRST204' || insertErr.message?.includes('source_collection')) {
           const { error: retryErr } = await supabase.from('interactions').insert({
+        church_id: getChurchId(),
             ...interactionData,
             source_collection: undefined
           });

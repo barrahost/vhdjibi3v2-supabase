@@ -4,6 +4,7 @@ import { Soul } from '../../../types/database.types';
 import { TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 interface WeeklyData {
   week: string;
@@ -19,7 +20,7 @@ export function SoulEvolutionChart() {
     const fetchEvolutionData = async () => {
       try {
         // Récupérer toutes les âmes enregistrées (sans filtre de statut)
-        const { data: soulsRaw } = await supabase.from('souls').select('*');
+        const { data: soulsRaw } = await supabase.from('souls').select('*').eq('church_id', getChurchId());
         const allSouls = (soulsRaw ?? []).map(row => ({
           id: row.id,
           ...row,

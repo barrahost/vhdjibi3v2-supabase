@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { EvangelizedSoul } from '../../types/evangelized.types';
 import { Search, UserCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect }: 
     supabase
       .from('evangelized_souls')
       .select('*')
+      .eq('church_id', getChurchId())
       .neq('status', 'imported')
       .then(({ data, error }) => {
         if (error) { console.error('PickEvangelized load error:', error); return; }

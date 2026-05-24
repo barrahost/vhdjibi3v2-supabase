@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
 
 interface Category {
@@ -19,6 +20,7 @@ export function useCategories() {
         const { data, error } = await supabase
           .from('audio_categories')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('status', 'active')
           .order('name', { ascending: true });
 

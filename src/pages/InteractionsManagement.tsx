@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, MessageCircle, Phone, Users, ChevronDown, Trash2 } from 'lucide-react';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
@@ -154,6 +155,7 @@ export default function InteractionsManagement() {
         const { data, error } = await supabase
           .from('users')
           .select('id, full_name, role')
+          .eq('church_id', getChurchId())
           .eq('status', 'active');
         if (error) throw error;
         const list: Actor[] = (data || [])
@@ -186,6 +188,7 @@ export default function InteractionsManagement() {
           const { data: userData } = await supabase
             .from('users')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('id', localUserId)
             .eq('status', 'active')
             .single();
@@ -199,7 +202,7 @@ export default function InteractionsManagement() {
         }
       }
 
-      let q = supabase.from('interactions').select('*').order('date', { ascending: false });
+      let q = supabase.from('interactions').select('*').eq('church_id', getChurchId()).order('date', { ascending: false });
 
       if (currentUserId) {
         q = q.eq('shepherd_id', currentUserId);
@@ -227,8 +230,8 @@ export default function InteractionsManagement() {
       const soulsData: Record<string, any> = {};
       if (uniqueSoulIds.length > 0) {
         const [soulsResult, evangelizedResult] = await Promise.all([
-          supabase.from('souls').select('id, full_name').in('id', uniqueSoulIds),
-          supabase.from('evangelized_souls').select('id, full_name').in('id', uniqueSoulIds),
+          supabase.from('souls').select('id, full_name').eq('church_id', getChurchId()).in('id', uniqueSoulIds),
+          supabase.from('evangelized_souls').select('id, full_name').eq('church_id', getChurchId()).in('id', uniqueSoulIds),
         ]);
         (soulsResult.data || []).forEach((s: any) => {
           soulsData[s.id] = { id: s.id, fullName: s.full_name || s.fullName, collection: 'souls' };
@@ -244,6 +247,7 @@ export default function InteractionsManagement() {
         const { data: actorDocs } = await supabase
           .from('users')
           .select('id, full_name, role')
+          .eq('church_id', getChurchId())
           .in('id', uniqueActorIds);
         (actorDocs || []).forEach((d: any) => {
           actorsData[d.id] = { id: d.id, fullName: d.full_name || d.fullName, role: d.role };

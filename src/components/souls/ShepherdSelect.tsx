@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShepherdOption } from '../../types/database.types';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface ShepherdSelectProps {
   value: string | undefined;
@@ -17,6 +18,7 @@ function Options() {
         const { data, error } = await supabase
           .from('users')
           .select('id, uid, full_name, role, business_profiles')
+          .eq('church_id', getChurchId())
           .eq('status', 'active');
 
         if (error) throw error;

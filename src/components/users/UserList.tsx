@@ -16,6 +16,7 @@ import { UserRoleMigration } from '../../utils/migration/userRoleMigration';
 import { useServantStatus } from '../../hooks/useServantStatus';
 import { isShepherdUser, isADNUser, isAdminUser, isDepartmentLeaderUser, isFamilyLeaderUser, isEvangelistUser } from '../../utils/roleHelpers';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 
@@ -216,6 +217,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
         const { data: usersRaw, error: usersErr } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .order('created_at', { ascending: false });
 
         if (usersErr) throw usersErr;

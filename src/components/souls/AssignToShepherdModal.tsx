@@ -9,6 +9,7 @@ import { UserCheck, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePermissions } from '../../hooks/usePermissions';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface AssignToShepherdModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export default function AssignToShepherdModal({
     supabase
       .from('users')
       .select('id, full_name, role')
+      .eq('church_id', getChurchId())
       .eq('status', 'active')
       .in('role', ['shepherd', 'intern', 'admin'])
       .then(({ data }) => {

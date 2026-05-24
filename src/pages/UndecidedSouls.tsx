@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
 import { Search, AlertTriangle, MessageCircle } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
@@ -80,6 +81,7 @@ export default function UndecidedSouls() {
       const { data, error } = await supabase
         .from('souls')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
 
       if (error) {

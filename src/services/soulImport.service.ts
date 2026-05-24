@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export interface ParsedRow {
   rowNumber: number;
@@ -80,8 +81,8 @@ export async function parseSoulsFile(file: File): Promise<ParsedRow[]> {
 
   // Preload families + existing phones from Supabase
   const [familiesRes, soulsRes] = await Promise.all([
-    supabase.from('service_families').select('id, name'),
-    supabase.from('souls').select('phone'),
+    supabase.from('service_families').select('id, name').eq('church_id', getChurchId()),
+    supabase.from('souls').select('phone').eq('church_id', getChurchId()),
   ]);
 
   const familyMap = new Map<string, string>();

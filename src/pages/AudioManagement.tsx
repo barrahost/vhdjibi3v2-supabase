@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { StorageService } from '../services/storage.service';
 import { Plus, Search, Trash2, Pencil, Play, Pause, Calendar, Loader2 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
@@ -85,6 +86,8 @@ export default function AudioManagement() {
       const { data, error } = await supabase
         .from('teachings')
         .select('*')
+        .eq('church_id', getChurchId())
+        .eq('church_id', getChurchId())
         .eq('status', 'active')
         .order('date', { ascending: false });
 
@@ -341,6 +344,7 @@ export default function AudioManagement() {
       // Save to Supabase with correct duration
       const newId = crypto.randomUUID();
       const { error: insertError } = await supabase.from('teachings').insert({
+        church_id: getChurchId(),
         id: newId,
         title: formData.title.trim(),
         description: formData.description.trim(),

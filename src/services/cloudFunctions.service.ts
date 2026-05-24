@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 /**
  * Service for password operations.
@@ -66,6 +67,7 @@ export class CloudFunctionsService {
       const { data: usersRow } = await supabase
         .from('users')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('id', docId)
         .single();
       if (usersRow) {
@@ -90,6 +92,7 @@ export class CloudFunctionsService {
       const { data: usersRows } = await supabase
         .from('users')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('uid', uid)
         .limit(1);
       if (usersRows && usersRows.length > 0) {

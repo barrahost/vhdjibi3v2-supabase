@@ -10,6 +10,7 @@ import { isShepherdUser } from '../../utils/roleHelpers';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 // Configure Mapbox API key from environment variables
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_API_KEY;
@@ -97,7 +98,7 @@ export function SoulMap({ className = '' }: SoulMapProps) {
     const loadData = async () => {
       try {
         // Charger les bergers actifs
-        const { data: usersData } = await supabase.from('users').select('*').eq('status', 'active');
+        const { data: usersData } = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('status', 'active');
         const shepherdsData = ((usersData ?? []).map((r: any) => ({
           id: r.id,
           fullName: r.full_name || '',
@@ -109,7 +110,7 @@ export function SoulMap({ className = '' }: SoulMapProps) {
         setUsers(shepherdsData);
 
         // Charger les âmes
-        let soulsQ = supabase.from('souls').select('*').eq('status', 'active');
+        let soulsQ = supabase.from('souls').select('*').eq('church_id', getChurchId()).eq('status', 'active');
         if (selectedShepherdId === 'unassigned') {
           soulsQ = soulsQ.is('shepherd_id', null);
         } else if (selectedShepherdId) {

@@ -10,6 +10,7 @@ import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface ImportServantsModalProps {
   isOpen: boolean;
@@ -82,6 +83,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
         const { data: existingServants } = await supabase
           .from('servants')
           .select('source_type, source_id, original_soul_id')
+          .eq('church_id', getChurchId())
           .eq('department_id', selectedDept);
         const existingSoulIds = new Set<string>();
         const existingUserIds = new Set<string>();
@@ -100,6 +102,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           const { data: soulsData } = await supabase
             .from('souls')
             .select('id, full_name, phone, gender')
+            .eq('church_id', getChurchId())
             .eq('status', 'active');
           const rows: SoulRow[] = (soulsData ?? []).map((d: any) => ({
             id: d.id,
@@ -113,6 +116,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           const { data: usersData } = await supabase
             .from('users')
             .select('id, full_name, phone, email, role')
+            .eq('church_id', getChurchId())
             .eq('status', 'active');
           const rows: UserRow[] = (usersData ?? []).map((d: any) => ({
             id: d.id,

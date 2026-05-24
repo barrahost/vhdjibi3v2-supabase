@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export interface ServiceFamily {
   id: string;
@@ -26,6 +27,7 @@ export function useServiceFamilies(onlyActive: boolean = true) {
         let q = supabase
           .from('service_families')
           .select('*')
+          .eq('church_id', getChurchId())
           .order('order', { ascending: true });
 
         if (onlyActive) {

@@ -1,6 +1,7 @@
 import { BusinessProfile } from '../../types/businessProfile.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export class ServantLeaderSync {
   static async syncAllDepartmentHeads(): Promise<{ synced: number; errors: string[] }> {
@@ -9,6 +10,7 @@ export class ServantLeaderSync {
       const { data: servants, error: sErr } = await supabase
         .from('servants')
         .select('id, full_name, email, department_id')
+        .eq('church_id', getChurchId())
         .eq('is_head', true)
         .eq('status', 'active');
       if (sErr) throw sErr;
@@ -22,6 +24,7 @@ export class ServantLeaderSync {
           const { data: userRows } = await supabase
             .from('users')
             .select('id, full_name, business_profiles')
+            .eq('church_id', getChurchId())
             .eq('email', servant.email)
             .limit(1);
 
@@ -68,6 +71,7 @@ export class ServantLeaderSync {
     const { data: servants } = await supabase
       .from('servants')
       .select('id, department_id')
+      .eq('church_id', getChurchId())
       .eq('email', servantEmail)
       .eq('is_head', true)
       .limit(1);
@@ -77,6 +81,7 @@ export class ServantLeaderSync {
     const { data: userRows } = await supabase
       .from('users')
       .select('id')
+      .eq('church_id', getChurchId())
       .eq('email', servantEmail)
       .limit(1);
     if (!userRows || userRows.length === 0) throw new Error('User not found');

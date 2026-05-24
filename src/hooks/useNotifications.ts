@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
 
 export interface Notification {
@@ -32,6 +33,7 @@ export function useNotifications(userId: string | undefined) {
         const { data: soulsData } = await supabase
           .from('souls')
           .select('id, full_name')
+          .eq('church_id', getChurchId())
           .eq('shepherd_id', userId);
 
         if (soulsErr) throw soulsErr;
@@ -42,6 +44,7 @@ export function useNotifications(userId: string | undefined) {
         const { data: interactionsData } = await supabase
           .from('interactions')
           .select('soul_id, date')
+          .eq('church_id', getChurchId())
           .eq('shepherd_id', userId)
           .order('date', { ascending: false });
 

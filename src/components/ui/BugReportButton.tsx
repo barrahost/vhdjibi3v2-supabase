@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bug, X, Send, ChevronDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,7 @@ export default function BugReportButton() {
     setSubmitting(true);
     try {
       const { error } = await supabase.from('bug_reports').insert({
+        church_id: getChurchId(),
         id: crypto.randomUUID(),
         title: form.title.trim(),
         description: form.description.trim(),

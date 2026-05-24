@@ -5,6 +5,7 @@ import { MessageSquare } from 'lucide-react';
 import { SMS_VARIABLES } from '../../../types/sms.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
@@ -33,7 +34,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
     const loadTemplate = async () => {
       try {
         // Supabase: use id directly: const docRefId = templateId; // table: smsTemplates
-        const docData = await supabase.from('sms_templates').select('*').eq('id', templateId).single();
+        const docData = await supabase.from('sms_templates').select('*').eq('church_id', getChurchId()).eq('id', templateId).single();
         if (docErr) throw docErr;
         
         if (!!docData) {
@@ -61,7 +62,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const { data: snapshot } = await supabase.from('sms_categories').select('id, name').eq('status', 'active').order('name', { ascending: true });
+        const { data: snapshot } = await supabase.from('sms_categories').select('id, name').eq('church_id', getChurchId()).eq('status', 'active').order('name', { ascending: true });
         setCategories((snapshot ?? []).map((r: any) => ({ id: r.id, name: r.name })));
       } catch (error) {
         console.error('Error loading categories:', error);

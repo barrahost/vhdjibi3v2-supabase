@@ -9,6 +9,7 @@ import { LocationField } from '../souls/form/LocationField';
 import { StorageService } from '../../services/storage.service';
 import { BusinessProfile } from '../../types/businessProfile.types';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 const DEFAULT_PASSWORDS = {
   ADMIN: '@123456',
@@ -61,7 +62,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       }
 
       // Vérifier si le numéro existe déjà
-      const { data: phoneData } = await supabase.from('users').select('id').eq('phone', phoneValidation.formattedNumber).limit(1);
+      const { data: phoneData } = await supabase.from('users').select('id').eq('church_id', getChurchId()).eq('phone', phoneValidation.formattedNumber).limit(1);
       if (phoneData && phoneData.length > 0) {
         toast.error('Ce numéro de téléphone est déjà utilisé');
         return;
@@ -70,7 +71,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
       // Vérifier si l'email existe déjà — uniquement s'il est renseigné
       const trimmedEmail = formData.email.trim();
       if (trimmedEmail) {
-        const { data: emailData } = await supabase.from('users').select('id').eq('email', trimmedEmail).limit(1);
+        const { data: emailData } = await supabase.from('users').select('id').eq('church_id', getChurchId()).eq('email', trimmedEmail).limit(1);
         if (emailData && emailData.length > 0) {
           toast.error('Cet email est déjà utilisé');
           return;
@@ -99,6 +100,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
 
       // Créer l'utilisateur dans Firestore
       const { data: insertedUser, error: _insertErr } = await supabase.from('users').insert({
+        church_id: getChurchId(),
         id: uid,
         full_name: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,

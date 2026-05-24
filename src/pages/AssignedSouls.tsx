@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { useAuth } from '../contexts/AuthContext';
 import type { Soul } from '../types/database.types';
 import { Pencil, Search, Phone } from 'lucide-react';
@@ -29,6 +30,7 @@ export default function AssignedSouls() {
       const { data, error } = await supabase
         .from('interactions')
         .select('soul_id, date')
+        .eq('church_id', getChurchId())
         .in('soul_id', soulIds)
         .order('date', { ascending: false });
 
@@ -124,6 +126,7 @@ export default function AssignedSouls() {
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('id', currentUserId)
         .eq('status', 'active');
 
@@ -143,6 +146,7 @@ export default function AssignedSouls() {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
+            .eq('church_id', getChurchId())
             .eq('shepherd_id', currentUserId)
             .eq('status', 'active');
 

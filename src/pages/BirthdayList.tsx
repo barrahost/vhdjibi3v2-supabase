@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { Search, Calendar, Gift, Users, Bell, Trash2, Plus } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { Modal } from '../components/ui/Modal';
@@ -165,6 +166,7 @@ export default function BirthdayList() {
       const { data, error } = await supabase
         .from('birthdays')
         .select('*')
+        .eq('church_id', getChurchId())
         .order('birth_date', { ascending: true });
 
       if (error) {

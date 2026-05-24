@@ -2,6 +2,7 @@ import { Soul } from '../types/database.types';
 import { ServantFormData } from '../types/servant.types';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export class SoulPromotionService {
   /**
@@ -12,6 +13,7 @@ export class SoulPromotionService {
       const { data: soulRow, error: soulErr } = await supabase
         .from('souls')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('id', soulId)
         .single();
 

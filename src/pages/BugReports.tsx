@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { Bug, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useConfirmModal } from '../hooks/useConfirmModal';
@@ -45,6 +46,7 @@ export default function BugReports() {
     const { data, error } = await supabase
       .from('bug_reports')
       .select('*')
+      .eq('church_id', getChurchId())
       .order('created_at', { ascending: false });
     if (error) { toast.error('Erreur de chargement'); setLoading(false); return; }
     setReports((data || []) as BugReport[]);

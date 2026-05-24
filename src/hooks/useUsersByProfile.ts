@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import type { BusinessProfileType } from '../types/businessProfile.types';
 
 export interface SimpleUser {
@@ -28,6 +29,7 @@ export function useUsersByProfile(profileTypes: BusinessProfileType[]) {
         const { data, error: err } = await supabase
           .from('users')
           .select('id, uid, full_name, nickname, phone, role, business_profiles')
+          .eq('church_id', getChurchId())
           .eq('status', 'active');
 
         if (err) throw err;

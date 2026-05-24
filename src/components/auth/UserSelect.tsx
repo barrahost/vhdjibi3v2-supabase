@@ -4,6 +4,7 @@ import { ChevronDown, Search } from 'lucide-react';
 import { UserType } from '../../types/user.types';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 
 /** Génère les initiales (1 ou 2 lettres) depuis un nom complet */
@@ -79,6 +80,7 @@ export default function UserSelect({ value, onChange }: UserSelectProps) {
       const { data: usersRaw } = await supabase
         .from('users')
         .select('id, full_name, phone, role, email, status')
+        .eq('church_id', getChurchId())
         .eq('status', 'active')
         .order('full_name', { ascending: true });
 

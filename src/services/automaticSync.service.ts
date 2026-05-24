@@ -1,6 +1,7 @@
 import { BusinessProfile } from '../types/businessProfile.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 /**
  * Service de synchronisation automatique des profils business
@@ -26,6 +27,7 @@ export class AutomaticSyncService {
       const { data: userRows } = await supabase
         .from('users')
         .select('id, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('email', servantData.email)
         .limit(1);
 
@@ -80,6 +82,7 @@ export class AutomaticSyncService {
       const { data: userRows } = await supabase
         .from('users')
         .select('id, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('email', emailToUse)
         .limit(1);
 
@@ -133,6 +136,7 @@ export class AutomaticSyncService {
       const { data: userRows } = await supabase
         .from('users')
         .select('id, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('email', servantData.email)
         .limit(1);
 

@@ -3,6 +3,7 @@ import { StatCard } from './StatCard';
 import { Heart, BookOpen, Droplets, Users2, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 export function SpiritualStats() {
   const [stats, setStats] = useState({
@@ -16,6 +17,7 @@ export function SpiritualStats() {
         const { data: souls, error } = await supabase
           .from('souls')
           .select('id, spiritual_profile, shepherd_id')
+          .eq('church_id', getChurchId())
           .eq('status', 'active')
           .not('shepherd_id', 'is', null);
 

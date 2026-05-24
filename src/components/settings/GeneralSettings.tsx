@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { Save, Globe, Clock, AlertTriangle, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -38,6 +39,7 @@ export default function GeneralSettings() {
         const { data, error } = await supabase
           .from('app_settings')
           .select('value')
+          .eq('church_id', getChurchId())
           .eq('key', 'general')
           .single();
         if (!error && data?.value) {

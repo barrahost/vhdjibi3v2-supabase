@@ -7,6 +7,7 @@ import { SMSService } from '../../services/sms.service';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 const SMS_HARD_LIMIT = 160;
 
@@ -58,6 +59,7 @@ export default function UndecidedSoulMessageModal({
           const { data: rows } = await supabase
             .from('users')
             .select('full_name, phone')
+            .eq('church_id', getChurchId())
             .eq('id', currentUserId)
             .limit(1);
           if (rows && rows.length > 0) {

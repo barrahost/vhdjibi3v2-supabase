@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 export function CategoryForm() {
   const [formData, setFormData] = useState({
@@ -22,13 +23,14 @@ export function CategoryForm() {
       }
 
       // Check if category already exists
-      const { data: existingDocs } = await supabase.from('audio_categories').select('id').eq('name', formData.name.trim()).limit(1);
+      const { data: existingDocs } = await supabase.from('audio_categories').select('id').eq('church_id', getChurchId()).eq('name', formData.name.trim()).limit(1);
       if (existingDocs && existingDocs.length > 0) {
         toast.error('Une catégorie avec ce nom existe déjà');
         return;
       }
 
       const { error: _insertErr } = await supabase.from('audio_categories').insert({
+        church_id: getChurchId(),
         ...formData,
         name: formData.name.trim(),
         description: formData.description.trim(),

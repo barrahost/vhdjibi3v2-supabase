@@ -8,6 +8,7 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EditServantModalProps {
   servant: Servant;
@@ -71,7 +72,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si le numéro existe déjà (sauf pour le même serviteur)
       if (phoneValidation.formattedNumber !== servant.phone) {
-        const { data: phoneData } = await supabase.from('servants').select('id').eq('phone', phoneValidation.formattedNumber).limit(1);
+        const { data: phoneData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('phone', phoneValidation.formattedNumber).limit(1);
         if (phoneData && phoneData.length > 0) {
           toast.error('Ce numéro de téléphone est déjà utilisé');
           return;
@@ -80,7 +81,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Vérifier si l'email existe déjà (sauf pour le même serviteur)
       if (formData.email && formData.email !== servant.email) {
-        const { data: emailData } = await supabase.from('servants').select('id').eq('email', formData.email.trim()).limit(1);
+        const { data: emailData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('email', formData.email.trim()).limit(1);
         if (emailData && emailData.length > 0) {
           toast.error('Cet email est déjà utilisé');
           return;
@@ -89,7 +90,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Si le département a changé et que c'est un responsable, vérifier qu'il n'y a pas déjà un responsable
       if (formData.isHead && formData.departmentId !== servant.departmentId) {
-        const { data: headData } = await supabase.from('servants').select('id').eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
+        const { data: headData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
         if (headData && headData.length > 0) {
           toast.error('Ce département a déjà un responsable');
           return;
@@ -103,7 +104,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
       // Si le serviteur devient responsable
       if (formData.isHead && !servant.isHead) {
-        const { data: headData } = await supabase.from('servants').select('id').eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
+        const { data: headData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
         if (headData && headData.length > 0) {
           toast.error('Ce département a déjà un responsable');
           return;

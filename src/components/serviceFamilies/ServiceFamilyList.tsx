@@ -5,6 +5,7 @@ import EditServiceFamilyModal from './EditServiceFamilyModal';
 import { Search, MoveUp, MoveDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface ServiceFamily {
   id: string;
@@ -24,7 +25,7 @@ export default function ServiceFamilyList() {
 
   useEffect(() => {
     const loadFamilies = async () => {
-      const { data } = await supabase.from('service_families').select('*').order('order', { ascending: true });
+      const { data } = await supabase.from('service_families').select('*').eq('church_id', getChurchId()).order('order', { ascending: true });
       setFamilies((data ?? []) as any[]);
     };
     loadFamilies();

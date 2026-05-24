@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface Department {
   id: string;
@@ -49,6 +50,7 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
         const { data: nameData } = await supabase
           .from('departments')
           .select('id')
+          .eq('church_id', getChurchId())
           .eq('name', formData.name.trim())
           .neq('id', department.id)
           .limit(1);

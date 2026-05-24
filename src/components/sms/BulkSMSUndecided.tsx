@@ -6,6 +6,7 @@ import { Search, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 const SMS_HARD_LIMIT = 160;
 
@@ -31,7 +32,7 @@ export default function BulkSMSUndecided() {
         const currentUserId = localUser.id;
         if (currentUserId) {
           const { data: userRows } = await supabase
-            .from('users').select('full_name, phone').eq('id', currentUserId).limit(1);
+            .from('users').select('full_name, phone').eq('church_id', getChurchId()).eq('id', currentUserId).limit(1);
           if (userRows && userRows.length > 0) {
             setUserInfo({ fullName: userRows[0].full_name || '', phone: userRows[0].phone || '' });
           } else {
@@ -57,6 +58,7 @@ export default function BulkSMSUndecided() {
         const { data: soulsData, error: soulsErr } = await supabase
           .from('souls')
           .select('id, full_name, nickname, phone')
+          .eq('church_id', getChurchId())
           .eq('is_undecided', true)
           .eq('status', 'active');
 

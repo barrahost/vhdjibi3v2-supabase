@@ -13,6 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser, isADNUser } from '../../utils/roleHelpers';
 import EvangelistSelect from './EvangelistSelect';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EvangelistOption {
   id: string;
@@ -176,7 +177,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
   useEffect(() => {
     const load = async () => {
       try {
-        const snap = await supabase.from('users').select('*').eq('status', 'active').then(r=>r);
+        const snap = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('status', 'active').then(r=>r);
         const data = snap.docs
           .map(d => {
             const u: any = d.data();
@@ -204,7 +205,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
     const checkDB = async () => {
       setCheckingDuplicates(true);
       try {
-        const snap = await supabase.from('evangelized_souls').select('*');
+        const snap = await supabase.from('evangelized_souls').select('*').eq('church_id', getChurchId());
         const existingPhones = new Set<string>();
         const existingNames = new Set<string>();
         snap.forEach(d => {

@@ -5,6 +5,7 @@ import { MenuAssignment } from '../users/MenuAssignment';
 import { isShepherdUser, isInternUser } from '../../utils/roleHelpers';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function UserMenuManagement() {
   const [users, setUsers] = useState<any[]>([]);
@@ -19,7 +20,7 @@ export default function UserMenuManagement() {
     const fetchUsers = async () => {
       try {
         // Charger tous les utilisateurs actifs puis filtrer côté client
-        const { data, error } = await supabase.from('users').select('*').eq('status', 'active');
+        const { data, error } = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('status', 'active');
         if (error) throw error;
         const usersData = (data ?? []).map((r: any) => ({
           id: r.id,

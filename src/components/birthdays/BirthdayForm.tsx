@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Cake, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface BirthdayFormProps {
   onSuccess?: () => void;
@@ -44,6 +45,7 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       const { data: existingPhone } = await supabase
         .from('birthdays')
         .select('id')
+        .eq('church_id', getChurchId())
         .eq('phone', formData.phone)
         .limit(1);
 
@@ -53,6 +55,7 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       }
 
       const { error: _insertErr } = await supabase.from('birthdays').insert({
+        church_id: getChurchId(),
         ...formData,
         birthDate: `${formData.birthMonth}-${formData.birthDay}`,
         createdAt: new Date(),

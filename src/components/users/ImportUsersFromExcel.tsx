@@ -7,6 +7,7 @@ import { BusinessProfileType } from '../../types/businessProfile.types';
 import { ServantService } from '../../services/servant.service';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 /* ─── Types ─────────────────────────────────────────────── */
 type RowStatus = 'valid' | 'error' | 'db_duplicate' | 'file_duplicate';
@@ -88,7 +89,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
     const checkDB = async () => {
       setCheckingDuplicates(true);
       try {
-        const snap = await supabase.from('users').select('*');
+        const snap = await supabase.from('users').select('*').eq('church_id', getChurchId());
         const existingPhones = new Set(snap.docs.map(d => d.data().phone as string));
 
         setRows(prev => prev.map(row => {
@@ -207,7 +208,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
 
     try {
       // Re-vérification finale avant écriture
-      const snap = await supabase.from('users').select('*');
+      const snap = await supabase.from('users').select('*').eq('church_id', getChurchId());
       const existingPhones = new Set(snap.docs.map(d => d.data().phone as string));
 
       for (const row of validRows) {
@@ -217,6 +218,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
         const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
         const { data: insertedUser, error: _insertErr } = await supabase.from('users').insert({
+        church_id: getChurchId(),
           uid,
           fullName: row.fullName,
           nickname: row.nickname || null,

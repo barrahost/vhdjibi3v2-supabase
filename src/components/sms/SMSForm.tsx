@@ -6,6 +6,7 @@ import { SMSTemplate, SMSRecipient, SMS_VARIABLES } from '../../types/sms.types'
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface SMSFormProps {
   assignedSouls: SMSRecipient[];
@@ -35,6 +36,7 @@ export default function SMSForm({ assignedSouls }: SMSFormProps) {
           const { data: rows } = await supabase
             .from('users')
             .select('full_name, phone')
+            .eq('church_id', getChurchId())
             .eq('id', currentUserId)
             .limit(1);
           if (rows && rows.length > 0) {

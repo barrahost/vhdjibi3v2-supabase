@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Phone, Users, MessageSquare, Calendar } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 export function InteractionStats() {
   const [stats, setStats] = useState({
@@ -19,6 +20,7 @@ export function InteractionStats() {
         const { data: interactions, error } = await supabase
           .from('interactions')
           .select('id, type, date, soul_id')
+          .eq('church_id', getChurchId())
           .gte('date', weekStart.toISOString());
 
         if (error) throw error;

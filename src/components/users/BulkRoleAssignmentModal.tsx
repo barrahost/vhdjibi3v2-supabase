@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Users, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface BulkRoleAssignmentModalProps {
   isOpen: boolean;

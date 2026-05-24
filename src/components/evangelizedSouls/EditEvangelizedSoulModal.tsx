@@ -13,6 +13,7 @@ import { isAdminUser } from '../../utils/roleHelpers';
 import EvangelistSelect from './EvangelistSelect';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface Props {
   soul: EvangelizedSoul;

@@ -2,6 +2,7 @@ import { Soul } from '../../types/database.types';
 import { Servant } from '../../types/servant.types';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export class SoulServantMigration {
   /**
@@ -20,6 +21,7 @@ export class SoulServantMigration {
       const { data: soulsRows } = await supabase
         .from('souls')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
       if (soulsErr) throw soulsErr;
 
@@ -40,6 +42,7 @@ export class SoulServantMigration {
       const { data: servantsRows } = await supabase
         .from('servants')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('status', 'active');
       if (servantsErr) throw servantsErr;
 
@@ -108,6 +111,7 @@ export class SoulServantMigration {
       const { data: promotedSouls } = await supabase
         .from('souls')
         .select('id, full_name, servant_id, is_servant')
+        .eq('church_id', getChurchId())
         .eq('is_servant', true);
       if (error) throw error;
 
@@ -116,6 +120,7 @@ export class SoulServantMigration {
           const { data: servantRows } = await supabase
             .from('servants')
             .select('id')
+            .eq('church_id', getChurchId())
             .eq('id', soul.servant_id)
             .limit(1);
           if (!servantRows || servantRows.length === 0) {

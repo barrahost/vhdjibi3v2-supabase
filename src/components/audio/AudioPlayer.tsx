@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import toast from 'react-hot-toast';
 
@@ -212,7 +213,7 @@ export function AudioPlayer({
       const p = audioRef.current.play();
       if (p !== undefined) {
         if (!playTrackedRef.current) {
-          supabase.from('teachings').select('plays').eq('id', id).single()
+          supabase.from('teachings').select('plays').eq('church_id', getChurchId()).eq('id', id).single()
             .then(({ data }) => { if (data) supabase.from('teachings').update({ plays: (data.plays || 0) + 1 }).eq('id', id).then(() => {}); });
           playTrackedRef.current = true;
           try {

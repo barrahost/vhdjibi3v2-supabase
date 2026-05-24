@@ -3,6 +3,7 @@ import AttendanceActions from './AttendanceActions';
 import { AttendanceRecord, Soul } from '../../types/attendance.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 

@@ -4,6 +4,7 @@ import { StatCard } from '../dashboard/stats/StatCard';
 import { Users, UserCheck, UserX } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function AttendanceStats() {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ export default function AttendanceStats() {
         const { data: userRows, error: userErr } = await supabase
           .from('users')
           .select('id, role')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .limit(1);
 
@@ -48,7 +50,8 @@ export default function AttendanceStats() {
         // Récupérer toutes les présences (admin = toutes, berger = les siennes)
         const statsQuery = supabase
           .from('attendances')
-          .select('id, present');
+          .select('id, present')
+          .eq('church_id', getChurchId());
         if (!isAdminUser) statsQuery.eq('shepherd_id', shepherdId);
 
         const { data: attendancesRows, error: attErr } = await statsQuery;

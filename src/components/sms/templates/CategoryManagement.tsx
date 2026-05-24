@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
@@ -37,7 +38,7 @@ export function CategoryManagement() {
 
   const loadCategories = async () => {
     try {
-      const { data: snapshot } = await supabase.from('sms_categories').select('*').in('status', ['active', 'inactive']).order('name', { ascending: true });
+      const { data: snapshot } = await supabase.from('sms_categories').select('*').eq('church_id', getChurchId()).in('status', ['active', 'inactive']).order('name', { ascending: true });
       setCategories((snapshot ?? []).map((r: any) => ({ id: r.id, name: r.name, description: r.description || '', status: r.status } as Category)));
     } catch (error) {
       console.error('Error loading categories:', error);
@@ -60,7 +61,7 @@ export function CategoryManagement() {
       }
 
       // Vérifier si le nom existe déjà
-      const { data: existingDocs } = await supabase.from('sms_categories').select('id').eq('name', formData.name.trim()).limit(1);
+      const { data: existingDocs } = await supabase.from('sms_categories').select('id').eq('church_id', getChurchId()).eq('name', formData.name.trim()).limit(1);
       if (!editingCategoryId && existingDocs && existingDocs.length > 0) {
         toast.error('Une catégorie avec ce nom existe déjà');
         return;
@@ -76,6 +77,7 @@ export function CategoryManagement() {
       } else {
         // Création
         const { error: _insertErr } = await supabase.from('sms_categories').insert({
+        church_id: getChurchId(),
           ...formData,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -95,7 +97,7 @@ export function CategoryManagement() {
     if (await confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
       try {
         // Vérifier si la catégorie est utilisée
-        const { data: templatesData } = await supabase.from('sms_templates').select('id').eq('category', category.name).limit(1);
+        const { data: templatesData } = await supabase.from('sms_templates').select('id').eq('church_id', getChurchId()).eq('category', category.name).limit(1);
         if (templatesData && templatesData.length > 0) {
           toast.error('Cette catégorie est utilisée par des modèles et ne peut pas être supprimée');
           return;

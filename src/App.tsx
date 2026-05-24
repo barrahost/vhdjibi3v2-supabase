@@ -4,6 +4,9 @@ import { Toaster } from 'react-hot-toast';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider } from './contexts/AuthContext';
+import { useChurch } from './contexts/ChurchContext';
+import ChurchNotFound from './pages/ChurchNotFound';
+import { ChurchProvider } from './contexts/ChurchContext';
 import { useAuth } from './contexts/AuthContext';
 import UndecidedSouls from './pages/UndecidedSouls';
 import { UserProfileProvider } from './contexts/UserProfileContext';
@@ -43,6 +46,7 @@ const BirthdayList = lazy(() => import('./pages/BirthdayList'));
 const BirthdayConfirmation = lazy(() => import('./pages/BirthdayConfirmation'));
 const ReplayTeachings = lazy(() => import('./pages/ReplayTeachings'));
 const AudioManagement = lazy(() => import('./pages/AudioManagement'));
+const ChurchesManagement = lazy(() => import('./pages/ChurchesManagement'));
 
 // Loading component
 function PageLoader() {
@@ -55,9 +59,18 @@ function PageLoader() {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { church, loading: churchLoading, isSuperAdminDomain } = useChurch();
 
-  if (loading) {
+  if (loading || churchLoading) {
     return <PageLoader />;
+  }
+
+  // If not super admin domain and church not found, show error page
+  const hostname = window.location.hostname;
+  const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.');
+  if (!isSuperAdminDomain && !isLocalDev && !church) {
+    const slug = hostname.split('.')[0];
+    return <ChurchNotFound slug={slug} />;
   }
 
   return (
@@ -316,6 +329,7 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ChurchProvider>
       <BrowserRouter>
         <AuthProvider>
           <UserProfileProvider>
@@ -325,6 +339,7 @@ export default function App() {
           </UserProfileProvider>
         </AuthProvider>
       </BrowserRouter>
+      </ChurchProvider>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { BusinessProfile } from '../../types/businessProfile.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export class BusinessProfileMigration {
   static async migrateDepartmentLeaders(): Promise<{ migrated: number; errors: string[] }> {
@@ -9,6 +10,7 @@ export class BusinessProfileMigration {
       const { data: users, error } = await supabase
         .from('users')
         .select('id, full_name, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('role', 'department_leader');
       if (error) throw error;
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { DEFAULT_PASSWORDS } from '../constants/auth';
 import { RoleService } from '../services/auth/roleService';
 import type { Permission, Role, BaseRole } from '../types/permission.types';
@@ -9,6 +10,21 @@ import { PROFILE_PERMISSIONS, getProfilePermissions } from '../types/businessPro
 import type { BusinessProfileType } from '../types/businessProfile.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
+
+// Helper : churchId courant depuis le hostname (même logique que ChurchContext)
+function getCurrentChurchId(): string {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
+    return 'agc'; // dev
+  }
+  const parts = hostname.split('.');
+  if (parts.length >= 3) {
+    const subdomain = parts[0];
+    if (subdomain === 'bergerie') return ''; // super admin
+    return subdomain;
+  }
+  return ''; // root domain = super admin
+}
 
 // ---------------------------------------------------------------------------
 // Mappers Supabase (snake_case) → camelCase
@@ -121,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { data } = await supabase
             .from('users')
             .select('additional_menus')
+            .eq('church_id', getChurchId())
             .eq('uid', userData.uid)
             .limit(1);
           if (data && data.length > 0) {
@@ -222,13 +239,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Attempting login with:', { phone: formattedPhone, passwordLength: password.length });
 
-      // Query Supabase: users + admins
+      // Query Supabase: users + admins (filtrés par church_id)
+      const churchId = getCurrentChurchId();
       const [usersRes, adminsRes] = await Promise.all([
-        supabase
-          .from('users')
-          .select('*')
-          .in('phone', phoneCandidates)
-          .eq('status', 'active'),
+        churchId
+          ? supabase
+              .from('users')
+              .select('*')
+              .eq('church_id', getChurchId())
+              .in('phone', phoneCandidates)
+              .eq('status', 'active')
+              .eq('church_id', churchId)
+          : supabase
+              .from('users')
+              .select('*')
+              .eq('church_id', getChurchId())
+              .in('phone', phoneCandidates)
+              .eq('status', 'active'),
         supabase
           .from('admins')
           .select('*')

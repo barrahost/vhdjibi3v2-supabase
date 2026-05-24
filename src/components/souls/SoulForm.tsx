@@ -9,6 +9,7 @@ import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { CheckCircle2, Plus, List, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface LastAddedSoul {
   fullName: string;
@@ -153,7 +154,8 @@ export default function SoulForm() {
 
       const { data: insertedSoul, error: insertErr } = await supabase
         .from('souls')
-        .insert({ ...soulData, created_by: user.id, photo_url: photoURL || null })
+        .insert({
+          church_id: getChurchId(), ...soulData, created_by: user.id, photo_url: photoURL || null })
         .select('id')
         .single();
 

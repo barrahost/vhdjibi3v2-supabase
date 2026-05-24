@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListTodo, AlertTriangle, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 type Props =
   | { role: 'adn' }
@@ -33,6 +34,7 @@ export default function PendingActionsWidget(props: Props) {
           const { data: souls } = await supabase
             .from('souls')
             .select('id, is_undecided, service_family_id')
+            .eq('church_id', getChurchId())
             .eq('status', 'active');
 
           let noFamily = 0;
@@ -61,6 +63,7 @@ export default function PendingActionsWidget(props: Props) {
           const { data: souls } = await supabase
             .from('souls')
             .select('id, shepherd_id, status')
+            .eq('church_id', getChurchId())
             .eq('service_family_id', props.familyId);
 
           const noShepherd = (souls ?? []).filter(s => !s.shepherd_id && s.status !== 'inactive').length;
@@ -76,11 +79,13 @@ export default function PendingActionsWidget(props: Props) {
             supabase
               .from('souls')
               .select('id')
+              .eq('church_id', getChurchId())
               .eq('shepherd_id', props.shepherdId)
               .eq('status', 'active'),
             supabase
               .from('interactions')
               .select('soul_id, date')
+              .eq('church_id', getChurchId())
               .eq('shepherd_id', props.shepherdId),
           ]);
 

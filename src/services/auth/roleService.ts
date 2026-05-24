@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ROLES, ROLE_PERMISSIONS } from '../../constants/roles';
 import type { Role, Permission } from '../../types/permission.types';
 
@@ -11,6 +12,7 @@ export class RoleService {
       const { data: userData } = await supabase
         .from('users')
         .select('role')
+        .eq('church_id', getChurchId())
         .eq('uid', userId)
         .limit(1);
 

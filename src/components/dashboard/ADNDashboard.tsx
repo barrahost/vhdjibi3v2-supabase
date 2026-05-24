@@ -9,6 +9,7 @@ import PendingActionsWidget from './PendingActionsWidget';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 type Period = '7d' | '30d' | '90d' | '365d' | 'all';
 
@@ -45,7 +46,8 @@ export function ADNDashboard() {
       try {
         const { data, error } = await supabase
           .from('souls')
-          .select('id, created_at, shepherd_id, is_undecided, gender, status, service_family_id');
+          .select('id, created_at, shepherd_id, is_undecided, gender, status, service_family_id')
+          .eq('church_id', getChurchId());
 
         if (error) throw error;
 
@@ -76,7 +78,8 @@ export function ADNDashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'souls' }, async () => {
         const { data } = await supabase
           .from('souls')
-          .select('id, created_at, shepherd_id, is_undecided, gender, status, service_family_id');
+          .select('id, created_at, shepherd_id, is_undecided, gender, status, service_family_id')
+          .eq('church_id', getChurchId());
         setSouls((data ?? []).map((r: any) => ({
           id: r.id,
           createdAt: r.created_at ? new Date(r.created_at) : new Date(),

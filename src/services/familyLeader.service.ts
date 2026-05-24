@@ -1,5 +1,6 @@
 import type { ServiceFamily, Soul } from '../types/database.types';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export class FamilyLeaderService {
   /** Trouve la famille dont le user est responsable (via leader_id). */
@@ -7,6 +8,7 @@ export class FamilyLeaderService {
     const { data, error } = await supabase
       .from('service_families')
       .select('*')
+      .eq('church_id', getChurchId())
       .eq('leader_id', userId)
       .limit(1)
       .single();
@@ -19,6 +21,7 @@ export class FamilyLeaderService {
     const { data, error } = await supabase
       .from('souls')
       .select('*')
+      .eq('church_id', getChurchId())
       .eq('service_family_id', familyId);
     if (error || !data) return [];
     return data as Soul[];
@@ -38,6 +41,7 @@ export class FamilyLeaderService {
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name')
+      .eq('church_id', getChurchId())
       .in('id', shepherdIds);
     if (error || !data) return [];
     return data.map((row: any) => ({ id: row.id, fullName: row.full_name }));

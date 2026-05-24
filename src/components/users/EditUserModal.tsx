@@ -11,6 +11,7 @@ import { Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PasswordResetModal from './PasswordResetModal';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EditUserModalProps {
   user: User;

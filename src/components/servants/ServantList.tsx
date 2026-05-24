@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -99,7 +100,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   // Charger les serviteurs
   useEffect(() => {
     const loadServants = async () => {
-      let q = supabase.from('servants').select('*').order('created_at', { ascending: false });
+      let q = supabase.from('servants').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
       if (selectedDepartmentId) q = q.eq('department_id', selectedDepartmentId);
       if (statusFilter !== 'all') q = q.eq('status', statusFilter);
       const { data, error } = await q;

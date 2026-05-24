@@ -7,6 +7,7 @@ import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { isShepherdUser } from '../../utils/roleHelpers';
 
 export function ShepherdDashboard() {
@@ -34,6 +35,7 @@ export function ShepherdDashboard() {
         const { data: userRows, error: userErr } = await supabase
           .from('users')
           .select('id, role, business_profiles')
+          .eq('church_id', getChurchId())
           .eq('id', currentUserId)
           .limit(1);
 
@@ -81,8 +83,8 @@ export function ShepherdDashboard() {
     const loadData = async () => {
       try {
         const [soulsResult, interactionsResult] = await Promise.all([
-          supabase.from('souls').select('*').eq('shepherd_id', shepherdId).eq('status', 'active'),
-          supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes, created_at').eq('shepherd_id', shepherdId).order('created_at', { ascending: false }).limit(50),
+          supabase.from('souls').select('*').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).eq('status', 'active'),
+          supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes, created_at').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).order('created_at', { ascending: false }).limit(50),
         ]);
 
         if (soulsResult.error) console.error('[ShepherdDashboard] souls error:', soulsResult.error);
@@ -125,7 +127,7 @@ export function ShepherdDashboard() {
     const soulsChannel = supabase
       .channel('shepherd-souls-' + shepherdId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'souls', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
-        const { data } = await supabase.from('souls').select('*').eq('shepherd_id', shepherdId).eq('status', 'active');
+        const { data } = await supabase.from('souls').select('*').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).eq('status', 'active');
         if (!cancelled) setSouls((data ?? []).map((r: any) => ({ id: r.id, fullName: r.full_name || r.fullName || '', phone: r.phone || '', spiritualStatus: r.spiritual_profile?.spiritualStatus || r.spiritual_status || null, originSource: r.origin_source || null, status: r.status || 'active', firstVisitDate: r.first_visit_date ? new Date(r.first_visit_date) : null, shepherdId: r.shepherd_id || null } as unknown as Soul)));
       })
       .subscribe();
@@ -133,7 +135,7 @@ export function ShepherdDashboard() {
     const interactionsChannel = supabase
       .channel('shepherd-interactions-' + shepherdId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'interactions', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
-        const { data } = await supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes').eq('shepherd_id', shepherdId);
+        const { data } = await supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId);
         if (!cancelled) {
           const mapped = (data ?? []).map((r: any) => ({ id: r.id, soulId: r.soul_id, shepherdId: r.shepherd_id, date: r.date ? new Date(r.date) : new Date(), type: r.type, notes: r.notes } as unknown as Interaction));
           setRecentInteractions(mapped.sort((a, b) => b.date.getTime() - a.date.getTime()));

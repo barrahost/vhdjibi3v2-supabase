@@ -5,6 +5,7 @@ import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 

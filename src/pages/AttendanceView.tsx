@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { formatDate } from '../utils/dateUtils';
 import { CustomTable } from '../components/ui/CustomTable';
 import { Search } from 'lucide-react';
@@ -85,6 +86,7 @@ export default function AttendanceView() {
       let q = supabase
         .from('attendances')
         .select('*')
+        .eq('church_id', getChurchId())
         .order('date', { ascending: false });
 
       if (selectedShepherdId) {
@@ -114,6 +116,7 @@ export default function AttendanceView() {
         const { data: soulsResult } = await supabase
           .from('souls')
           .select('id, full_name, phone')
+          .eq('church_id', getChurchId())
           .in('id', uniqueSoulIds);
         (soulsResult || []).forEach((s: any) => { soulsData[s.id] = s; });
       }
@@ -122,6 +125,7 @@ export default function AttendanceView() {
         const { data: shepherdsResult } = await supabase
           .from('users')
           .select('id, full_name')
+          .eq('church_id', getChurchId())
           .in('id', uniqueShepherdIds);
         (shepherdsResult || []).forEach((s: any) => { shepherdsData[s.id] = s; });
       }

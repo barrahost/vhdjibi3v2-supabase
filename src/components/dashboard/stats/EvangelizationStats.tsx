@@ -4,6 +4,7 @@ import { Users, UserCheck, Clock, TrendingUp } from 'lucide-react';
 import { StatCard } from './StatCard';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 interface EvangelizedSoul {
   id: string;
@@ -26,8 +27,8 @@ export function EvangelizationStats() {
     const loadData = async () => {
       try {
         const [{ data: soulsRaw, error: soulsErr }, { data: usersRaw, error: usersErr }] = await Promise.all([
-          supabase.from('evangelized_souls').select('id, evangelist_id, status, evangelization_date'),
-          supabase.from('users').select('id, full_name').eq('status', 'active'),
+          supabase.from('evangelized_souls').select('id, evangelist_id, status, evangelization_date').eq('church_id', getChurchId()),
+          supabase.from('users').select('id, full_name').eq('church_id', getChurchId()).eq('status', 'active'),
         ]);
 
         if (soulsErr) throw soulsErr;
@@ -54,7 +55,7 @@ export function EvangelizationStats() {
     const channel = supabase
       .channel('evangelized-souls-stats')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'evangelized_souls' }, async () => {
-        const { data } = await supabase.from('evangelized_souls').select('id, evangelist_id, status, evangelization_date');
+        const { data } = await supabase.from('evangelized_souls').select('id, evangelist_id, status, evangelization_date').eq('church_id', getChurchId());
         setEvangelizedSouls((data ?? []).map((r: any) => ({
           id: r.id, evangelistId: r.evangelist_id, status: r.status, evangelizationDate: r.evangelization_date
         })));

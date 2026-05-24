@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useServiceFamilies } from '../../../hooks/useServiceFamilies';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 
 interface GeneralInfoTabProps {
   data: {
@@ -55,7 +56,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
       }
 
       try {
-        const userDoc = await supabase.from('users').select('*').eq('id', data.shepherdId).single();
+        const userDoc = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('id', data.shepherdId).single();
         if (userDoc.exists()) {
           setShepherdName(userDoc.data().fullName);
           setShepherdRole(userDoc.data().role);

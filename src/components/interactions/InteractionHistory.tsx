@@ -4,6 +4,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { Phone, Users, MessageSquare, Trash2, MessageCircle, HelpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 
@@ -36,6 +37,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
       const { data, error } = await supabase
         .from('interactions')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('soul_id', soulId)
         .order('date', { ascending: false });
 
@@ -62,7 +64,7 @@ export default function InteractionHistory({ soulId }: InteractionHistoryProps) 
     const channel = supabase
       .channel('interaction-history-' + soulId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'interactions', filter: 'soul_id=eq.' + soulId }, async () => {
-        const { data } = await supabase.from('interactions').select('*').eq('soul_id', soulId).order('date', { ascending: false });
+        const { data } = await supabase.from('interactions').select('*').eq('church_id', getChurchId()).eq('soul_id', soulId).order('date', { ascending: false });
         setInteractions((data ?? []).map((r: any) => ({
           id: r.id, soulId: r.soul_id, shepherdId: r.shepherd_id, type: r.type, notes: r.notes,
           date: r.date ? new Date(r.date) : new Date(),

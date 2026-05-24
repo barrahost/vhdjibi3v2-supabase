@@ -6,6 +6,7 @@ import EditSMSTemplateModal from './EditSMSTemplateModal';
 import { SMSTemplatePreview } from './SMSTemplatePreview';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
@@ -19,7 +20,7 @@ export default function SMSTemplateList() {
   useEffect(() => {
     const fetchTemplates = async () => {
       const { data } = await supabase
-        .from('sms_templates').select('*').order('created_at', { ascending: false });
+        .from('sms_templates').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
       setTemplates((data ?? []).map((row: any) => ({
         id: row.id, title: row.title, content: row.content,
         category: row.category, status: row.status,

@@ -4,6 +4,7 @@ import { Search, Pencil, Trash2 } from 'lucide-react';
 import { EditCategoryModal } from './EditCategoryModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
+import { getChurchId } from '../../../lib/churchId';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../../hooks/useConfirmModal';
 
@@ -25,7 +26,7 @@ export function CategoryList() {
 
   useEffect(() => {
     const loadCategories = async () => {
-      const { data, error } = await supabase.from('audio_categories').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('audio_categories').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
       if (error) {
         console.error('Error loading categories:', error);
         toast.error('Erreur lors du chargement des catégories');

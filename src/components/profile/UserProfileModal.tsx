@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { StorageService } from '../../services/storage.service';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
  
 import { formatDate } from '../../utils/dateUtils';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
@@ -54,6 +55,7 @@ export function UserProfileModal() {
         const { data: usersRows } = await supabase
           .from('users')
           .select('*')
+          .eq('church_id', getChurchId())
           .eq('id', (() => { const s = localStorage.getItem('user'); return s ? JSON.parse(s).id : ''; })())
           .limit(1);
 
@@ -252,6 +254,7 @@ export function UserProfileModal() {
         const { data: usersData } = await supabase
           .from('users')
           .select('id, uid')
+          .eq('church_id', getChurchId())
           .eq('phone', phoneValidation.formattedNumber);
         
         const { data: adminsData } = await supabase

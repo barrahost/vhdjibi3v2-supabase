@@ -8,6 +8,7 @@ import { ServantService } from '../../services/servant.service';
 import { AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const [formData, setFormData] = useState({
@@ -33,7 +34,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     let cancelled = false;
     const check = async () => {
       try {
-        const { data: snap } = await supabase.from('servants').select('full_name, department_id').eq('phone', phoneValidation.formattedNumber).eq('status', 'active');
+        const { data: snap } = await supabase.from('servants').select('full_name, department_id').eq('church_id', getChurchId()).eq('phone', phoneValidation.formattedNumber).eq('status', 'active');
         if (cancelled) return;
         const others = (snap ?? []).filter((d: any) => !formData.departmentId || d.department_id !== formData.departmentId);
         if (others.length === 0) {

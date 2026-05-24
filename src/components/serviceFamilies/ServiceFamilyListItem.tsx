@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pencil, Trash2, Users, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 
@@ -30,7 +31,7 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
         return;
       }
       try {
-        const snap = await supabase.from('users').select('*').eq('id', family.leaderId).single();
+        const snap = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('id', family.leaderId).single();
         if (snap.exists()) {
           setLeaderName(snap.data().fullName || null);
         }

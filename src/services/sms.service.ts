@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { SMSMessage } from '../types/sms.types';
 import toast from 'react-hot-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,6 +70,7 @@ export class SMSService {
   ) {
     try {
       const { error: _insertErr } = await supabase.from('interactions').insert({
+        church_id: getChurchId(),
         type: 'message',
         soulId,
         shepherdId,
@@ -88,6 +90,7 @@ export class SMSService {
       let q = supabase
         .from('sms_templates')
         .select('*')
+        .eq('church_id', getChurchId())
         .eq('status', 'active')
         .order('title', { ascending: true });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
 import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck } from 'lucide-react';
 import ImportSoulsModal from '../components/souls/ImportSoulsModal';
@@ -195,6 +196,8 @@ export default function SoulManagement() {
       const { data: byId } = await supabase
         .from('users')
         .select('id, uid, full_name')
+        .eq('church_id', getChurchId())
+        .eq('church_id', getChurchId())
         .in('id', shepherdIds);
       (byId || []).forEach((u: any) => {
         if (u.full_name) {
@@ -208,6 +211,8 @@ export default function SoulManagement() {
         const { data: byUid } = await supabase
           .from('users')
           .select('id, uid, full_name')
+          .eq('church_id', getChurchId())
+          .eq('church_id', getChurchId())
           .in('uid', unmatchedIds);
         (byUid || []).forEach((u: any) => {
           if (u.full_name) {
@@ -408,7 +413,7 @@ export default function SoulManagement() {
   const fetchSouls = useCallback(async () => {
     setLoading(true);
     try {
-      let q = supabase.from('souls').select('*').order('created_at', { ascending: false });
+      let q = supabase.from('souls').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
 
       if (selectedShepherdId === 'unassigned') {
         q = q.is('shepherd_id', null);
@@ -418,6 +423,8 @@ export default function SoulManagement() {
           const { data: sUser } = await supabase
             .from('users')
             .select('id, uid')
+            .eq('church_id', getChurchId())
+            .eq('church_id', getChurchId())
             .eq('id', selectedShepherdId)
             .limit(1)
             .single();

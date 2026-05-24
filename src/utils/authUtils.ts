@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 interface UserRole {
   isAdmin: boolean;
@@ -13,6 +14,7 @@ export async function getUserRole(userId: string): Promise<UserRole> {
     const { data: userRows } = await supabase
       .from('users')
       .select('role, status')
+      .eq('church_id', getChurchId())
       .eq('id', userId)
       .eq('status', 'active')
       .limit(1);

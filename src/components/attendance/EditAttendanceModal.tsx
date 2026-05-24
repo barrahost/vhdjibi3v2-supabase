@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Input } from '../ui/input';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface EditAttendanceModalProps {
   attendance: {

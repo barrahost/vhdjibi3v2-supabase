@@ -2,6 +2,7 @@ import { toast } from 'react-hot-toast';
 import { ServantService } from './servant.service';
 import { BusinessProfile } from '../types/businessProfile.types';
 import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 export class ShepherdPromotionService {
   /**
@@ -14,6 +15,7 @@ export class ShepherdPromotionService {
       const { data: userRows, error: userErr } = await supabase
         .from('users')
         .select('id, full_name, nickname, gender, phone, email, role, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('id', userId)
         .limit(1);
 
@@ -58,6 +60,7 @@ export class ShepherdPromotionService {
       const { data: servantRows } = await supabase
         .from('servants')
         .select('id')
+        .eq('church_id', getChurchId())
         .eq('email', userRow.email)
         .limit(1);
 
@@ -112,6 +115,7 @@ export class ShepherdPromotionService {
       const { data: userRows, error: userErr } = await supabase
         .from('users')
         .select('id, full_name, email, business_profiles')
+        .eq('church_id', getChurchId())
         .eq('id', userId)
         .limit(1);
 
@@ -130,6 +134,7 @@ export class ShepherdPromotionService {
       const { data: servantRows } = await supabase
         .from('servants')
         .select('id')
+        .eq('church_id', getChurchId())
         .eq('email', userRow.email)
         .limit(1);
 
