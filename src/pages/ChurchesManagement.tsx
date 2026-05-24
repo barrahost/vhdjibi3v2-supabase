@@ -286,8 +286,8 @@ export default function ChurchesManagement() {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl my-auto">
             <h2 className="text-lg font-bold text-gray-900 mb-5">
               {editingChurch ? 'Modifier l\'église' : 'Nouvelle église'}
             </h2>
