@@ -9,7 +9,6 @@ import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
  
 import { formatDate } from '../../utils/dateUtils';
-import { validatePhoneNumber } from '../../utils/phoneValidation';
 import toast from 'react-hot-toast';
 import SelfPasswordResetModal from './SelfPasswordResetModal';
 
@@ -34,6 +33,7 @@ export function UserProfileModal() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
     phone: '',
     location: '',
     coordinates: null as { latitude: number; longitude: number; } | null,
@@ -75,6 +75,7 @@ export function UserProfileModal() {
           setUserData(loaded);
           setFormData({
             fullName: loaded.fullName,
+            email: loaded.email || '',
             phone: loaded.phone,
             location: loaded.location || '',
             coordinates: data.coordinates,
@@ -107,6 +108,7 @@ export function UserProfileModal() {
           setUserData(loaded);
           setFormData({
             fullName: loaded.fullName,
+            email: loaded.email || '',
             phone: loaded.phone,
             location: loaded.location || '',
             coordinates: data.coordinates,
@@ -242,75 +244,71 @@ export function UserProfileModal() {
         }
       }
 
-      // Validation du numéro de téléphone
-      const phoneValidation = validatePhoneNumber(formData.phone);
-      if (!phoneValidation.isValid) {
-        toast.error(phoneValidation.error ?? 'Erreur de validation du numéro de téléphone');
-        return;
-      }
+      // Email facultatif : vérifier l'unicité uniquement s'il est renseigné
+      const trimmedEmail = formData.email.trim();
+      if (trimmedEmail) {
+        try {
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('id, uid')
+            .eq('church_id', getChurchId())
+            .eq('email', trimmedEmail);
 
-      // Vérifier si le numéro existe déjà
-      try {
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, uid')
-          .eq('church_id', getChurchId())
-          .eq('phone', phoneValidation.formattedNumber);
-        
-        const { data: adminsData } = await supabase
-          .from('admins')
-          .select('id, uid')
-          .eq('phone', phoneValidation.formattedNumber);
-        
-        const currentUid = user?.uid;
-        const existingUser = [...(usersData ?? []), ...(adminsData ?? [])]
-          .find(row => row.uid !== currentUid);
-        
-        if (existingUser) {
-          toast.error('Ce numéro de téléphone est déjà utilisé');
+          const { data: adminsData } = await supabase
+            .from('admins')
+            .select('id, uid')
+            .eq('email', trimmedEmail);
+
+          const currentUid = user?.uid;
+          const existingUser = [...(usersData ?? []), ...(adminsData ?? [])]
+            .find(row => row.uid !== currentUid && row.id !== userData.id);
+
+          if (existingUser) {
+            toast.error('Cet email est déjà utilisé');
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking email:', error);
+          toast.error("Erreur lors de la vérification de l'email");
           return;
         }
-      } catch (error) {
-        console.error('Error checking phone number:', error);
-        toast.error('Erreur lors de la vérification du numéro');
-        return;
       }
 
-      // Mise à jour dans Supabase
+      // Mise à jour dans Supabase (le numéro de téléphone, identifiant de connexion, n'est pas modifié ici)
       const _table = userRole === 'super_admin' ? 'admins' : 'users';
-      
+
       // Vérifier si le document existe avant de le mettre à jour
       const { data: existingDoc } = await supabase
         .from(_table)
         .select('id')
         .eq('id', userData.id)
         .single();
-      
+
       if (!existingDoc) {
         toast.error("Utilisateur non trouvé dans la base de données");
         setIsSubmitting(false);
         return;
       }
-      
+
       const { error: updateErr } = await supabase
         .from(_table)
         .update({
           full_name: formData.fullName.trim(),
-          phone: phoneValidation.formattedNumber,
+          email: trimmedEmail || null,
           location: formData.location.trim(),
           coordinates: formData.useGeolocation ? formData.coordinates : null,
           photo_url: photoURL,
           updated_at: new Date().toISOString(),
         })
         .eq('id', userData.id);
-      
+
       if (updateErr) throw updateErr;
 
       // Mettre à jour les données locales
       setUserData(prev => prev ? {
         ...prev,
         fullName: formData.fullName.trim(),
-        phone: phoneValidation.formattedNumber as string,
+        email: trimmedEmail,
         location: formData.location.trim(),
         photoURL
       } : null);
@@ -449,32 +447,28 @@ export function UserProfileModal() {
             
             <div className="flex items-center space-x-3 text-gray-600">
               <Mail className="w-5 h-5 text-gray-400" />
-              <span className="text-sm">{userData.email}</span>
+              {isEditing ? (
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+                  placeholder="Email (facultatif)"
+                />
+              ) : (
+                <span className="text-sm">{userData.email || 'Non renseigné'}</span>
+              )}
             </div>
 
-            <div className="flex items-center space-x-3 text-gray-600">
-              <Phone className="w-5 h-5 text-gray-400" />
-              {isEditing ? (
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    +225
-                  </span>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      const truncated = value.slice(0, 10);
-                      setFormData(prev => ({ ...prev, phone: truncated }));
-                    }}
-                    className="w-full pl-16 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-                    placeholder="0757000203"
-                    maxLength={10}
-                    required
-                  />
-                </div>
-              ) : (
-                <span className="text-sm">{userData.phone}</span>
+            <div className="text-gray-600">
+              <div className="flex items-center space-x-3">
+                <Phone className="w-5 h-5 text-gray-400" />
+                <span className="text-sm">{userData.phone || 'Non renseigné'}</span>
+              </div>
+              {isEditing && (
+                <p className="mt-1 ml-8 text-xs text-gray-400">
+                  Le numéro est votre identifiant de connexion — contactez un administrateur pour le modifier.
+                </p>
               )}
             </div>
 
@@ -609,6 +603,7 @@ export function UserProfileModal() {
                   setIsEditing(false);
                   setFormData({
                     fullName: userData.fullName,
+                    email: userData.email || '',
                     phone: userData.phone,
                     location: userData.location || '',
                     coordinates: null,

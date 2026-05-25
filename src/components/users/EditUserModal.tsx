@@ -24,6 +24,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
     fullName: '',
     nickname: '',
     phone: '',
+    email: '',
     businessProfiles: [] as BusinessProfile[],
     status: 'active' as 'active' | 'inactive',
     location: '',
@@ -57,6 +58,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         fullName: user.fullName,
         nickname: user.nickname || '',
         phone: user.phone?.replace('+225', '') || '',
+        email: user.email || '',
         businessProfiles,
         status: user.status || 'active',
         location: user.location || '',
@@ -150,6 +152,23 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         return;
       }
 
+      // Email facultatif : unicité vérifiée uniquement s'il est renseigné
+      const trimmedEmail = formData.email.trim();
+      if (trimmedEmail) {
+        const { data: emailUsers } = await supabase
+          .from('users').select('id, uid')
+          .eq('church_id', getChurchId()).eq('email', trimmedEmail);
+        const { data: emailAdmins } = await supabase
+          .from('admins').select('id, uid')
+          .eq('email', trimmedEmail);
+        const clash = [...(emailUsers ?? []), ...(emailAdmins ?? [])]
+          .find(r => r.id !== user.id && r.uid !== user.uid);
+        if (clash) {
+          toast.error('Cet email est déjà utilisé');
+          return;
+        }
+      }
+
       // Determine primary role from business profiles for backward compatibility
       const primaryRole = formData.businessProfiles.find(p => p.type === 'admin')?.type || 
                           formData.businessProfiles.find(p => p.type === 'adn')?.type ||
@@ -162,6 +181,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         full_name: formData.fullName.trim(),
         nickname: formData.nickname?.trim() || null,
         phone: phoneValidation.formattedNumber,
+        email: trimmedEmail || null,
         business_profiles: formData.businessProfiles,
         role: primaryRole,
         status: formData.status,
@@ -273,17 +293,15 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            Email <span className="text-gray-400 font-normal">(facultatif)</span>
           </label>
           <input
             type="email"
-            value={user.email}
-            disabled
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
+            value={formData.email}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+            placeholder="ex: jean.kouassi@example.com"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
           />
-          <p className="mt-1 text-sm text-gray-500">
-            L'email ne peut pas être modifié
-          </p>
         </div>
 
         <div>
