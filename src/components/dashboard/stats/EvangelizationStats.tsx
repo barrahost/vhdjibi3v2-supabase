@@ -141,10 +141,31 @@ export function EvangelizationStats() {
 
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-4 border-b"><h3 className="text-sm font-semibold text-gray-700">Classement des évangélistes</h3></div>
-        <div className="overflow-x-auto">
-          {stats.evangelistRanking.length === 0 ? (
-            <div className="p-6 text-center text-sm text-gray-500">Aucun évangéliste avec des âmes enregistrées.</div>
-          ) : (
+        {stats.evangelistRanking.length === 0 ? (
+          <div className="p-6 text-center text-sm text-gray-500">Aucun évangéliste avec des âmes enregistrées.</div>
+        ) : (
+          <>
+            {/* Vue liste — mobile (< lg) */}
+            <div className="lg:hidden divide-y">
+              {stats.evangelistRanking.map(ev => (
+                <div key={ev.evangelistId} className="p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-gray-800 truncate">{ev.fullName}</span>
+                    <span className="text-sm font-semibold text-[#00665C] flex-shrink-0">{ev.conversionRate}%</span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
+                    <span>Total : <span className="font-semibold text-gray-700">{ev.total}</span></span>
+                    <span>Reçues : <span className="font-semibold text-gray-700">{ev.imported}</span></span>
+                  </div>
+                  <div className="mt-2 w-full bg-gray-200 rounded h-2">
+                    <div style={{ width: `${ev.conversionRate}%`, background: '#00665C', height: '8px', borderRadius: '4px' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Vue tableau — desktop (lg+) */}
+            <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
@@ -171,8 +192,9 @@ export function EvangelizationStats() {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {stats.withoutEvangelist > 0 && (

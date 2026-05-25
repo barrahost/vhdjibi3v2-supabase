@@ -275,7 +275,42 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border">
+      {/* Vue carte — mobile (< lg) */}
+      <div className="lg:hidden space-y-3">
+        {paginatedServants.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-lg border text-gray-500">
+            Aucun serviteur trouvé
+          </div>
+        ) : (
+          paginatedServants.map((servant) => (
+            <div key={servant.id} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+              {onSelectionChange && (
+                <label className="flex items-center gap-2 px-4 pt-3 text-xs text-gray-500 cursor-pointer">
+                  <Checkbox
+                    checked={selectedServantIds.includes(servant.id)}
+                    onCheckedChange={() => toggleServantSelection(servant.id)}
+                  />
+                  Sélectionner
+                </label>
+              )}
+              <ServantListItem
+                variant="card"
+                servant={servant}
+                departmentName={getDepartmentName(servant.departmentId)}
+                departmentNames={
+                  (servant as any).departmentIds && (servant as any).departmentIds.length > 1
+                    ? (servant as any).departmentIds.map((id: string) => getDepartmentName(id))
+                    : undefined
+                }
+                onEdit={() => setEditingServant(servant)}
+              />
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Vue tableau — desktop (lg+) */}
+      <div className="hidden lg:block bg-white rounded-lg shadow-sm border">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -355,17 +390,17 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
             </tbody>
           </table>
         </div>
-
-        {totalPages > 1 && (
-          <CustomPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={filteredServants.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
-        )}
       </div>
+
+      {totalPages > 1 && (
+        <CustomPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredServants.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+        />
+      )}
 
       {editingServant && (
         <EditServantModal

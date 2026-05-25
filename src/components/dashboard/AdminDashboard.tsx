@@ -138,7 +138,7 @@ export function AdminDashboard() {
     <div className="space-y-6">
 
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -147,7 +147,7 @@ export function AdminDashboard() {
         </div>
         <button
           onClick={() => navigate('/statistiques')}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/5"
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/5 self-start sm:self-auto"
         >
           <BarChart2 className="w-4 h-4" />
           Voir les statistiques

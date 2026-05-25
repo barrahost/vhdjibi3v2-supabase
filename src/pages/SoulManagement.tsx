@@ -547,9 +547,9 @@ export default function SoulManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Gestion des Ames</h1>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
           {hasPermission(PERMISSIONS.EXPORT_DATA) && (
             <button
               onClick={() => exportData({ data: sortedSouls, type: 'souls', format: 'xlsx' })}

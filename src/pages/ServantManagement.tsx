@@ -83,9 +83,9 @@ export default function ServantManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Gestion des Serviteurs</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedServantIds.length > 0 && canManageServants && (
             <Button
               onClick={handleBulkDelete}

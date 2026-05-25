@@ -8,7 +8,7 @@ export default function ServiceFamilyManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des Familles de Service</h1>
         <button
           onClick={() => setShowForm(!showForm)}

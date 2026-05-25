@@ -208,9 +208,9 @@ export default function DepartmentLeaderDashboard() {
       {/* Liste des serviteurs */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>Serviteurs du département</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={() => setShowImportModal(true)}
                 variant="default"
@@ -239,27 +239,23 @@ export default function DepartmentLeaderDashboard() {
           ) : (
             <div className="space-y-3">
               {servants.map((servant) => (
-                <div 
-                  key={servant.id} 
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                <div
+                  key={servant.id}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:bg-muted/50"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <h4 className="font-medium text-foreground">
-                          {servant.fullName}
-                          {servant.nickname && (
-                            <span className="text-muted-foreground ml-2">({servant.nickname})</span>
-                          )}
-                        </h4>
-                        <div className="text-sm text-muted-foreground">
-                          {servant.email} • {servant.phone}
-                        </div>
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-foreground break-words">
+                      {servant.fullName}
+                      {servant.nickname && (
+                        <span className="text-muted-foreground ml-2">({servant.nickname})</span>
+                      )}
+                    </h4>
+                    <div className="text-sm text-muted-foreground break-words">
+                      {[servant.email, servant.phone].filter(Boolean).join(' • ')}
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex flex-wrap items-center gap-2">
                     {servant.isHead && (
                       <Badge variant="default" className="bg-primary">
                         Responsable

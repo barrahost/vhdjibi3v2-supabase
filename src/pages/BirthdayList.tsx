@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
-import { Search, Calendar, Gift, Users, Bell, Trash2, Plus } from 'lucide-react';
+import { Search, Calendar, Gift, Users, Bell, Trash2, Plus, Cake, Phone } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { Modal } from '../components/ui/Modal';
 import { formatDate } from '../utils/dateUtils';
@@ -161,6 +161,82 @@ export default function BirthdayList() {
     }] : [])
   ];
 
+  // Compte à rebours lisible jusqu'au prochain anniversaire (comparaison par date, sans l'heure)
+  const formatBirthdayCountdown = (mmdd: string) => {
+    const [m, d] = mmdd.split('-').map(Number);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let next = new Date(now.getFullYear(), m - 1, d);
+    if (next < today) next = new Date(now.getFullYear() + 1, m - 1, d);
+    const days = Math.round((next.getTime() - today.getTime()) / 86400000);
+    const label =
+      days === 0 ? "Aujourd'hui 🎉"
+      : days === 1 ? 'Demain'
+      : `Dans ${days} jours`;
+    const tone =
+      days === 0 ? 'bg-pink-100 text-pink-700'
+      : days <= 7 ? 'bg-amber-100 text-amber-700'
+      : days <= 30 ? 'bg-blue-100 text-blue-700'
+      : 'bg-gray-100 text-gray-600';
+    return { days, label, tone };
+  };
+
+  // Carte mobile dédiée (remplace le rendu générique libellé/valeur)
+  const renderBirthdayMobileCard = (birthday: any) => {
+    const { label, tone } = formatBirthdayCountdown(birthday.birthDate);
+    const dateLabel = new Date(
+      2024,
+      parseInt(birthday.birthDate.split('-')[0]) - 1,
+      parseInt(birthday.birthDate.split('-')[1])
+    ).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+
+    return (
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-full bg-[#00665C]/10 flex items-center justify-center flex-shrink-0">
+              <Cake className="w-5 h-5 text-[#00665C]" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 truncate">
+                {birthday.fullName}
+                {birthday.nickname && (
+                  <span className="ml-1 text-sm font-normal text-gray-500">({birthday.nickname})</span>
+                )}
+              </p>
+              <p className="text-sm text-gray-500">{dateLabel}</p>
+            </div>
+          </div>
+          {canManageBirthdays && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(birthday.id); }}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+              title="Supprimer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${tone}`}>
+            {label}
+          </span>
+          {birthday.phone && (
+            <a
+              href={`tel:${birthday.phone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#00665C]"
+            >
+              <Phone className="w-4 h-4" />
+              {birthday.phone}
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const fetchBirthdays = async () => {
     try {
       const { data, error } = await supabase
@@ -268,7 +344,7 @@ export default function BirthdayList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Anniversaires</h1>
         <button
           onClick={() => setShowAddModal(true)}
@@ -404,6 +480,7 @@ export default function BirthdayList() {
         <CustomTable
           data={paginatedBirthdays}
           columns={columns}
+          mobileCard={renderBirthdayMobileCard}
         />
 
         {totalPages > 1 && (

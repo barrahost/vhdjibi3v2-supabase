@@ -4,6 +4,7 @@ import { Search, Pencil, Trash2 } from 'lucide-react';
 import { formatDate } from '../../../utils/dateUtils';
 import EditSMSTemplateModal from './EditSMSTemplateModal';
 import { SMSTemplatePreview } from './SMSTemplatePreview';
+import { CustomTable } from '../../ui/CustomTable';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 import { getChurchId } from '../../../lib/churchId';
@@ -52,6 +53,63 @@ export default function SMSTemplateList() {
     template.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const statusBadge = (status?: string) => (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+    }`}>
+      {status === 'active' ? 'Actif' : 'Inactif'}
+    </span>
+  );
+
+  const actionButtons = (template: SMSTemplate) => (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={(e) => { e.stopPropagation(); setEditingTemplateId(template.id); }}
+        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+        title="Modifier"
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleDelete(template.id); }}
+        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+        title="Supprimer"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+
+  const columns = [
+    { key: 'title', title: 'Titre', render: (v: string) => <span className="font-medium text-gray-900">{v}</span> },
+    { key: 'category', title: 'Catégorie', render: (v: string) => <span className="text-gray-500">{v || '-'}</span> },
+    { key: 'content', title: 'Aperçu', render: (v: string) => <span className="text-gray-500">{v.slice(0, 50)}...</span> },
+    { key: 'status', title: 'Statut', render: (v: string) => statusBadge(v) },
+    { key: 'updatedAt', title: 'Dernière modification', render: (v: any) => <span className="text-gray-500">{formatDate(v)}</span> },
+    { key: 'actions', title: 'Actions', render: (_: any, t: SMSTemplate) => actionButtons(t) },
+  ];
+
+  const renderTemplateMobileCard = (template: SMSTemplate) => (
+    <div className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-gray-900 break-words">{template.title}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {template.category && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">
+                {template.category}
+              </span>
+            )}
+            {statusBadge(template.status)}
+          </div>
+        </div>
+        {actionButtons(template)}
+      </div>
+      <p className="mt-2.5 text-sm text-gray-600 line-clamp-3 whitespace-pre-wrap">{template.content}</p>
+      <p className="mt-2 text-xs text-gray-400">Modifié le {formatDate(template.updatedAt)}</p>
+    </div>
+  );
+
   if (loading) {
     return <div className="text-center py-4">Chargement...</div>;
   }
@@ -69,77 +127,11 @@ export default function SMSTemplateList() {
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Titre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Catégorie
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Aperçu
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Statut
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Dernière modification
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredTemplates.map((template) => (
-              <tr key={template.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {template.title}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {template.category || '-'}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {template.content.slice(0, 50)}...
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    template.status === 'active'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {template.status === 'active' ? 'Actif' : 'Inactif'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(template.updatedAt)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => setEditingTemplateId(template.id)}
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                      title="Modifier"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(template.id)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <CustomTable
+        data={filteredTemplates}
+        columns={columns}
+        mobileCard={renderTemplateMobileCard}
+      />
 
       {editingTemplateId && (
         <EditSMSTemplateModal

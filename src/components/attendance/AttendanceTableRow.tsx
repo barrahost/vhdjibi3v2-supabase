@@ -11,9 +11,11 @@ interface AttendanceTableRowProps {
   attendance: AttendanceRecord;
   soul: Soul;
   onEdit: () => void;
+  /** 'row' (cellules de tableau, defaut) ou 'card' (carte mobile) */
+  variant?: 'row' | 'card';
 }
 
-export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTableRowProps) {
+export function AttendanceTableRow({ attendance, soul, onEdit, variant = 'row' }: AttendanceTableRowProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   if (!soul) return null;
 
@@ -29,6 +31,35 @@ export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTable
     }
   };
 
+  const presenceBadge = (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      attendance.present
+        ? 'bg-green-100 text-green-800'
+        : 'bg-red-100 text-red-800'
+    }`}>
+      {attendance.present ? 'Présent(e)' : 'Absent(e)'}
+    </span>
+  );
+
+  if (variant === 'card') {
+    return (
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 break-words">{soul.fullName}</p>
+            <p className="text-sm text-gray-500 mt-0.5">{formatDate(attendance.date)}</p>
+          </div>
+          <AttendanceActions onEdit={onEdit} onDelete={handleDelete} />
+        </div>
+        <div className="mt-2.5">{presenceBadge}</div>
+        {attendance.notes && (
+          <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap break-words">{attendance.notes}</p>
+        )}
+        <ConfirmModal {...confirmModalProps} />
+      </div>
+    );
+  }
+
   return (
     <tr>
       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -38,13 +69,7 @@ export function AttendanceTableRow({ attendance, soul, onEdit }: AttendanceTable
         {formatDate(attendance.date)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          attendance.present
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {attendance.present ? 'Présent(e)' : 'Absent(e)'}
-        </span>
+        {presenceBadge}
       </td>
       <td className="px-6 py-4 text-sm text-gray-500">
         {attendance.notes || '-'}

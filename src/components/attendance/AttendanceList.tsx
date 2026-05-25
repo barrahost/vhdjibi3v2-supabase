@@ -188,7 +188,30 @@ export default function AttendanceList() {
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border">
+      {/* Vue carte — mobile (< lg) */}
+      <div className="lg:hidden space-y-3">
+        {sortedAttendances.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-lg border text-gray-500">
+            Aucune présence trouvée
+          </div>
+        ) : (
+          sortedAttendances.map((attendance) =>
+            souls[attendance.soulId] ? (
+              <div key={attendance.id} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                <AttendanceTableRow
+                  variant="card"
+                  attendance={attendance}
+                  soul={souls[attendance.soulId]}
+                  onEdit={() => setEditingAttendance(attendance)}
+                />
+              </div>
+            ) : null
+          )
+        )}
+      </div>
+
+      {/* Vue tableau — desktop (lg+) */}
+      <div className="hidden lg:block bg-white rounded-lg shadow-sm border">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <AttendanceTableHeader

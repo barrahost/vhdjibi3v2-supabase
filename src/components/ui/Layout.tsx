@@ -103,10 +103,10 @@ export default function Layout() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 flex flex-col overflow-y-auto">
+        <main className="flex-1 min-w-0 flex flex-col overflow-y-auto overflow-x-hidden">
           <Header />
           <SMSStatusBanner />
-          <div className="flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
             <Outlet />
           </div>
           <Footer />
