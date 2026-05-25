@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Download, Share, Plus } from 'lucide-react';
+import { useChurch } from '../../contexts/ChurchContext';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -7,6 +8,9 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PWAInstallBanner() {
+  const { church } = useChurch();
+  const appName = church?.shortName || church?.name || 'Bergerie';
+  const appLogo = church?.logoUrl || '/logo-agc-bergerie.svg';
   const [showBanner, setShowBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -83,12 +87,12 @@ export function PWAInstallBanner() {
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-3">
             <img
-              src="/logo-agc-bergerie.svg"
-              alt="AGC Bergerie"
+              src={appLogo}
+              alt={appName}
               className="w-10 h-10 rounded-lg object-contain"
             />
             <div>
-              <p className="font-semibold text-gray-900 text-sm">AGC Bergerie</p>
+              <p className="font-semibold text-gray-900 text-sm">{appName}</p>
               <p className="text-xs text-gray-500">Installer l'application</p>
             </div>
           </div>

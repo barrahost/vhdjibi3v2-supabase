@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { useChurch } from '../../contexts/ChurchContext';
 import { Save, Globe, Clock, AlertTriangle, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -23,13 +24,15 @@ interface GeneralConfig {
 }
 
 const DEFAULTS: GeneralConfig = {
-  churchName: "Vases d'Honneur Assemblée Grâce Confondante",
+  churchName: '',
   timezone: 'Africa/Abidjan',
   maintenanceMode: false,
 };
 
 export default function GeneralSettings() {
-  const [config, setConfig] = useState<GeneralConfig>(DEFAULTS);
+  const { church } = useChurch();
+  // Par défaut, on reprend le nom de l'église courante (multitenant)
+  const [config, setConfig] = useState<GeneralConfig>({ ...DEFAULTS, churchName: church?.name ?? '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -43,7 +46,8 @@ export default function GeneralSettings() {
           .eq('key', 'general')
           .single();
         if (!error && data?.value) {
-          setConfig({ ...DEFAULTS, ...(data.value as GeneralConfig) });
+          const saved = data.value as GeneralConfig;
+          setConfig({ ...DEFAULTS, ...saved, churchName: saved.churchName || church?.name || '' });
         }
       } catch (e) {
         console.error('Erreur chargement paramètres généraux:', e);
@@ -52,7 +56,8 @@ export default function GeneralSettings() {
       }
     };
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [church?.id]);
 
   const handleSave = async () => {
     setSaving(true);

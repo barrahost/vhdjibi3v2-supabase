@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, ArrowRight, CheckCircle, Megaphone, Heart, BookOpen } from 'lucide-react';
 import type { TourRole } from '../../hooks/useOnboarding';
+import { useChurch } from '../../contexts/ChurchContext';
 
 /* ─── Step definition ───────────────────────────────────────────── */
 interface TourStep {
@@ -17,7 +18,7 @@ interface TourStep {
 const STEPS: Record<TourRole, TourStep[]> = {
   evangelist: [
     {
-      title: 'Bienvenue sur Bergerie ! 🙏',
+      title: 'Bienvenue dans {church} ! 🙏',
       body: 'Cette application vous permet de suivre vos âmes évangélisées et d\'enregistrer vos interactions. Nous allons vous guider en quelques étapes.',
       position: 'center',
       icon: <Megaphone className="w-10 h-10 text-[#F2B636]" />,
@@ -56,7 +57,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
 
   shepherd: [
     {
-      title: 'Bienvenue sur Bergerie ! 🙏',
+      title: 'Bienvenue dans {church} ! 🙏',
       body: 'Cette application vous aide à prendre soin de vos âmes. Nous allons vous guider en quelques étapes pour que vous soyez opérationnel rapidement.',
       position: 'center',
       icon: <Heart className="w-10 h-10 text-[#00665C]" />,
@@ -190,8 +191,11 @@ interface OnboardingTourProps {
 }
 
 export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTourProps) {
+  const { church } = useChurch();
+  const churchLabel = church?.name || 'Bergerie';
   const steps = STEPS[role];
   const current = steps[step];
+  const displayTitle = (current?.title ?? '').replace('{church}', churchLabel);
   const isLast = step === steps.length - 1;
   const [rect, setRect] = useState<ReturnType<typeof getTargetRect>>(null);
   const [, forceUpdate] = useState(0);
@@ -307,7 +311,7 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
         role="dialog"
         aria-modal="true"
-        aria-label={current.title}
+        aria-label={displayTitle}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-[#00665C] to-[#00865C] px-5 py-4 flex items-start justify-between">
@@ -318,7 +322,7 @@ export function OnboardingTour({ role, step, onAdvance, onSkip }: OnboardingTour
               </span>
             )}
             <h3 className="text-white font-semibold text-sm leading-tight">
-              {current.title}
+              {displayTitle}
             </h3>
           </div>
           <button

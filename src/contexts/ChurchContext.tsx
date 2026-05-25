@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { setCurrentChurchId } from '../lib/churchId';
 import { ChurchModules, DEFAULT_MODULES, isModuleEnabled } from '../lib/churchModules';
+import { applyChurchBranding } from '../lib/branding';
 export { isModuleEnabled };
 
 // ---------------------------------------------------------------------------
@@ -166,6 +167,15 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const churchId = church?.id || (superAdminDomain ? selectedChurchId : 'bergerie');
+
+  // Eglise active : tenant courant, ou (domaine super-admin) celle sélectionnée
+  const activeChurch = church ?? allChurches.find(c => c.id === selectedChurchId) ?? null;
+
+  // Branding par tenant : titre d'onglet, theme-color, favicon, manifest PWA
+  useEffect(() => {
+    applyChurchBranding(activeChurch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChurch?.id, activeChurch?.name, activeChurch?.primaryColor, activeChurch?.logoUrl]);
 
   const modules = church?.modules ?? DEFAULT_MODULES;
   const hasModule = (key: string) => isModuleEnabled(modules, key);

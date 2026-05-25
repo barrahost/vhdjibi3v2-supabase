@@ -1,12 +1,17 @@
+import { useChurch } from '../../contexts/ChurchContext';
+
 interface LogoProps {
   className?: string;
 }
 
 export function Logo({ className = "h-8 w-auto" }: LogoProps) {
+  const { church } = useChurch();
+  const alt = church?.shortName || church?.name || 'Bergerie';
+
   return (
     <img
-      src="/logo-agc-bergerie.svg"
-      alt="AGC Bergerie"
+      src={church?.logoUrl || "/logo-agc-bergerie.svg"}
+      alt={alt}
       className={className}
     />
   );
