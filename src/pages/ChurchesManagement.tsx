@@ -289,7 +289,7 @@ export default function ChurchesManagement() {
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  {church.slug !== 'agc' && (
+                  {church.slug !== 'bergerie' && (
                     <button
                       onClick={() => handleDelete(church)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
