@@ -20,7 +20,10 @@ export default function PrivacyPolicy() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
           <p className="text-gray-700 mb-4">
-            La protection de vos données personnelles est une priorité pour Vases d'Honneur Assemblée Grâce Confondante. Cette politique de confidentialité vous informe de la manière dont nous collectons, utilisons et protégeons vos données personnelles sur le site https://chad3.evdh.org.
+            La protection de vos données personnelles est une priorité pour le Siège des Églises Vases d'Honneur,
+            propriétaire de l'application Bergerie. Cette politique de confidentialité vous informe de la
+            manière dont nous collectons, utilisons et protégeons vos données personnelles dans le cadre de
+            l'application Bergerie.
           </p>
         </section>
 
@@ -87,14 +90,35 @@ export default function PrivacyPolicy() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Sécurité</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Hébergement et sous-traitants</h2>
+          <p className="text-gray-700 mb-4">
+            Pour fournir le service, nous faisons appel aux prestataires techniques suivants, qui agissent
+            en qualité de sous-traitants au sens du RGPD :
+          </p>
+          <ul className="list-disc pl-6 mb-4 text-gray-700">
+            <li>
+              <strong>Cloudflare, Inc.</strong> — hébergement et diffusion de l'application (réseau CDN).
+            </li>
+            <li>
+              <strong>Supabase, Inc.</strong> — hébergement de la base de données et exécution des fonctions
+              edge (stockage et traitement des données).
+            </li>
+          </ul>
+          <p className="text-gray-700 mb-4">
+            Ces prestataires sont contractuellement tenus d'assurer un niveau de protection adéquat de vos
+            données et de ne les traiter que selon nos instructions.
+          </p>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Sécurité</h2>
           <p className="text-gray-700 mb-4">
             Nous mettons en œuvre des mesures de sécurité appropriées pour protéger vos données contre tout accès, modification, divulgation ou destruction non autorisés.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Contact</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">9. Contact</h2>
           <p className="text-gray-700">
             Pour exercer vos droits ou pour toute question concernant la protection de vos données, contactez notre Délégué à la Protection des Données (DPO) à : dpo@evdh.org
           </p>
