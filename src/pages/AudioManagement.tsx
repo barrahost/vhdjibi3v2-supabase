@@ -10,9 +10,12 @@ import toast from 'react-hot-toast';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CategoryForm } from '../components/audio/categories/CategoryForm';
 import { CategoryList } from '../components/audio/categories/CategoryList';
+import { SpeakerForm } from '../components/audio/speakers/SpeakerForm';
+import { SpeakerList } from '../components/audio/speakers/SpeakerList';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { Tabs } from '../components/ui/tabs';
 import { useCategories } from '../hooks/useCategories';
+import { useSpeakers } from '../hooks/useSpeakers';
 import { isWithinLast7Days } from '../utils/dateUtils';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
@@ -49,7 +52,7 @@ export default function AudioManagement() {
   const { confirm, confirmModalProps } = useConfirmModal();
   const [teachings, setTeachings] = useState<Teaching[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'teachings' | 'categories'>('teachings');
+  const [activeTab, setActiveTab] = useState<'teachings' | 'categories' | 'speakers'>('teachings');
   const [showForm, setShowForm] = useState(false);
   const [editingTeaching, setEditingTeaching] = useState<Teaching | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,6 +71,7 @@ export default function AudioManagement() {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { categories } = useCategories();
+  const { speakers: speakerOptions } = useSpeakers();
   
   // Add filters
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -688,9 +692,9 @@ export default function AudioManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des Audios de cultes</h1>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setActiveTab('teachings')}
             className={`px-4 py-2 text-sm font-medium rounded-md ${
@@ -711,6 +715,16 @@ export default function AudioManagement() {
           >
             Catégories
           </button>
+          <button
+            onClick={() => setActiveTab('speakers')}
+            className={`px-4 py-2 text-sm font-medium rounded-md ${
+              activeTab === 'speakers'
+                ? 'bg-[#00665C] text-white'
+                : 'text-gray-700 bg-white border border-gray-300'
+            }`}
+          >
+            Orateurs
+          </button>
           {activeTab === 'teachings' && (
             <button
               onClick={() => setShowForm(true)}
@@ -730,6 +744,14 @@ export default function AudioManagement() {
             <CategoryForm />
           </div>
           <CategoryList />
+        </div>
+      ) : activeTab === 'speakers' ? (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h2 className="text-lg font-semibold text-[#00665C] mb-4">Ajouter un orateur</h2>
+            <SpeakerForm />
+          </div>
+          <SpeakerList />
         </div>
       ) : (
         <>
@@ -943,13 +965,26 @@ export default function AudioManagement() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Orateur
             </label>
-            <input
-              type="text"
+            <select
               required
               value={formData.speaker}
               onChange={(e) => setFormData(prev => ({ ...prev, speaker: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-            />
+            >
+              <option value="">Sélectionner un orateur</option>
+              {/* Conserve l'orateur actuel s'il n'est plus dans la liste configurée (édition) */}
+              {formData.speaker && !speakerOptions.some(s => s.name === formData.speaker) && (
+                <option value={formData.speaker}>{formData.speaker}</option>
+              )}
+              {speakerOptions.map(speaker => (
+                <option key={speaker.id} value={speaker.name}>
+                  {speaker.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              Gérez la liste des orateurs dans l'onglet « Orateurs ».
+            </p>
           </div>
 
           <div>
