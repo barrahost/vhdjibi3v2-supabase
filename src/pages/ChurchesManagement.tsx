@@ -20,7 +20,7 @@ interface Church {
   address: string | null;
   phone: string | null;
   email: string | null;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'archived';
   created_at: string;
 }
 
@@ -48,6 +48,7 @@ export default function ChurchesManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingChurch, setEditingChurch] = useState<Church | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ church: Church; step: number; inputName: string } | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [modulesOpen, setModulesOpen] = useState(false);
 
@@ -184,17 +185,28 @@ export default function ChurchesManagement() {
     }
   };
 
-  const handleDelete = async (church: Church) => {
+const handleDelete = (church: Church) => {
     if (church.slug === 'bergerie') {
-      toast.error("L'église AGC ne peut pas être supprimée");
+      toast.error("L'Ã©glise AGC ne peut pas Ãªtre supprimÃ©e");
       return;
     }
-    const ok = await confirm(
-      `Supprimer l'église "${church.name}" (${church.slug}) ? Toutes ses données seront dissociées.`
-    );
-    if (!ok) return;
+    setDeleteModal({ church, step: 1, inputName: '' });
+  };
+
+  const handleArchive = async (church: Church) => {
     try {
-      // Nettoyer DNS + domaine Cloudflare avant suppression
+      const { error } = await supabase.from('churches').update({ status: 'archived' }).eq('id', church.id);
+      if (error) throw error;
+      setChurches(prev => prev.map(c => c.id === church.id ? { ...c, status: 'archived' as const } : c));
+      setDeleteModal(null);
+      toast.success('Ã‰glise archivÃ©e â€” les donnÃ©es sont conservÃ©es');
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de l'archivage");
+    }
+  };
+
+  const handleHardDelete = async (church: Church) => {
+    try {
       try {
         await supabase.functions.invoke('setup-church-domain', {
           body: { slug: church.slug, action: 'delete' },
@@ -205,9 +217,21 @@ export default function ChurchesManagement() {
       const { error } = await supabase.from('churches').delete().eq('id', church.id);
       if (error) throw error;
       setChurches(prev => prev.filter(c => c.id !== church.id));
-      toast.success('Église supprimée');
+      setDeleteModal(null);
+      toast.success('Ã‰glise supprimÃ©e dÃ©finitivement');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la suppression');
+    }
+  };
+
+  const handleRestore = async (church: Church) => {
+    try {
+      const { error } = await supabase.from('churches').update({ status: 'active' }).eq('id', church.id);
+      if (error) throw error;
+      setChurches(prev => prev.map(c => c.id === church.id ? { ...c, status: 'active' as const } : c));
+      toast.success('Ã‰glise restaurÃ©e');
+    } catch (err: any) {
+      toast.error(err?.message || 'Erreur lors de la restauration');
     }
   };
 
@@ -239,7 +263,7 @@ export default function ChurchesManagement() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {churches.map(church => (
+          {churches.filter(c => c.status !== 'archived').map(church => (
             <div key={church.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
@@ -529,6 +553,128 @@ export default function ChurchesManagement() {
       )}
 
       <ConfirmModal {...confirmModalProps} />
+      {/* â”€â”€ Modal Archivage / Suppression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+
+            {/* Ã‰tape 1 : Choix archiver ou supprimer */}
+            {deleteModal.step === 1 && (
+              <>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Que souhaitez-vous faire ?</h3>
+                <p className="text-gray-500 text-sm mb-5">{deleteModal.church.name} ({deleteModal.church.slug})</p>
+                <div className="space-y-3">
+                  <button onClick={() => handleArchive(deleteModal.church)}
+                    className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 text-left transition-colors">
+                    <span className="text-2xl">ðŸ“¦</span>
+                    <div>
+                      <div className="font-semibold text-yellow-800">Archiver</div>
+                      <div className="text-xs text-yellow-600 mt-0.5">Les donnÃ©es sont conservÃ©es. L'Ã©glise peut Ãªtre restaurÃ©e.</div>
+                    </div>
+                  </button>
+                  <button onClick={() => setDeleteModal({ ...deleteModal, step: 2 })}
+                    className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 text-left transition-colors">
+                    <span className="text-2xl">ðŸ—‘ï¸</span>
+                    <div>
+                      <div className="font-semibold text-red-800">Supprimer dÃ©finitivement</div>
+                      <div className="text-xs text-red-600 mt-0.5">Suppression irrÃ©versible de l'Ã©glise et toutes ses donnÃ©es.</div>
+                    </div>
+                  </button>
+                </div>
+                <button onClick={() => setDeleteModal(null)} className="mt-4 w-full text-gray-400 hover:text-gray-600 text-sm py-2">Annuler</button>
+              </>
+            )}
+
+            {/* Ã‰tape 2 : Confirmation nom */}
+            {deleteModal.step === 2 && (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-3xl">âš ï¸</span>
+                  <h3 className="text-lg font-bold text-red-700">Suppression dÃ©finitive</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irrÃ©versible</strong>. Toutes les donnÃ©es liÃ©es seront perdues :</p>
+                <ul className="text-xs text-gray-500 list-disc list-inside mb-4 space-y-1 bg-gray-50 rounded-lg p-3">
+                  <li>Ã‚mes, prÃ©sences, interactions</li>
+                  <li>Audios, enseignements</li>
+                  <li>Utilisateurs et serviteurs</li>
+                  <li>DNS et domaine Cloudflare</li>
+                </ul>
+                <p className="text-sm font-medium text-gray-700 mb-1">Tapez le nom exact pour confirmer :</p>
+                <p className="text-sm font-bold text-red-600 mb-2">{deleteModal.church.name}</p>
+                <input type="text" value={deleteModal.inputName}
+                  onChange={e => setDeleteModal({ ...deleteModal, inputName: e.target.value })}
+                  placeholder="Tapez le nom exactement..."
+                  className="w-full border rounded-lg px-3 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-red-300" />
+                <div className="flex gap-2">
+                  <button onClick={() => setDeleteModal({ ...deleteModal, step: 1 })}
+                    className="flex-1 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm">Retour</button>
+                  <button onClick={() => deleteModal.inputName === deleteModal.church.name && setDeleteModal({ ...deleteModal, step: 3 })}
+                    disabled={deleteModal.inputName !== deleteModal.church.name}
+                    className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-40 hover:bg-red-700 disabled:cursor-not-allowed">
+                    Continuer â†’
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Ã‰tape 3 : DerniÃ¨re confirmation */}
+            {deleteModal.step === 3 && (
+              <>
+                <div className="text-center mb-5">
+                  <div className="text-5xl mb-3">ðŸš¨</div>
+                  <h3 className="text-xl font-bold text-red-700 mb-2">DerniÃ¨re confirmation</h3>
+                  <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de faÃ§on permanente.</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm text-red-700 text-center font-medium">
+                  âš ï¸ Cette action ne peut pas Ãªtre annulÃ©e.
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setDeleteModal(null)}
+                    className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm">Annuler</button>
+                  <button onClick={() => handleHardDelete(deleteModal.church)}
+                    className="flex-1 py-2.5 rounded-lg bg-red-700 text-white text-sm font-bold hover:bg-red-800">
+                    Supprimer dÃ©finitivement
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* â”€â”€ Ã‰glises archivÃ©es â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {churches.filter(c => c.status === 'archived').length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <span>ðŸ“¦</span> ArchivÃ©es ({churches.filter(c => c.status === 'archived').length})
+          </h2>
+          <div className="space-y-2">
+            {churches.filter(c => c.status === 'archived').map(church => (
+              <div key={church.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-gray-50 opacity-60">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold text-sm">
+                    {church.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-500 text-sm">{church.name}</p>
+                    <p className="text-xs text-gray-400">{church.slug}.evdh.org</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleRestore(church)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium">
+                    Restaurer
+                  </button>
+                  <button onClick={() => setDeleteModal({ church, step: 2, inputName: '' })}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 font-medium">
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
