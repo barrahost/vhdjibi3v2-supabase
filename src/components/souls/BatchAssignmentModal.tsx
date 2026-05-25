@@ -39,7 +39,7 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
       .eq('church_id', getChurchId())
       .eq('status', 'active')
       .is('shepherd_id', null)
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         setUnassignedSouls((data ?? []).map((r: any) => ({
           id: r.id,
           fullName: r.full_name || '',
@@ -58,7 +58,7 @@ export default function BatchAssignmentModal({ isOpen, onClose, onSuccess }: Bat
       .eq('church_id', getChurchId())
       .eq('status', 'active')
       .in('role', ['shepherd', 'intern', 'admin'])
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         const list = (data ?? [])
           .map((r: any) => ({ id: r.id, fullName: r.full_name || '', role: r.role } as ShepherdOption))
           .filter((s: ShepherdOption) => !!s.fullName)

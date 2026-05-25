@@ -21,7 +21,7 @@ export function SoulEvolutionChart() {
       try {
         // Récupérer toutes les âmes enregistrées (sans filtre de statut)
         const { data: soulsRaw } = await supabase.from('souls').select('*').eq('church_id', getChurchId());
-        const allSouls = (soulsRaw ?? []).map(row => ({
+        const allSouls = (soulsRaw ?? []).map((row: any) => ({
           id: row.id,
           ...row,
           createdAt: row.created_at ? new Date(row.created_at) : new Date(),

@@ -32,12 +32,13 @@ export function AdminDashboard() {
         // Charger toutes les données en parallèle
         const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0);
 
-        const [soulsRes, evangelizedRes, interactionsRes, recentSoulsRes, recentInterRes] = await Promise.all([
+        const [soulsRes, evangelizedRes, interactionsRes, recentSoulsRes, recentInterRes, interactionsCountRes] = await Promise.all([
           supabase.from('souls').select('id,shepherd_id,service_family_id,is_undecided').eq('church_id', getChurchId()).eq('status', 'active'),
           supabase.from('evangelized_souls').select('id,imported_to_soul_id').eq('church_id', getChurchId()).neq('status', 'imported'),
           supabase.from('interactions').select('id,date').eq('church_id', getChurchId()).gte('date', weekStart.toISOString()),
           supabase.from('souls').select('id,full_name,location,shepherd_id,created_at').eq('church_id', getChurchId()).eq('status', 'active').order('created_at', { ascending: false }).limit(5),
           supabase.from('interactions').select('id,type,date,soul_id').eq('church_id', getChurchId()).order('date', { ascending: false }).limit(5),
+          supabase.from('interactions').select('id', { count: 'exact', head: true }).eq('church_id', getChurchId()),
         ]);
 
         if (cancelled) return;
@@ -51,6 +52,7 @@ export function AdminDashboard() {
         const pendingEvang = evangelized.filter((s: any) => !s.imported_to_soul_id).length;
 
         const weekInteractions = (interactionsRes.data || []).length;
+        const totalInteractions = interactionsCountRes.count || 0;
 
         setKpis([
           {
@@ -73,7 +75,7 @@ export function AdminDashboard() {
           {
             label: 'Interactions cette semaine',
             value: weekInteractions,
-            sub: `${interactionsSnapData.size} au total`,
+            sub: `${totalInteractions} au total`,
             color: 'text-blue-600',
             icon: <MessageCircle className="w-5 h-5" />,
             href: '/interactions'
@@ -98,12 +100,18 @@ export function AdminDashboard() {
         setAlerts(newAlerts);
 
         // Activité récente
-        setRecentSouls(recentSoulsSnapData.map(d => ({ id: d.id, ...d.data() } as RecentSoul)));
-        setRecentInteractions(recentInterSnapData.map(d => ({
+        setRecentSouls((recentSoulsRes.data || []).map((d: any) => ({
           id: d.id,
-          type: d.data().type,
-          date: d.data().date?.toDate?.() || new Date(d.data().date),
-          soulId: d.data().soulId,
+          fullName: d.full_name,
+          location: d.location,
+          shepherdId: d.shepherd_id,
+          createdAt: d.created_at,
+        } as RecentSoul)));
+        setRecentInteractions((recentInterRes.data || []).map((d: any) => ({
+          id: d.id,
+          type: d.type,
+          date: new Date(d.date),
+          soulId: d.soul_id,
         })));
 
       } catch (err) {

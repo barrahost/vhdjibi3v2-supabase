@@ -33,6 +33,8 @@ interface Teaching {
   tags: string[];
   duration: number;
   fileUrl: string;
+  /** snake_case fallback for migrated rows */
+  file_url?: string;
   thumbnail_url?: string;
   plays?: number;
   createdAt: Date;
@@ -389,7 +391,8 @@ export default function AudioManagement() {
 
     try {
       // Delete from storage
-      await StorageService.deleteAudioFile(teaching.fileUrl || teaching.file_url);
+      const fileUrl = teaching.fileUrl || teaching.file_url;
+      if (fileUrl) await StorageService.deleteAudioFile(fileUrl);
 
       // If there's a thumbnail, delete it too
       if (teaching.thumbnail_url) {
@@ -423,10 +426,13 @@ export default function AudioManagement() {
 
       // Delete storage files
       await Promise.allSettled(
-        toDelete.flatMap(t => [
-          t.fileUrl || t.file_url ? StorageService.deleteAudioFile(t.fileUrl || t.file_url) : Promise.resolve(),
-          t.thumbnail_url ? StorageService.deleteAudioFile(t.thumbnail_url) : Promise.resolve(),
-        ])
+        toDelete.flatMap(t => {
+          const url = t.fileUrl || t.file_url;
+          return [
+            url ? StorageService.deleteAudioFile(url) : Promise.resolve(),
+            t.thumbnail_url ? StorageService.deleteAudioFile(t.thumbnail_url) : Promise.resolve(),
+          ];
+        })
       );
 
       const { error } = await supabase.from('teachings').delete().in('id', ids);

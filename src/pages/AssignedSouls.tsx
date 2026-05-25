@@ -173,7 +173,7 @@ export default function AssignedSouls() {
           setSouls(loaded);
 
           if (loaded.length > 0) {
-            await loadLastContacts(loaded.map((s) => s.id));
+            await loadLastContacts(loaded.map((s: any) => s.id));
           }
         } else {
           toast.error('Profil berger requis pour voir les âmes assignées');

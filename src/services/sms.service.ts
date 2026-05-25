@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { SMSMessage } from '../types/sms.types';
 import toast from 'react-hot-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 export class SMSService {
   private static readonly MIN_SMS_THRESHOLD = 5; // Alerte si moins de 5 SMS restants
@@ -101,7 +100,7 @@ export class SMSService {
       const { data, error } = await q;
       if (error) throw error;
 
-      return (data ?? []).map(row => ({
+      return (data ?? []).map((row: any) => ({
         id: row.id,
         title: row.title,
         content: row.content,

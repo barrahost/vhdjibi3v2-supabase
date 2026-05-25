@@ -138,7 +138,7 @@ export function ShepherdDashboard() {
         const { data } = await supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId);
         if (!cancelled) {
           const mapped = (data ?? []).map((r: any) => ({ id: r.id, soulId: r.soul_id, shepherdId: r.shepherd_id, date: r.date ? new Date(r.date) : new Date(), type: r.type, notes: r.notes } as unknown as Interaction));
-          setRecentInteractions(mapped.sort((a, b) => b.date.getTime() - a.date.getTime()));
+          setRecentInteractions(mapped.sort((a: any, b: any) => b.date.getTime() - a.date.getTime()));
         }
       })
       .subscribe();

@@ -30,8 +30,8 @@ function Options() {
 
         const list = (data ?? [])
           .map((r: any) => ({ id: r.id, fullName: r.full_name || '' }))
-          .filter(e => !!e.fullName)
-          .sort((a, b) => a.fullName.localeCompare(b.fullName));
+          .filter((e: any) => !!e.fullName)
+          .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
 
         setEvangelists(list);
       } catch (error) {

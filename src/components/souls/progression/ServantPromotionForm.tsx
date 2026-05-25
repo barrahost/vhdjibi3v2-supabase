@@ -49,7 +49,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
   // Charger les départements disponibles
   useEffect(() => {
     supabase.from('departments').select('*').eq('church_id', getChurchId()).eq('status', 'active').order('order', { ascending: true })
-      .then(({ data }) => setDepartments((data ?? []) as Department[]));
+      .then(({ data }: any) => setDepartments((data ?? []) as Department[]));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

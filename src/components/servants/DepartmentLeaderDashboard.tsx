@@ -94,9 +94,9 @@ export default function DepartmentLeaderDashboard() {
       setServants(servantsData);
       setStats({
         totalServants: servantsData.length,
-        activeServants: servantsData.filter(s => s.status === 'active').length,
-        promotedFromSouls: servantsData.filter(s => s.originalSoulId).length,
-        shepherds: servantsData.filter(s => s.isShepherd).length
+        activeServants: servantsData.filter((s: any) => s.status === 'active').length,
+        promotedFromSouls: servantsData.filter((s: any) => s.originalSoulId).length,
+        shepherds: servantsData.filter((s: any) => s.isShepherd).length
       });
     };
     loadServants();

@@ -94,7 +94,7 @@ export class ServantService {
             .eq('church_id', getChurchId())
             .eq('phone', data.phone)
             .eq('status', 'active');
-          const otherDepts = (globalSnap ?? []).filter(d => d.department_id !== data.departmentId);
+          const otherDepts = (globalSnap ?? []).filter((d: any) => d.department_id !== data.departmentId);
           if (otherDepts.length > 0) {
             console.warn(`[Servants] Numéro ${data.phone} déjà utilisé dans ${otherDepts.length} autre(s) département(s)`);
           }
@@ -461,7 +461,7 @@ export class ServantService {
 
     for (let i = 0; i < soulIds.length; i += 100) {
       const chunk = soulIds.slice(i, i + 100);
-      const { data: souls } = await supabase
+      const { data: souls, error } = await supabase
         .from('souls')
         .select('*')
         .eq('church_id', getChurchId())
@@ -520,7 +520,7 @@ export class ServantService {
 
     for (let i = 0; i < userDocIds.length; i += 100) {
       const chunk = userDocIds.slice(i, i + 100);
-      const { data: users } = await supabase
+      const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('church_id', getChurchId())

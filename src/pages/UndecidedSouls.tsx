@@ -110,7 +110,7 @@ export default function UndecidedSouls() {
             : undefined,
           createdAt: row.createdAt || row.created_at,
         } as Soul))
-        .filter(s => s.isUndecided === true)
+        .filter((s: any) => s.isUndecided === true)
         .sort((a: any, b: any) => {
           const aDate = a.createdAt || 0;
           const bDate = b.createdAt || 0;

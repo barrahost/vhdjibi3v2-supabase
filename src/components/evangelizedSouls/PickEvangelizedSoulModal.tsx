@@ -27,7 +27,7 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect }: 
       .select('*')
       .eq('church_id', getChurchId())
       .neq('status', 'imported')
-      .then(({ data, error }) => {
+      .then(({ data, error }: any) => {
         if (error) { console.error('PickEvangelized load error:', error); return; }
         const list = (data ?? [])
           .map((d: any) => ({

@@ -177,16 +177,15 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
   useEffect(() => {
     const load = async () => {
       try {
-        const snap = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('status', 'active').then(r=>r);
-        const data = snap.docs
-          .map(d => {
-            const u: any = d.data();
-            const profiles: any[] = Array.isArray(u.businessProfiles) ? u.businessProfiles : [];
+        const { data: usersData } = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('status', 'active');
+        const data = (usersData ?? [])
+          .map((u: any) => {
+            const profiles: any[] = Array.isArray(u.business_profiles) ? u.business_profiles : (Array.isArray(u.businessProfiles) ? u.businessProfiles : []);
             const isEv = u.role === 'evangelist' || profiles.some((p: any) => p?.type === 'evangelist' && p?.isActive !== false);
             if (!isEv) return null;
-            return { id: d.id, fullName: u.fullName || '' } as EvangelistOption;
+            return { id: u.id, fullName: u.full_name || u.fullName || '' } as EvangelistOption;
           })
-          .filter((e): e is EvangelistOption => e !== null && !!e.fullName);
+          .filter((e: any): e is EvangelistOption => e !== null && !!e.fullName);
         setEvangelists(data);
       } catch (e) {
         console.error('Error loading evangelists:', e);
@@ -205,13 +204,13 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
     const checkDB = async () => {
       setCheckingDuplicates(true);
       try {
-        const snap = await supabase.from('evangelized_souls').select('*').eq('church_id', getChurchId());
+        const { data: existingRows } = await supabase.from('evangelized_souls').select('*').eq('church_id', getChurchId());
         const existingPhones = new Set<string>();
         const existingNames = new Set<string>();
-        snap.forEach(d => {
-          const data = d.data();
-          if (data.phone) existingPhones.add(data.phone);
-          if (data.fullName) existingNames.add(normalize(data.fullName));
+        (existingRows ?? []).forEach((d: any) => {
+          if (d.phone) existingPhones.add(d.phone);
+          const fullName = d.full_name || d.fullName;
+          if (fullName) existingNames.add(normalize(fullName));
         });
 
         setRows(prev => prev.map(r => {

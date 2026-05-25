@@ -64,7 +64,7 @@ export default function Reminders() {
             .eq('shepherd_id', shepherdId);
 
           if (interactionsError) throw interactionsError;
-          setInteractions((interactionsData ?? []).map(row => ({
+          setInteractions((interactionsData ?? []).map((row: any) => ({
             ...row,
             date: row.date ? new Date(row.date) : new Date()
           } as Interaction)));

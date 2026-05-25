@@ -256,7 +256,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
         }
 
         // Deduplicate by email
-        const deduplicatedUsers = allUsers.reduce((acc: User[], user) => {
+        const deduplicatedUsers = allUsers.reduce((acc: User[], user: any) => {
           const existing = acc.find(u => user.email && u.email && u.email === user.email);
           if (!existing) acc.push(user);
           return acc;
@@ -264,15 +264,15 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
         let filteredUsers = deduplicatedUsers;
         if (filter !== 'all') {
-          if (filter === 'admins') filteredUsers = filteredUsers.filter(user => isAdminUser(user));
-          else if (filter === 'shepherds') filteredUsers = filteredUsers.filter(user => isShepherdUser(user));
-          else if (filter === 'adn') filteredUsers = filteredUsers.filter(user => isADNUser(user));
-          else if (filter === 'department_leader') filteredUsers = filteredUsers.filter(user => isDepartmentLeaderUser(user));
-          else if (filter === 'family_leader') filteredUsers = filteredUsers.filter(user => isFamilyLeaderUser(user));
-          else if (filter === 'evangelist') filteredUsers = filteredUsers.filter(user => isEvangelistUser(user));
+          if (filter === 'admins') filteredUsers = filteredUsers.filter((user: any) =>isAdminUser(user));
+          else if (filter === 'shepherds') filteredUsers = filteredUsers.filter((user: any) =>isShepherdUser(user));
+          else if (filter === 'adn') filteredUsers = filteredUsers.filter((user: any) =>isADNUser(user));
+          else if (filter === 'department_leader') filteredUsers = filteredUsers.filter((user: any) =>isDepartmentLeaderUser(user));
+          else if (filter === 'family_leader') filteredUsers = filteredUsers.filter((user: any) =>isFamilyLeaderUser(user));
+          else if (filter === 'evangelist') filteredUsers = filteredUsers.filter((user: any) =>isEvangelistUser(user));
         }
         if (statusFilter !== 'all') {
-          filteredUsers = filteredUsers.filter(user => user.status === statusFilter);
+          filteredUsers = filteredUsers.filter((user: any) =>user.status === statusFilter);
         }
 
         setUsers(filteredUsers);

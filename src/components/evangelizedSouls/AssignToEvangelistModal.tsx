@@ -44,7 +44,7 @@ export default function AssignToEvangelistModal({
       .eq('church_id', getChurchId())
       .eq('status', 'active')
       .eq('role', 'evangelist')
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         const list = (data ?? [])
           .map((r: any) => ({ id: r.id, fullName: r.full_name || '' }))
           .filter((e: EvangelistOption) => !!e.fullName)

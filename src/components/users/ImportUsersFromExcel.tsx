@@ -89,8 +89,8 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
     const checkDB = async () => {
       setCheckingDuplicates(true);
       try {
-        const snap = await supabase.from('users').select('*').eq('church_id', getChurchId());
-        const existingPhones = new Set(snap.docs.map(d => d.data().phone as string));
+        const { data: usersData } = await supabase.from('users').select('*').eq('church_id', getChurchId());
+        const existingPhones = new Set((usersData ?? []).map((d: any) => d.phone as string));
 
         setRows(prev => prev.map(row => {
           if (row.status === 'error') return row; // garder les erreurs de format
@@ -208,8 +208,8 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
 
     try {
       // Re-vérification finale avant écriture
-      const snap = await supabase.from('users').select('*').eq('church_id', getChurchId());
-      const existingPhones = new Set(snap.docs.map(d => d.data().phone as string));
+      const { data: usersData } = await supabase.from('users').select('*').eq('church_id', getChurchId());
+      const existingPhones = new Set((usersData ?? []).map((d: any) => d.phone as string));
 
       for (const row of validRows) {
         if (existingPhones.has(row.phone)) { skipped++; continue; }
