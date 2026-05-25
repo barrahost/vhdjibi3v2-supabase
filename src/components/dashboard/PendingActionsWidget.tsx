@@ -66,7 +66,7 @@ export default function PendingActionsWidget(props: Props) {
             .eq('church_id', getChurchId())
             .eq('service_family_id', props.familyId);
 
-          const noShepherd = (souls ?? []).filter(s => !s.shepherd_id && s.status !== 'inactive').length;
+          const noShepherd = (souls ?? []).filter((s: any) => !s.shepherd_id && s.status !== 'inactive').length;
 
           next.push({
             id: 'no-shepherd',
@@ -98,7 +98,7 @@ export default function PendingActionsWidget(props: Props) {
           }
 
           const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-          const stale = (soulsData ?? []).filter(s => {
+          const stale = (soulsData ?? []).filter((s: any) => {
             const last = lastBySoul.get(s.id);
             return !last || last < cutoff;
           }).length;

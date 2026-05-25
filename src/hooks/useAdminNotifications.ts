@@ -33,7 +33,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         const newAlerts: AdminAlert[] = [];
 
         // 1. Toutes les âmes actives (une seule requête pour tout)
-        const { data: allSouls } = await supabase
+        const { data: allSouls, error: soulsErr } = await supabase
           .from('souls')
           .select('id, full_name, shepherd_id, is_undecided, service_family_id, status')
           .eq('church_id', getChurchId());
@@ -79,7 +79,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         }
 
         // 5. Âmes évangélisées en attente (non importées)
-        const { data: evangelizedData } = await supabase
+        const { data: evangelizedData, error: evangErr } = await supabase
           .from('evangelized_souls')
           .select('id, full_name, status, imported_to_soul_id')
           .eq('church_id', getChurchId())
@@ -97,7 +97,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
         }
 
         // 6. Anniversaires dans les 7 prochains jours (table birthdays)
-        const { data: birthdaysData } = await supabase
+        const { data: birthdaysData, error: bdErr } = await supabase
           .from('birthdays')
           .select('id, full_name, birth_date, soul_id')
           .eq('church_id', getChurchId());

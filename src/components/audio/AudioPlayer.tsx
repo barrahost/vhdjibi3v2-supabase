@@ -214,7 +214,7 @@ export function AudioPlayer({
       if (p !== undefined) {
         if (!playTrackedRef.current) {
           supabase.from('teachings').select('plays').eq('church_id', getChurchId()).eq('id', id).single()
-            .then(({ data }) => { if (data) supabase.from('teachings').update({ plays: (data.plays || 0) + 1 }).eq('id', id).then(() => {}); });
+            .then(({ data }: any) => { if (data) supabase.from('teachings').update({ plays: (data.plays || 0) + 1 }).eq('id', id).then(() => {}); });
           playTrackedRef.current = true;
           try {
             const stored: string[] = JSON.parse(localStorage.getItem('recently_played') || '[]');

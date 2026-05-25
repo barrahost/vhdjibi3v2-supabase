@@ -106,7 +106,7 @@ export function SoulMap({ className = '' }: SoulMapProps) {
           status: r.status,
           coordinates: r.coordinates,
           businessProfiles: r.business_profiles || []
-        } as unknown as User))).filter(u => isShepherdUser(u));
+        } as unknown as User))).filter((u: any) => isShepherdUser(u));
         setUsers(shepherdsData);
 
         // Charger les âmes
@@ -131,8 +131,8 @@ export function SoulMap({ className = '' }: SoulMapProps) {
         // Update stats
         setStats({
           totalSouls: soulsData.length,
-          geolocatedSouls: soulsData.filter(s => s.coordinates).length,
-          geolocatedShepherds: shepherdsData.filter(s => s.coordinates).length
+          geolocatedSouls: soulsData.filter((s: any) => s.coordinates).length,
+          geolocatedShepherds: shepherdsData.filter((s: any) => s.coordinates).length
         });
 
       } catch (error) {

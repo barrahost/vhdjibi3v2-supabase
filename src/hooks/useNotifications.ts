@@ -30,7 +30,7 @@ export function useNotifications(userId: string | undefined) {
     const compute = async () => {
       try {
         // Récupérer les âmes du berger
-        const { data: soulsData } = await supabase
+        const { data: soulsData, error: soulsErr } = await supabase
           .from('souls')
           .select('id, full_name')
           .eq('church_id', getChurchId())
@@ -41,7 +41,7 @@ export function useNotifications(userId: string | undefined) {
         if (souls.length === 0) return;
 
         // Récupérer les interactions du berger (tri desc par date)
-        const { data: interactionsData } = await supabase
+        const { data: interactionsData, error: intErr } = await supabase
           .from('interactions')
           .select('soul_id, date')
           .eq('church_id', getChurchId())

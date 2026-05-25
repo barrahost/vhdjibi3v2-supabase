@@ -34,7 +34,7 @@ export default function SMSManagement() {
 
       try {
         // Récupérer l'utilisateur (incluant bergers multi-casquettes)
-        const { data: usersData } = await supabase
+        const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('*')
           .eq('church_id', getChurchId())
@@ -50,7 +50,7 @@ export default function SMSManagement() {
           setShepherdId(currentShepherdId);
 
           // Récupérer les âmes assignées
-          const { data: soulsData } = await supabase
+          const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('id, full_name, nickname, phone')
             .eq('church_id', getChurchId())
@@ -59,7 +59,7 @@ export default function SMSManagement() {
 
           if (soulsError) throw soulsError;
 
-          setAssignedSouls((soulsData ?? []).map(soul => ({
+          setAssignedSouls((soulsData ?? []).map((soul: any) => ({
             id: soul.id,
             fullName: soul.full_name || soul.fullName || '',
             nickname: soul.nickname,

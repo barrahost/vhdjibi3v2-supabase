@@ -33,7 +33,7 @@ const EMPTY_FORM = {
   address: '',
   phone: '',
   email: '',
-  status: 'active' as 'active' | 'inactive',
+  status: 'active' as 'active' | 'inactive' | 'archived',
   modules: { ...DEFAULT_MODULES } as ChurchModules,
 };
 

@@ -58,7 +58,7 @@ export default function ShepherdReminders() {
         let totalSoulsWithInteractions = 0;
 
         // Charger les données en parallèle pour chaque berger
-        await Promise.all(shepherds.map(async (shepherd) => {
+        await Promise.all(shepherds.map(async (shepherd: any) => {
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
@@ -91,17 +91,17 @@ export default function ShepherdReminders() {
 
           if (interactionsError) throw interactionsError;
 
-          const interactions = (interactionsData ?? []).map(row => ({
+          const interactions = (interactionsData ?? []).map((row: any) => ({
             ...row,
             soulId: row.soulId || row.soul_id,
             date: row.date ? new Date(row.date) : new Date()
           }));
 
           // Calculer les jours sans interaction pour chaque âme
-          const soulsWithInteractions = souls.map(soul => {
+          const soulsWithInteractions = souls.map((soul: any) => {
             const soulInteractions = interactions.filter((i: any) => i.soulId === soul.id);
             const lastInteraction = soulInteractions.length > 0
-              ? new Date(Math.max(...soulInteractions.map(i => i.date.getTime())))
+              ? new Date(Math.max(...soulInteractions.map((i: any) => i.date.getTime())))
               : null;
 
             const daysWithoutInteraction = lastInteraction
@@ -122,7 +122,7 @@ export default function ShepherdReminders() {
 
           // Filtrer pour ne garder que les âmes nécessitant attention (5 jours ou plus)
           const soulsNeedingAttention = soulsWithInteractions.filter(
-            s => s.daysWithoutInteraction >= 5
+            (s: any) => s.daysWithoutInteraction >= 5
           );
 
           if (soulsNeedingAttention.length > 0) {
@@ -133,7 +133,7 @@ export default function ShepherdReminders() {
                 phone: shepherd.phone,
                 email: shepherd.email
               },
-              souls: soulsNeedingAttention.sort((a, b) => b.daysWithoutInteraction - a.daysWithoutInteraction)
+              souls: soulsNeedingAttention.sort((a: any, b: any) => b.daysWithoutInteraction - a.daysWithoutInteraction)
             });
             totalNeedingAttention += soulsNeedingAttention.length;
           }

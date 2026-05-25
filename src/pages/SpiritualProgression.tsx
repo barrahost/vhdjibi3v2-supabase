@@ -67,7 +67,7 @@ export default function SpiritualProgression() {
       }
 
       const soulsData = (data ?? [])
-        .map((row) => ({
+        .map((row: any) => ({
           ...row,
           id: row.id,
           fullName: row.fullName || row.full_name || '',
@@ -82,7 +82,7 @@ export default function SpiritualProgression() {
           updatedAt: row.updatedAt ? new Date(row.updatedAt) : row.updated_at ? new Date(row.updated_at) : undefined,
           spiritualProfile: row.spiritualProfile || row.spiritual_profile || {},
         } as Soul))
-        .sort((a, b) => {
+        .sort((a: any, b: any) => {
           const aTime = a.createdAt ? a.createdAt.getTime() : 0;
           const bTime = b.createdAt ? b.createdAt.getTime() : 0;
           return bTime - aTime;

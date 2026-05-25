@@ -164,7 +164,7 @@ export default function ReplayTeachings() {
       }
       const { data, error } = await q;
       if (error) { toast.error('Erreur de chargement'); setLoading(false); return; }
-      const list = (data ?? []).map(r => ({
+      const list = (data ?? []).map((r: any) => ({
         id: r.id, title: r.title || '', description: r.description || '',
         speaker: r.speaker || '', category: r.category || '', tags: r.tags || [],
         duration: r.duration || 0, fileUrl: r.fileUrl || r.file_url || '',

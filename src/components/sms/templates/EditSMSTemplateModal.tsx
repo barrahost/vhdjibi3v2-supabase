@@ -34,7 +34,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
     const loadTemplate = async () => {
       try {
         // Supabase: use id directly: const docRefId = templateId; // table: smsTemplates
-        const docData = await supabase.from('sms_templates').select('*').eq('church_id', getChurchId()).eq('id', templateId).single();
+        const { data: docData, error: docErr } = await supabase.from('sms_templates').select('*').eq('church_id', getChurchId()).eq('id', templateId).single();
         if (docErr) throw docErr;
         
         if (!!docData) {

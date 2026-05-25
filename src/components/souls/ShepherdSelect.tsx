@@ -36,8 +36,8 @@ function Options() {
             fullName: r.full_name || '',
             role: r.role,
           } as ShepherdOption))
-          .filter(s => !!s.fullName)
-          .sort((a, b) => a.fullName.localeCompare(b.fullName));
+          .filter((s: any) => !!s.fullName)
+          .sort((a: any, b: any) => a.fullName.localeCompare(b.fullName));
 
         setShepherds(list);
       } catch (error) {
