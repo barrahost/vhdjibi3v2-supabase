@@ -1,82 +1,116 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const CF_API_TOKEN   = Deno.env.get('CLOUDFLARE_API_TOKEN')!;
-const CF_ACCOUNT_ID  = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')!;
-const CF_ZONE_ID     = Deno.env.get('CLOUDFLARE_ZONE_ID')!;
-const CF_PAGES_PROJECT = Deno.env.get('CLOUDFLARE_PAGES_PROJECT')!; // vhdjibi3v2-supabase
-const BASE_DOMAIN    = Deno.env.get('BASE_DOMAIN') || 'evdh.org';
-
-const CF_HEADERS = {
-  'Authorization': `Bearer ${CF_API_TOKEN}`,
-  'Content-Type': 'application/json',
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
-
   try {
-    const { slug } = await req.json();
-    if (!slug) return new Response(JSON.stringify({ error: 'slug requis' }), { status: 400 });
+    const { slug, action = "create" } = await req.json();
+    if (!slug) {
+      return new Response(
+        JSON.stringify({ error: "slug is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
+    const CF_TOKEN = Deno.env.get("CLOUDFLARE_API_TOKEN")!;
+    const CF_ACCOUNT = Deno.env.get("CLOUDFLARE_ACCOUNT_ID")!;
+    const CF_ZONE = Deno.env.get("CLOUDFLARE_ZONE_ID")!;
+    const CF_PROJECT = Deno.env.get("CLOUDFLARE_PAGES_PROJECT") || "vhdjibi3v2-supabase";
+    const BASE_DOMAIN = Deno.env.get("BASE_DOMAIN") || "evdh.org";
+    const cfH = { "Authorization": `Bearer ${CF_TOKEN}`, "Content-Type": "application/json" };
     const subdomain = `${slug}.${BASE_DOMAIN}`;
-    const results: Record<string, unknown> = {};
 
-    // ----------------------------------------------------------------
-    // 1. Créer l'enregistrement DNS CNAME
-    // ----------------------------------------------------------------
+    // --------------------------------------------------------
+    // DELETE: supprime le DNS + domaine Pages
+    // --------------------------------------------------------
+    if (action === "delete") {
+      // 1. Trouver l'enregistrement DNS CNAME
+      const listRes = await fetch(
+        `https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records?name=${subdomain}&type=CNAME`,
+        { headers: cfH }
+      );
+      const listData = await listRes.json();
+
+      let dnsResult = "not_found";
+      if (listData.success && listData.result?.length > 0) {
+        const recordId = listData.result[0].id;
+        const delRes = await fetch(
+          `https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records/${recordId}`,
+          { method: "DELETE", headers: cfH }
+        );
+        const delData = await delRes.json();
+        dnsResult = delData.success ? "deleted" : "error";
+      }
+
+      // 2. Supprimer le domaine personnalise dans Cloudflare Pages
+      const pagesDelRes = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${CF_PROJECT}/domains/${subdomain}`,
+        { method: "DELETE", headers: cfH }
+      );
+      const pagesDelData = await pagesDelRes.json();
+      const pagesResult = pagesDelData.success ? "deleted" : "not_found";
+
+      return new Response(
+        JSON.stringify({ success: true, subdomain, dns: dnsResult, pages: pagesResult }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --------------------------------------------------------
+    // CREATE (default): cree DNS + domaine Pages
+    // --------------------------------------------------------
     const dnsRes = await fetch(
-      `https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records`,
+      `https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/dns_records`,
       {
-        method: 'POST',
-        headers: CF_HEADERS,
+        method: "POST",
+        headers: cfH,
         body: JSON.stringify({
-          type: 'CNAME',
-          name: slug,                          // mhad3
-          content: `${CF_PAGES_PROJECT}.pages.dev`,
+          type: "CNAME",
+          name: slug,
+          content: `${CF_PROJECT}.pages.dev`,
+          ttl: 1,
           proxied: true,
-          ttl: 1,                              // Auto
         }),
       }
     );
-    const dnsJson = await dnsRes.json();
-    results.dns = dnsJson.success
-      ? { ok: true, id: dnsJson.result?.id }
-      : { ok: false, errors: dnsJson.errors };
+    const dnsData = await dnsRes.json();
+    if (!dnsData.success && !dnsData.errors?.some((e: any) => e.code === 81057)) {
+      return new Response(
+        JSON.stringify({ error: "DNS failed", details: dnsData.errors }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // ----------------------------------------------------------------
-    // 2. Ajouter le custom domain dans Cloudflare Pages
-    // ----------------------------------------------------------------
     const pagesRes = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/pages/projects/${CF_PAGES_PROJECT}/domains`,
+      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${CF_PROJECT}/domains`,
       {
-        method: 'POST',
-        headers: CF_HEADERS,
+        method: "POST",
+        headers: cfH,
         body: JSON.stringify({ name: subdomain }),
       }
     );
-    const pagesJson = await pagesRes.json();
-    results.pages = pagesJson.success
-      ? { ok: true }
-      : { ok: false, errors: pagesJson.errors };
-
-    const allOk = (results.dns as any).ok && (results.pages as any).ok;
+    const pagesData = await pagesRes.json();
+    if (!pagesData.success && !pagesData.errors?.some((e: any) => e.code === 8000007)) {
+      return new Response(
+        JSON.stringify({ error: "Pages domain failed", details: pagesData.errors }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
-      JSON.stringify({ ok: allOk, subdomain, results }),
-      {
-        status: allOk ? 200 : 207,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
+      JSON.stringify({ success: true, subdomain }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ ok: false, error: String(err) }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
