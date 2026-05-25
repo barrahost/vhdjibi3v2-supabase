@@ -194,6 +194,14 @@ export default function ChurchesManagement() {
     );
     if (!ok) return;
     try {
+      // Nettoyer DNS + domaine Cloudflare avant suppression
+      try {
+        await supabase.functions.invoke('setup-church-domain', {
+          body: { slug: church.slug, action: 'delete' },
+        });
+      } catch (e) {
+        console.warn('DNS cleanup warning:', e);
+      }
       const { error } = await supabase.from('churches').delete().eq('id', church.id);
       if (error) throw error;
       setChurches(prev => prev.filter(c => c.id !== church.id));
