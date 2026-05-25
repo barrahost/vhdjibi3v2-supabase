@@ -161,7 +161,7 @@ export default function ChurchesManagement() {
           const { data: fnData, error: fnError } = await supabase.functions.invoke('setup-church-domain', {
             body: { slug: form.slug.trim() },
           });
-          if (fnError || !fnData?.ok) {
+          if (fnError || !fnData?.success) {
             console.warn('DNS auto-setup partiel:', fnData?.results || fnError);
             toast.success('Église créée ✓ — Configuration DNS en cours (vérifiez Cloudflare si besoin)');
           } else {
