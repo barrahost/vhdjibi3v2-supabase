@@ -621,7 +621,7 @@ const handleDelete = (church: Church) => {
             {deleteModal.step === 3 && (
               <>
                 <div className="text-center mb-5">
-                  <div className="text-5xl mb-3">ðŸš¨</div>
+                  <div className="text-5xl mb-3">🚨</div>
                   <h3 className="text-xl font-bold text-red-700 mb-2">Dernière confirmation</h3>
                   <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de façon permanente.</p>
                 </div>
