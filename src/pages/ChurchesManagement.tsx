@@ -187,7 +187,7 @@ export default function ChurchesManagement() {
 
 const handleDelete = (church: Church) => {
     if (church.slug === 'bergerie') {
-      toast.error("L'Ã©glise AGC ne peut pas Ãªtre supprimÃ©e");
+      toast.error("L'église AGC ne peut pas être supprimée");
       return;
     }
     setDeleteModal({ church, step: 1, inputName: '' });
@@ -199,7 +199,7 @@ const handleDelete = (church: Church) => {
       if (error) throw error;
       setChurches(prev => prev.map(c => c.id === church.id ? { ...c, status: 'archived' as const } : c));
       setDeleteModal(null);
-      toast.success('Ã‰glise archivÃ©e â€” les donnÃ©es sont conservÃ©es');
+      toast.success('Église archivée â€” les données sont conservées');
     } catch (err: any) {
       toast.error(err?.message || "Erreur lors de l'archivage");
     }
@@ -218,7 +218,7 @@ const handleDelete = (church: Church) => {
       if (error) throw error;
       setChurches(prev => prev.filter(c => c.id !== church.id));
       setDeleteModal(null);
-      toast.success('Ã‰glise supprimÃ©e dÃ©finitivement');
+      toast.success('Église supprimée définitivement');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la suppression');
     }
@@ -229,7 +229,7 @@ const handleDelete = (church: Church) => {
       const { error } = await supabase.from('churches').update({ status: 'active' }).eq('id', church.id);
       if (error) throw error;
       setChurches(prev => prev.map(c => c.id === church.id ? { ...c, status: 'active' as const } : c));
-      toast.success('Ã‰glise restaurÃ©e');
+      toast.success('Église restaurée');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la restauration');
     }
@@ -558,7 +558,7 @@ const handleDelete = (church: Church) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
 
-            {/* Ã‰tape 1 : Choix archiver ou supprimer */}
+            {/* Étape 1 : Choix archiver ou supprimer */}
             {deleteModal.step === 1 && (
               <>
                 <h3 className="text-lg font-bold text-gray-900 mb-1">Que souhaitez-vous faire ?</h3>
@@ -569,15 +569,15 @@ const handleDelete = (church: Church) => {
                     <span className="text-2xl">ðŸ“¦</span>
                     <div>
                       <div className="font-semibold text-yellow-800">Archiver</div>
-                      <div className="text-xs text-yellow-600 mt-0.5">Les donnÃ©es sont conservÃ©es. L'Ã©glise peut Ãªtre restaurÃ©e.</div>
+                      <div className="text-xs text-yellow-600 mt-0.5">Les données sont conservées. L'église peut être restaurée.</div>
                     </div>
                   </button>
                   <button onClick={() => setDeleteModal({ ...deleteModal, step: 2 })}
                     className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 text-left transition-colors">
                     <span className="text-2xl">ðŸ—‘ï¸</span>
                     <div>
-                      <div className="font-semibold text-red-800">Supprimer dÃ©finitivement</div>
-                      <div className="text-xs text-red-600 mt-0.5">Suppression irrÃ©versible de l'Ã©glise et toutes ses donnÃ©es.</div>
+                      <div className="font-semibold text-red-800">Supprimer définitivement</div>
+                      <div className="text-xs text-red-600 mt-0.5">Suppression irréversible de l'église et toutes ses données.</div>
                     </div>
                   </button>
                 </div>
@@ -585,16 +585,16 @@ const handleDelete = (church: Church) => {
               </>
             )}
 
-            {/* Ã‰tape 2 : Confirmation nom */}
+            {/* Étape 2 : Confirmation nom */}
             {deleteModal.step === 2 && (
               <>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-3xl">âš ï¸</span>
-                  <h3 className="text-lg font-bold text-red-700">Suppression dÃ©finitive</h3>
+                  <h3 className="text-lg font-bold text-red-700">Suppression définitive</h3>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irrÃ©versible</strong>. Toutes les donnÃ©es liÃ©es seront perdues :</p>
+                <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irréversible</strong>. Toutes les données liées seront perdues :</p>
                 <ul className="text-xs text-gray-500 list-disc list-inside mb-4 space-y-1 bg-gray-50 rounded-lg p-3">
-                  <li>Ã‚mes, prÃ©sences, interactions</li>
+                  <li>Ã‚mes, présences, interactions</li>
                   <li>Audios, enseignements</li>
                   <li>Utilisateurs et serviteurs</li>
                   <li>DNS et domaine Cloudflare</li>
@@ -617,23 +617,23 @@ const handleDelete = (church: Church) => {
               </>
             )}
 
-            {/* Ã‰tape 3 : DerniÃ¨re confirmation */}
+            {/* Étape 3 : Dernière confirmation */}
             {deleteModal.step === 3 && (
               <>
                 <div className="text-center mb-5">
                   <div className="text-5xl mb-3">ðŸš¨</div>
-                  <h3 className="text-xl font-bold text-red-700 mb-2">DerniÃ¨re confirmation</h3>
-                  <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de faÃ§on permanente.</p>
+                  <h3 className="text-xl font-bold text-red-700 mb-2">Dernière confirmation</h3>
+                  <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de façon permanente.</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm text-red-700 text-center font-medium">
-                  âš ï¸ Cette action ne peut pas Ãªtre annulÃ©e.
+                  âš ï¸ Cette action ne peut pas être annulée.
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setDeleteModal(null)}
                     className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm">Annuler</button>
                   <button onClick={() => handleHardDelete(deleteModal.church)}
                     className="flex-1 py-2.5 rounded-lg bg-red-700 text-white text-sm font-bold hover:bg-red-800">
-                    Supprimer dÃ©finitivement
+                    Supprimer définitivement
                   </button>
                 </div>
               </>
@@ -642,11 +642,11 @@ const handleDelete = (church: Church) => {
         </div>
       )}
 
-      {/* â”€â”€ Ã‰glises archivÃ©es â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* â”€â”€ Églises archivées â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {churches.filter(c => c.status === 'archived').length > 0 && (
         <div className="mt-10">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <span>ðŸ“¦</span> ArchivÃ©es ({churches.filter(c => c.status === 'archived').length})
+            <span>ðŸ“¦</span> Archivées ({churches.filter(c => c.status === 'archived').length})
           </h2>
           <div className="space-y-2">
             {churches.filter(c => c.status === 'archived').map(church => (
