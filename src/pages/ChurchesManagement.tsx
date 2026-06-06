@@ -574,7 +574,7 @@ const handleDelete = (church: Church) => {
                   </button>
                   <button onClick={() => setDeleteModal({ ...deleteModal, step: 2 })}
                     className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 text-left transition-colors">
-                    <span className="text-2xl">ðŸ—‘ï¸</span>
+                    <span className="text-2xl">ðŸ—‘️</span>
                     <div>
                       <div className="font-semibold text-red-800">Supprimer définitivement</div>
                       <div className="text-xs text-red-600 mt-0.5">Suppression irréversible de l'église et toutes ses données.</div>
@@ -589,7 +589,7 @@ const handleDelete = (church: Church) => {
             {deleteModal.step === 2 && (
               <>
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-3xl">âš ï¸</span>
+                  <span className="text-3xl">âš ️</span>
                   <h3 className="text-lg font-bold text-red-700">Suppression définitive</h3>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irréversible</strong>. Toutes les données liées seront perdues :</p>
@@ -626,7 +626,7 @@ const handleDelete = (church: Church) => {
                   <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de façon permanente.</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm text-red-700 text-center font-medium">
-                  âš ï¸ Cette action ne peut pas être annulée.
+                  âš ️ Cette action ne peut pas être annulée.
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setDeleteModal(null)}
