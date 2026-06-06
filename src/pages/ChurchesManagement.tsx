@@ -594,7 +594,7 @@ const handleDelete = (church: Church) => {
                 </div>
                 <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irréversible</strong>. Toutes les données liées seront perdues :</p>
                 <ul className="text-xs text-gray-500 list-disc list-inside mb-4 space-y-1 bg-gray-50 rounded-lg p-3">
-                  <li>Ã‚mes, présences, interactions</li>
+                  <li>Âmes, présences, interactions</li>
                   <li>Audios, enseignements</li>
                   <li>Utilisateurs et serviteurs</li>
                   <li>DNS et domaine Cloudflare</li>
