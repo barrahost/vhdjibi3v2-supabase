@@ -56,7 +56,7 @@ export default function ChurchesManagement() {
   if (userRole !== 'super_admin') {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Acc�s r�serv� au super administrateur.</p>
+        <p className="text-gray-500">Accès réservé au super administrateur.</p>
       </div>
     );
   }
@@ -74,7 +74,7 @@ export default function ChurchesManagement() {
       if (error) throw error;
       setChurches(data || []);
     } catch (err) {
-      toast.error('Erreur lors du chargement des �glises');
+      toast.error('Erreur lors du chargement des églises');
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ export default function ChurchesManagement() {
           })
           .eq('id', editingChurch.id);
         if (error) throw error;
-        toast.success('�glise mise � jour');
+        toast.success('Église mise à jour');
       } else {
         // Insert
         const id = form.slug.trim(); // use slug as id for readability
@@ -164,19 +164,19 @@ export default function ChurchesManagement() {
           });
           if (fnError || !fnData?.success) {
             console.warn('DNS auto-setup partiel:', fnData?.results || fnError);
-            toast.success('�glise cr��e ? ? Configuration DNS en cours (v�rifiez Cloudflare si besoin)');
+            toast.success('Église créée ✓ — Configuration DNS en cours (vérifiez Cloudflare si besoin)');
           } else {
-            toast.success(`�glise cr��e ? ? ${fnData.subdomain} configur� automatiquement`);
+            toast.success(`Église créée ✓ — ${fnData.subdomain} configuré automatiquement`);
           }
         } catch {
-          toast.success('�glise cr��e ? ? Configuration DNS manuelle requise');
+          toast.success('Église créée ✓ — Configuration DNS manuelle requise');
         }
       }
       await fetchChurches();
       setShowForm(false);
     } catch (err: any) {
       if (err?.code === '23505') {
-        toast.error('Ce slug est d�j� utilis� par une autre �glise');
+        toast.error('Ce slug est déjà utilisé par une autre église');
       } else {
         toast.error(err?.message || 'Erreur lors de la sauvegarde');
       }
@@ -187,7 +187,7 @@ export default function ChurchesManagement() {
 
 const handleDelete = (church: Church) => {
     if (church.slug === 'bergerie') {
-      toast.error("L'�glise AGC ne peut pas �tre supprim�e");
+      toast.error("L'église AGC ne peut pas être supprimée");
       return;
     }
     setDeleteModal({ church, step: 1, inputName: '' });
@@ -199,7 +199,7 @@ const handleDelete = (church: Church) => {
       if (error) throw error;
       setChurches(prev => prev.map(c => c.id === church.id ? { ...c, status: 'archived' as const } : c));
       setDeleteModal(null);
-      toast.success('�glise archiv�e �?? les donn�es sont conserv�es');
+      toast.success('Église archivée â€” les données sont conservées');
     } catch (err: any) {
       toast.error(err?.message || "Erreur lors de l'archivage");
     }
@@ -218,7 +218,7 @@ const handleDelete = (church: Church) => {
       if (error) throw error;
       setChurches(prev => prev.filter(c => c.id !== church.id));
       setDeleteModal(null);
-      toast.success('�glise supprim�e d�finitivement');
+      toast.success('Église supprimée définitivement');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la suppression');
     }
@@ -229,7 +229,7 @@ const handleDelete = (church: Church) => {
       const { error } = await supabase.from('churches').update({ status: 'active' }).eq('id', church.id);
       if (error) throw error;
       setChurches(prev => prev.map(c => c.id === church.id ? { ...c, status: 'active' as const } : c));
-      toast.success('�glise restaur�e');
+      toast.success('Église restaurée');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la restauration');
     }
@@ -243,8 +243,8 @@ const handleDelete = (church: Church) => {
         <div className="flex items-center gap-3">
           <Building2 className="w-7 h-7 text-[#00665C]" />
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Gestion des �glises</h1>
-            <p className="text-sm text-gray-500">{churches.length} �glise{churches.length > 1 ? 's' : ''} enregistr�e{churches.length > 1 ? 's' : ''}</p>
+            <h1 className="text-xl font-bold text-gray-900">Gestion des Églises</h1>
+            <p className="text-sm text-gray-500">{churches.length} église{churches.length > 1 ? 's' : ''} enregistrée{churches.length > 1 ? 's' : ''}</p>
           </div>
         </div>
         <button
@@ -252,7 +252,7 @@ const handleDelete = (church: Church) => {
           className="flex items-center gap-2 bg-[#00665C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#005249] transition"
         >
           <Plus className="w-4 h-4" />
-          Nouvelle �glise
+          Nouvelle église
         </button>
       </div>
 
@@ -342,14 +342,14 @@ const handleDelete = (church: Church) => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl my-auto">
             <h2 className="text-lg font-bold text-gray-900 mb-5">
-              {editingChurch ? 'Modifier l\'�glise' : 'Nouvelle �glise'}
+              {editingChurch ? 'Modifier l\'église' : 'Nouvelle église'}
             </h2>
 
             <div className="space-y-4">
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de l'�glise <span className="text-red-500">*</span>
+                  Nom de l'église <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -358,7 +358,7 @@ const handleDelete = (church: Church) => {
                     setForm(prev => ({ ...prev, name: e.target.value }));
                     if (!editingChurch) handleSlugChange(e.target.value);
                   }}
-                  placeholder="ex: Assembl�e Gr�ce Confondante"
+                  placeholder="ex: Assemblée Grâce Confondante"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]"
                 />
               </div>
@@ -380,7 +380,7 @@ const handleDelete = (church: Church) => {
                   <span className="text-sm text-gray-500 whitespace-nowrap">.evdh.org</span>
                 </div>
                 {form.slug && (
-                  <p className="mt-1 text-xs text-[#00665C]">? {form.slug}.evdh.org</p>
+                  <p className="mt-1 text-xs text-[#00665C]">→ {form.slug}.evdh.org</p>
                 )}
               </div>
 
@@ -388,7 +388,7 @@ const handleDelete = (church: Church) => {
               {/* Nom court (page de login) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom court <span className="text-gray-400 font-normal">(affich� sur la page de connexion)</span>
+                  Nom court <span className="text-gray-400 font-normal">(affiché sur la page de connexion)</span>
                 </label>
                 <input
                   type="text"
@@ -406,7 +406,7 @@ const handleDelete = (church: Church) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="ex: Vases d'Honneur Assembl�e Gr�ce Confondante"
+                  placeholder="ex: Vases d'Honneur Assemblée Grâce Confondante"
                   value={(form as any).copyright_name || ''}
                   onChange={e => setForm(prev => ({ ...prev, copyright_name: e.target.value }))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]"
@@ -441,7 +441,7 @@ const handleDelete = (church: Church) => {
               {/* Phone + Email */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">T�l�phone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
                   <input
                     type="tel"
                     value={form.phone}
@@ -485,12 +485,12 @@ const handleDelete = (church: Church) => {
               >
                 <span className="flex items-center gap-2">
                   <Puzzle className="w-4 h-4 text-[#00665C]" />
-                  Modules activ�s
+                  Modules activés
                   <span className="text-xs text-gray-400 font-normal">
                     ({Object.values(form.modules).filter(Boolean).length}/{Object.keys(form.modules).length} actifs)
                   </span>
                 </span>
-                <span className="text-gray-400">{modulesOpen ? '?' : '?'}</span>
+                <span className="text-gray-400">{modulesOpen ? '▲' : '▼'}</span>
               </button>
               {modulesOpen && (
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -545,7 +545,7 @@ const handleDelete = (church: Church) => {
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-[#00665C] text-white rounded-lg hover:bg-[#005249] disabled:opacity-50 transition font-medium"
               >
-                {saving ? 'Enregistrement...' : editingChurch ? 'Mettre � jour' : 'Cr�er l\'�glise'}
+                {saving ? 'Enregistrement...' : editingChurch ? 'Mettre à jour' : 'Créer l\'église'}
               </button>
             </div>
           </div>
@@ -553,12 +553,12 @@ const handleDelete = (church: Church) => {
       )}
 
       <ConfirmModal {...confirmModalProps} />
-      {/* �??�?? Modal Archivage / Suppression �??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�?? */}
+      {/* â”€â”€ Modal Archivage / Suppression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {deleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
 
-            {/* �tape 1 : Choix archiver ou supprimer */}
+            {/* Étape 1 : Choix archiver ou supprimer */}
             {deleteModal.step === 1 && (
               <>
                 <h3 className="text-lg font-bold text-gray-900 mb-1">Que souhaitez-vous faire ?</h3>
@@ -566,18 +566,18 @@ const handleDelete = (church: Church) => {
                 <div className="space-y-3">
                   <button onClick={() => handleArchive(deleteModal.church)}
                     className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 text-left transition-colors">
-                    <span className="text-2xl">�??�</span>
+                    <span className="text-2xl">📦</span>
                     <div>
                       <div className="font-semibold text-yellow-800">Archiver</div>
-                      <div className="text-xs text-yellow-600 mt-0.5">Les donn�es sont conserv�es. L'�glise peut �tre restaur�e.</div>
+                      <div className="text-xs text-yellow-600 mt-0.5">Les données sont conservées. L'église peut être restaurée.</div>
                     </div>
                   </button>
                   <button onClick={() => setDeleteModal({ ...deleteModal, step: 2 })}
                     className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 text-left transition-colors">
-                    <span className="text-2xl">�????</span>
+                    <span className="text-2xl">🗑️</span>
                     <div>
-                      <div className="font-semibold text-red-800">Supprimer d�finitivement</div>
-                      <div className="text-xs text-red-600 mt-0.5">Suppression irr�versible de l'�glise et toutes ses donn�es.</div>
+                      <div className="font-semibold text-red-800">Supprimer définitivement</div>
+                      <div className="text-xs text-red-600 mt-0.5">Suppression irréversible de l'église et toutes ses données.</div>
                     </div>
                   </button>
                 </div>
@@ -585,16 +585,16 @@ const handleDelete = (church: Church) => {
               </>
             )}
 
-            {/* �tape 2 : Confirmation nom */}
+            {/* Étape 2 : Confirmation nom */}
             {deleteModal.step === 2 && (
               <>
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-3xl">�?�?</span>
-                  <h3 className="text-lg font-bold text-red-700">Suppression d�finitive</h3>
+                  <span className="text-3xl">âš ️</span>
+                  <h3 className="text-lg font-bold text-red-700">Suppression définitive</h3>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irr�versible</strong>. Toutes les donn�es li�es seront perdues :</p>
+                <p className="text-sm text-gray-600 mb-3">Cette action est <strong>irréversible</strong>. Toutes les données liées seront perdues :</p>
                 <ul className="text-xs text-gray-500 list-disc list-inside mb-4 space-y-1 bg-gray-50 rounded-lg p-3">
-                  <li>�mes, pr�sences, interactions</li>
+                  <li>Âmes, présences, interactions</li>
                   <li>Audios, enseignements</li>
                   <li>Utilisateurs et serviteurs</li>
                   <li>DNS et domaine Cloudflare</li>
@@ -611,29 +611,29 @@ const handleDelete = (church: Church) => {
                   <button onClick={() => deleteModal.inputName === deleteModal.church.name && setDeleteModal({ ...deleteModal, step: 3 })}
                     disabled={deleteModal.inputName !== deleteModal.church.name}
                     className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-40 hover:bg-red-700 disabled:cursor-not-allowed">
-                    Continuer �??
+                    Continuer â†’
                   </button>
                 </div>
               </>
             )}
 
-            {/* �tape 3 : Derni�re confirmation */}
+            {/* Étape 3 : Dernière confirmation */}
             {deleteModal.step === 3 && (
               <>
                 <div className="text-center mb-5">
-                  <div className="text-5xl mb-3">?</div>
-                  <h3 className="text-xl font-bold text-red-700 mb-2">Derni�re confirmation</h3>
-                  <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de fa�on permanente.</p>
+                  <div className="text-5xl mb-3">🚨</div>
+                  <h3 className="text-xl font-bold text-red-700 mb-2">Dernière confirmation</h3>
+                  <p className="text-gray-600 text-sm">Vous allez supprimer <strong>{deleteModal.church.name}</strong> de façon permanente.</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm text-red-700 text-center font-medium">
-                  �?�? Cette action ne peut pas �tre annul�e.
+                  âš ️ Cette action ne peut pas être annulée.
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setDeleteModal(null)}
                     className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm">Annuler</button>
                   <button onClick={() => handleHardDelete(deleteModal.church)}
                     className="flex-1 py-2.5 rounded-lg bg-red-700 text-white text-sm font-bold hover:bg-red-800">
-                    Supprimer d�finitivement
+                    Supprimer définitivement
                   </button>
                 </div>
               </>
@@ -642,11 +642,11 @@ const handleDelete = (church: Church) => {
         </div>
       )}
 
-      {/* �??�?? �glises archiv�es �??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�??�?? */}
+      {/* â”€â”€ Églises archivées â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {churches.filter(c => c.status === 'archived').length > 0 && (
         <div className="mt-10">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <span>�??�</span> Archiv�es ({churches.filter(c => c.status === 'archived').length})
+            <span>📦</span> Archivées ({churches.filter(c => c.status === 'archived').length})
           </h2>
           <div className="space-y-2">
             {churches.filter(c => c.status === 'archived').map(church => (
