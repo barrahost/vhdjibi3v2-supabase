@@ -54,13 +54,17 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
         return;
       }
 
-      const { error: _insertErr } = await supabase.from('birthdays').insert({
+      const { error: insertErr } = await supabase.from('birthdays').insert({
         church_id: getChurchId(),
-        ...formData,
-        birthDate: `${formData.birthMonth}-${formData.birthDay}`,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        full_name: formData.fullName,
+        nickname: formData.nickname,
+        phone: formData.phone,
+        birth_date: `${formData.birthMonth}-${formData.birthDay}`,
+        created_at: new Date(),
+        updated_at: new Date()
       });
+
+      if (insertErr) throw insertErr;
 
       // Si en mode modal, utiliser l'ancien comportement
       if (isModal) {
