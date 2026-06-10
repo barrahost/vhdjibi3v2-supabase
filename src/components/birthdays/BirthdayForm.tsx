@@ -60,8 +60,6 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
         nickname: formData.nickname,
         phone: formData.phone,
         birth_date: `${formData.birthMonth}-${formData.birthDay}`,
-        created_at: new Date(),
-        updated_at: new Date()
       });
 
       if (insertErr) throw insertErr;
