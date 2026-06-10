@@ -337,13 +337,13 @@ export default function BirthdayList() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-gray-500">Chargement des anniversaires...</div>
-      <ConfirmModal {...confirmModalProps} />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <ConfirmModal {...confirmModalProps} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Anniversaires</h1>
         <button
