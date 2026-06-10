@@ -16,7 +16,6 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
-    nickname: '',
     birthMonth: '',
     birthDay: '',
     phone: ''
@@ -57,7 +56,6 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       const { error: insertErr } = await supabase.from('birthdays').insert({
         church_id: getChurchId(),
         full_name: formData.fullName,
-        nickname: formData.nickname,
         phone: formData.phone,
         birth_date: `${formData.birthMonth}-${formData.birthDay}`,
       });
@@ -69,7 +67,6 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
         toast.success('Date d\'anniversaire enregistrée avec succès !');
         setFormData({
           fullName: '',
-          nickname: '',
           birthMonth: '',
           birthDay: '',
           phone: ''
@@ -112,19 +109,6 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
             placeholder="Ex: Jean Kouassi"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Surnom
-        </label>
-        <input
-          type="text"
-          value={formData.nickname}
-          onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          placeholder="Ex: Jean"
-        />
       </div>
 
       <div>
