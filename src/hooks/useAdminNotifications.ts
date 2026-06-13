@@ -50,7 +50,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
             type: 'no_shepherd',
             count: soulsWithoutShepherd.length,
             souls: soulsWithoutShepherd.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
-            navigateTo: '/gestion-des-ames',
+            navigateTo: '/ames?filter=unassigned',
           });
         }
 
@@ -61,7 +61,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
             type: 'undecided',
             count: undecidedSouls.length,
             souls: undecidedSouls.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
-            navigateTo: '/gestion-des-ames',
+            navigateTo: '/ames-indecises',
           });
         }
 
@@ -74,7 +74,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
             type: 'no_family',
             count: soulsWithoutFamily.length,
             souls: soulsWithoutFamily.slice(0, 5).map((s: any) => ({ id: s.id, name: s.full_name })),
-            navigateTo: '/gestion-des-ames',
+            navigateTo: '/ames?filter=unassigned_family',
           });
         }
 
@@ -134,7 +134,7 @@ export function useAdminNotifications(): AdminNotificationsResult {
                   detail: diff === 0 ? "Aujourd'hui !" : `Dans ${diff} jour${diff > 1 ? 's' : ''}`,
                 };
               }),
-              navigateTo: '/outils/anniversaires',
+              navigateTo: '/anniversaires',
             });
           }
         }

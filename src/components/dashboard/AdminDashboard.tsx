@@ -93,9 +93,9 @@ export function AdminDashboard() {
 
         // Alertes
         const newAlerts: Alert[] = [];
-        if (noShepherd > 0) newAlerts.push({ id: 'no-shepherd', label: `${noShepherd} âme${noShepherd > 1 ? 's' : ''} sans berger`, count: noShepherd, href: '/ames' });
+        if (noShepherd > 0) newAlerts.push({ id: 'no-shepherd', label: `${noShepherd} âme${noShepherd > 1 ? 's' : ''} sans berger`, count: noShepherd, href: '/ames?filter=unassigned' });
         if (undecided > 0) newAlerts.push({ id: 'undecided', label: `${undecided} âme${undecided > 1 ? 's' : ''} indécise${undecided > 1 ? 's' : ''} à recontacter`, count: undecided, href: '/ames-indecises' });
-        if (noFamily > 0) newAlerts.push({ id: 'no-family', label: `${noFamily} âme${noFamily > 1 ? 's' : ''} sans famille de service`, count: noFamily, href: '/ames' });
+        if (noFamily > 0) newAlerts.push({ id: 'no-family', label: `${noFamily} âme${noFamily > 1 ? 's' : ''} sans famille de service`, count: noFamily, href: '/ames?filter=unassigned_family' });
         if (pendingEvang > 0) newAlerts.push({ id: 'pending-evang', label: `${pendingEvang} âme${pendingEvang > 1 ? 's' : ''} évangélisée${pendingEvang > 1 ? 's' : ''} en attente de réception`, count: pendingEvang, href: '/ames-evangelisees' });
         setAlerts(newAlerts);
 

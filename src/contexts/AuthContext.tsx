@@ -345,6 +345,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         matchType: validateCandidatePassword(userData).matchType,
       });
 
+      // Met a jour la date de derniere connexion (best-effort, ne bloque jamais le login)
+      supabase
+        .from(matchedCandidate.collectionName)
+        .update({ last_login_at: new Date().toISOString() })
+        .eq('id', userData.id)
+        .then(({ error }: { error: any }) => {
+          if (error) console.warn('last_login_at non mis a jour:', error.message);
+        });
+
       // Determine permissions
       let permissions: Permission[] = [];
       if (userData.businessProfiles && userData.businessProfiles.length > 0) {
