@@ -76,49 +76,56 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
     try {
       setSubmitting(true);
 
+      // Colonnes en snake_case (schema reel), avec church_id et id genere — calque sur SoulForm.
+      const soulId = `soul_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const soulData = {
-        fullName: data.fullName.trim(),
+        id: soulId,
+        church_id: getChurchId(),
+        full_name: data.fullName.trim(),
         nickname: data.nickname.trim() || null,
         gender: data.gender,
         phone: data.phone.trim(),
-        isUndecided: data.isUndecided,
+        is_undecided: data.isUndecided,
         location: data.location.trim(),
         coordinates: null,
-        firstVisitDate: new Date(data.firstVisitDate),
-        shepherdId: data.shepherdId,
-        originSource: 'evangelisation',
-        serviceFamilyId: data.serviceFamilyId || null,
-        spiritualProfile: {
+        first_visit_date: new Date(data.firstVisitDate).toISOString(),
+        shepherd_id: data.shepherdId || null,
+        origin_source: 'evangelisation',
+        service_family_id: data.serviceFamilyId || null,
+        // Lien fonctionnel évangéliste (équivalent shepherd_id)
+        evangelist_id: soul.evangelistId || null,
+        spiritual_profile: {
           isBornAgain: false,
           isBaptized: false,
           isEnrolledInAcademy: false,
           isEnrolledInLifeBearers: false,
           departments: [],
         },
-        createdAt: new Date(),
-        updatedAt: new Date(),
         status: 'active',
-        createdBy: user.id,
-        photoURL: soul.photoURL || null,
-        // Lien fonctionnel évangéliste (équivalent shepherdId)
-        evangelistId: soul.evangelistId || null,
-        // Traçabilité
-        importedFromEvangelizedId: soul.id,
-        importedFromEvangelistId: soul.evangelistId,
+        created_by: user.id,
+        photo_url: soul.photoURL || null,
       };
 
-      const { data: insertedSoul, error: _insertErr } = await supabase
+      const { data: insertedSoul, error: insertErr } = await supabase
         .from('souls').insert(soulData).select('id').single();
-      const docRef = { id: insertedSoul?.id ?? '' };
+      if (insertErr) {
+        console.error('Supabase insert error (import vers souls):', insertErr);
+        throw new Error(insertErr.message || "Erreur lors de l'ajout de l'âme");
+      }
+      const docRef = { id: insertedSoul?.id ?? soulId };
 
-      // Marquer l'âme évangélisée comme importée
-      const { error: _updateErr } = await supabase.from('evangelized_souls').update({
+      // Marquer l'âme évangélisée comme importée (ciblée sur CETTE âme)
+      const { error: updateErr } = await supabase.from('evangelized_souls').update({
         status: 'imported',
-        importedToSoulId: docRef.id,
-        importedAt: new Date(),
-        importedBy: user.id,
-        updatedAt: new Date(),
-      });
+        imported_to_soul_id: docRef.id,
+        imported_at: new Date().toISOString(),
+        imported_by: user.id,
+        updated_at: new Date().toISOString(),
+      }).eq('id', soul.id);
+      if (updateErr) {
+        console.error('Erreur lors du marquage de l\'âme évangélisée comme importée:', updateErr);
+        toast.error("Âme reçue, mais sa fiche d'évangélisation n'a pas pu être marquée comme importée.");
+      }
 
       // Envoi SMS de bienvenue (best effort, n'annule pas l'import)
       try {
