@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import * as XLSX from 'xlsx';
@@ -30,9 +31,11 @@ const ITEMS_PER_PAGE = 10;
 export default function EvangelizedSoulManagement() {
   const { confirm, confirmModalProps } = useConfirmModal();
   const { user, userRole, activeRole } = useAuth();
+  const [searchParams] = useSearchParams();
   const [souls, setSouls] = useState<EvangelizedSoul[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  // Ouvre directement le formulaire si on arrive via ?add=1 (bouton du dashboard évangéliste)
+  const [showForm, setShowForm] = useState(searchParams.get('add') === '1');
   const [editing, setEditing] = useState<EvangelizedSoul | null>(null);
   const [importing, setImporting] = useState<EvangelizedSoul | null>(null);
   const [interactingSoul, setInteractingSoul] = useState<EvangelizedSoul | null>(null);

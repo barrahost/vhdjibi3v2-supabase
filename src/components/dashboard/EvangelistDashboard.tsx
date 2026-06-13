@@ -284,7 +284,7 @@ export default function EvangelistDashboard() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Mon tableau de bord</h1>
         <button
-          onClick={() => navigate('/ames-evangelisees')}
+          onClick={() => navigate('/ames-evangelisees?add=1')}
           className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
         >
           <Plus className="w-4 h-4 mr-2 flex-shrink-0" />

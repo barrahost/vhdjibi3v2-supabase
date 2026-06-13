@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { useDepartments } from '../../hooks/useDepartments';
+import { useAuth } from '../../contexts/AuthContext';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
 import { ServantService } from '../../services/servant.service';
 import { AlertTriangle } from 'lucide-react';
@@ -23,6 +24,20 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; deptNames: string[] } | null>(null);
   const { departments, loading: loadingDepartments } = useDepartments();
+  const { user, activeRole } = useAuth();
+
+  // Quand on agit en responsable de département, on verrouille le formulaire sur SON département.
+  const lockedDepartmentId = activeRole === 'department_leader'
+    ? ((user?.businessProfiles?.find((p: any) => p.type === 'department_leader' && p.departmentId)?.departmentId) ?? '')
+    : '';
+  const isDeptLocked = !!lockedDepartmentId;
+
+  // Pré-sélectionne le département verrouillé (au montage et après réinitialisation du formulaire).
+  useEffect(() => {
+    if (lockedDepartmentId) {
+      setFormData(prev => prev.departmentId === lockedDepartmentId ? prev : { ...prev, departmentId: lockedDepartmentId });
+    }
+  }, [lockedDepartmentId]);
 
   // Vérifier si le téléphone est déjà utilisé dans d'autres départements
   useEffect(() => {
@@ -98,14 +113,14 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         isHead: formData.isHead
       });
 
-      // Réinitialiser le formulaire
+      // Réinitialiser le formulaire (en conservant le département verrouillé le cas échéant)
       setFormData({
         fullName: '',
         nickname: '',
         gender: 'male',
         phone: '',
         email: '',
-        departmentId: '',
+        departmentId: lockedDepartmentId,
         isHead: false
       });
 
@@ -198,8 +213,8 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
           required
           value={formData.departmentId}
           onChange={(e) => setFormData(prev => ({ ...prev, departmentId: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          disabled={loadingDepartments}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C] disabled:bg-gray-100 disabled:text-gray-600"
+          disabled={loadingDepartments || isDeptLocked}
         >
           <option value="">Sélectionner un département</option>
           {departments.map(department => (
@@ -211,6 +226,11 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         {loadingDepartments && (
           <p className="mt-1 text-sm text-gray-500">
             Chargement des départements...
+          </p>
+        )}
+        {isDeptLocked && !loadingDepartments && (
+          <p className="mt-1 text-sm text-gray-500">
+            Le serviteur sera ajouté à votre département.
           </p>
         )}
       </div>

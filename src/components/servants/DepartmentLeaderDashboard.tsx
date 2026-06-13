@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Servant } from '../../types/servant.types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,6 +21,7 @@ interface Department {
 
 export default function DepartmentLeaderDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [servants, setServants] = useState<Servant[]>([]);
   const [department, setDepartment] = useState<Department | null>(null);
@@ -221,7 +223,7 @@ export default function DepartmentLeaderDashboard() {
                 Importer
               </Button>
               <Button
-                onClick={() => window.location.href = '/serviteurs'}
+                onClick={() => navigate('/serviteurs')}
                 variant="outline"
                 size="sm"
               >
