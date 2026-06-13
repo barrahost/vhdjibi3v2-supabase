@@ -3,10 +3,11 @@ import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { useAuth } from '../contexts/AuthContext';
 import type { Soul } from '../types/database.types';
-import { Pencil, Search, Phone } from 'lucide-react';
+import { Pencil, Search, Phone, MessageCircle } from 'lucide-react';
 import EditSoulModal from '../components/souls/EditSoulModal';
 import InteractionModal from '../components/interactions/InteractionModal';
 import { formatDate } from '../utils/dateUtils';
+import { telHref, whatsappHref } from '../utils/phoneValidation';
 import { CustomTable } from '../components/ui/CustomTable';
 import LastContactBadge from '../components/interactions/LastContactBadge';
 import toast from 'react-hot-toast';
@@ -88,14 +89,36 @@ export default function AssignedSouls() {
       key: 'actions',
       title: 'Actions',
       render: (_: any, soul: Soul) => (
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end items-center space-x-2">
+          {telHref(soul.phone) && (
+            <a
+              href={telHref(soul.phone)!}
+              onClick={(e) => e.stopPropagation()}
+              title="Appeler"
+              className="inline-flex items-center justify-center w-7 h-7 text-[#00665C] border border-[#00665C]/40 rounded hover:bg-[#00665C]/10 transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {whatsappHref(soul.phone) && (
+            <a
+              href={whatsappHref(soul.phone)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="WhatsApp"
+              className="inline-flex items-center justify-center w-7 h-7 text-[#25D366] border border-[#25D366]/40 rounded hover:bg-[#25D366]/10 transition-colors"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+            </a>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setInteractingSoul(soul);
             }}
             className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded transition-colors"
-            title="Contacter cette âme"
+            title="Enregistrer une interaction"
           >
             <Phone className="w-3.5 h-3.5" />
             Contacter

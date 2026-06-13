@@ -39,3 +39,23 @@ export function validatePhoneNumber(phone: string): PhoneValidationResult {
     };
   }
 }
+
+// Numéro international au format 225XXXXXXXXXX (sans +), ou null si invalide.
+function toInternational(phone?: string | null): string | null {
+  if (!phone) return null;
+  const { isValid, cleanNumber } = validatePhoneNumber(phone);
+  if (!isValid || !cleanNumber) return null;
+  return `225${cleanNumber}`;
+}
+
+// Lien d'appel direct (tel:) ou null si le numéro est invalide.
+export function telHref(phone?: string | null): string | null {
+  const intl = toInternational(phone);
+  return intl ? `tel:+${intl}` : null;
+}
+
+// Lien WhatsApp (wa.me) ou null si le numéro est invalide.
+export function whatsappHref(phone?: string | null): string | null {
+  const intl = toInternational(phone);
+  return intl ? `https://wa.me/${intl}` : null;
+}

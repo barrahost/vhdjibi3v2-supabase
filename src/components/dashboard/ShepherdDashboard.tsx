@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
-import { Users, MessageSquare, AlertTriangle, Phone, Sparkles } from 'lucide-react';
+import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle } from 'lucide-react';
 import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { telHref, whatsappHref } from '../../utils/phoneValidation';
 import { isShepherdUser } from '../../utils/roleHelpers';
 
 export function ShepherdDashboard() {
@@ -300,13 +301,35 @@ export function ShepherdDashboard() {
                   <span className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ${badge.color}`}>
                     {badge.label}
                   </span>
-                  <button
-                    onClick={() => setInteractionSoul(soul)}
-                    className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-[#00665C] text-white rounded-lg hover:bg-[#00554C] transition-colors"
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Contacter</span>
-                  </button>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    {telHref(soul.phone) && (
+                      <a
+                        href={telHref(soul.phone)!}
+                        title="Appeler"
+                        className="inline-flex items-center justify-center w-8 h-8 text-[#00665C] border border-[#00665C]/40 rounded-lg hover:bg-[#00665C]/10 transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {whatsappHref(soul.phone) && (
+                      <a
+                        href={whatsappHref(soul.phone)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="WhatsApp"
+                        className="inline-flex items-center justify-center w-8 h-8 text-[#25D366] border border-[#25D366]/40 rounded-lg hover:bg-[#25D366]/10 transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    <button
+                      onClick={() => setInteractionSoul(soul)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-[#00665C] text-white rounded-lg hover:bg-[#00554C] transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Contacter</span>
+                    </button>
+                  </div>
                 </div>
               );
             })
