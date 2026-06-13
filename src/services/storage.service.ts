@@ -1,41 +1,47 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 
+const R2_WORKER_URL = import.meta.env.VITE_R2_WORKER_URL as string;
+const R2_WORKER_SECRET = import.meta.env.VITE_R2_WORKER_SECRET as string;
+
 export class StorageService {
   private static readonly BUCKET_NAME = 'public_storage';
   private static readonly MAX_AUDIO_SIZE = 104857600; // 100MB
   private static readonly MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
-  // Upload vers R2 : obtient une presigned URL depuis l'edge function, puis PUT direct vers R2
+  private static workerHeaders(extra: Record<string, string> = {}): Record<string, string> {
+    return {
+      Authorization: `Bearer ${R2_WORKER_SECRET}`,
+      ...extra,
+    };
+  }
+
+  // Upload via Cloudflare Worker (binding R2 natif, sans credentials dans le client)
   private static async uploadToR2(file: File, filePath: string): Promise<string> {
     const contentType = file.type || 'application/octet-stream';
-
-    const { data, error } = await supabase.functions.invoke('r2-storage', {
-      body: { action: 'presign', filePath, contentType },
-    });
-    if (error) throw new Error(`r2-storage presign error: ${error.message}`);
-
-    const { uploadUrl, publicUrl } = data as { uploadUrl: string; publicUrl: string };
-
-    const resp = await fetch(uploadUrl, {
+    const resp = await fetch(R2_WORKER_URL, {
       method: 'PUT',
-      headers: { 'Content-Type': contentType },
+      headers: this.workerHeaders({ 'Content-Type': contentType, 'x-file-path': filePath }),
       body: await file.arrayBuffer(),
     });
     if (!resp.ok) {
       const err = await resp.text();
       throw new Error(`R2 upload failed (${resp.status}): ${err}`);
     }
-
-    return publicUrl;
+    const { url } = await resp.json() as { url: string };
+    return url;
   }
 
-  // Suppression via l'edge function (signature cote serveur)
+  // Suppression via Cloudflare Worker
   private static async deleteFromR2(filePath: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('r2-storage', {
-      body: { action: 'delete', filePath },
+    const resp = await fetch(R2_WORKER_URL, {
+      method: 'DELETE',
+      headers: this.workerHeaders({ 'x-file-path': filePath }),
     });
-    if (error) throw new Error(`r2-storage delete error: ${error.message}`);
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`R2 delete failed (${resp.status}): ${err}`);
+    }
   }
 
   // -- Photo de profil (Supabase Storage) --
