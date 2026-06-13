@@ -246,7 +246,7 @@ export default function FamilyLeaderDashboard() {
       )}
 
       {/* Liste des âmes */}
-      <div className="bg-white border rounded-lg overflow-hidden">
+      <div id="famille-ames" className="bg-white border rounded-lg overflow-hidden scroll-mt-4">
         <div className="px-4 py-3 border-b bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="font-semibold text-gray-900">Âmes de la famille</h2>
           {souls.length > 0 && (

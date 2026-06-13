@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getPageTitle } from '../../utils/pageTitle';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
@@ -12,6 +14,8 @@ import { getChurchId } from '../../lib/churchId';
 export function Header() {
   const { user, userRole, activeRole, logout } = useAuth();
   const { openProfileModal } = useUserProfile();
+  const location = useLocation();
+  const pageTitle = getPageTitle(location.pathname);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
   const [userPhotoURL, setUserPhotoURL] = useState<string | null>(null);
@@ -90,7 +94,13 @@ export function Header() {
         {/* Sélecteur d'église (super admin central uniquement) */}
         <ChurchSelector />
 
-        <div className="flex-1" />
+        {pageTitle ? (
+          <h1 className="flex-1 text-base sm:text-lg font-semibold text-gray-900 truncate">
+            {pageTitle}
+          </h1>
+        ) : (
+          <div className="flex-1" />
+        )}
 
         <div className="flex items-center space-x-4">
           <ProfileSwitcher />

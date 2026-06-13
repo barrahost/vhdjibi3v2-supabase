@@ -238,6 +238,46 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       }
     }
 
+    // Build family management menu - only for family leaders
+    if (activeRole === ROLES.FAMILY_LEADER) {
+      const familyChildren = [];
+
+      if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
+        familyChildren.push(
+          {
+            id: 'family-interactions',
+            label: 'Interactions',
+            href: '/interactions',
+            icon: <MessageCircle className="w-5 h-5" />
+          },
+          {
+            id: 'family-reminders',
+            label: 'Rappels',
+            href: '/rappels',
+            icon: <Bell className="w-5 h-5" />
+          }
+        );
+      }
+
+      if (hasPermission(PERMISSIONS.MANAGE_SMS)) {
+        familyChildren.push({
+          id: 'family-sms',
+          label: 'SMS',
+          href: '/sms',
+          icon: <MessageSquare className="w-5 h-5" />
+        });
+      }
+
+      if (familyChildren.length > 0) {
+        items.push({
+          id: 'family-management',
+          label: 'Ma famille',
+          icon: <UsersRound className="w-5 h-5" />,
+          children: familyChildren
+        });
+      }
+    }
+
     // Build tracking & interactions menu (for admins)
     if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasPermission(PERMISSIONS.VIEW_STATS) && (hasModule('interactions') || hasModule('attendance') || hasModule('spiritual_progression'))) {
       items.push({

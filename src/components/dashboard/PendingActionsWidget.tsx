@@ -72,6 +72,8 @@ export default function PendingActionsWidget(props: Props) {
             id: 'no-shepherd',
             count: noShepherd,
             label: noShepherd > 1 ? `${noShepherd} âmes sans berger dans ta famille` : `${noShepherd} âme sans berger dans ta famille`,
+            onClick: () => document.getElementById('famille-ames')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+            ctaLabel: 'Assigner',
           });
 
         } else if (props.role === 'shepherd') {
