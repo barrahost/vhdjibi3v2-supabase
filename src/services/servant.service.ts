@@ -19,7 +19,7 @@ function rowToServant(row: any): Servant {
     gender: row.gender,
     phone: row.phone,
     email: row.email,
-    departmentId: row.department_id,
+    departmentIds: row.department_ids || [],
     isHead: row.is_head,
     isShepherd: row.is_shepherd,
     shepherdId: row.shepherd_id,
@@ -35,20 +35,20 @@ function rowToServant(row: any): Servant {
 
 function formToRow(data: Partial<ServantFormData>): Record<string, any> {
   const row: Record<string, any> = {};
-  if (data.fullName !== undefined)       row.full_name        = data.fullName.trim();
-  if (data.nickname !== undefined)       row.nickname         = data.nickname?.trim() || null;
-  if (data.gender !== undefined)         row.gender           = data.gender;
-  if (data.phone !== undefined)          row.phone            = data.phone;
-  if (data.email !== undefined)          row.email            = data.email?.trim() || null;
-  if (data.departmentId !== undefined)   row.department_id    = data.departmentId;
-  if (data.isHead !== undefined)         row.is_head          = data.isHead;
-  if (data.isShepherd !== undefined)     row.is_shepherd      = data.isShepherd;
-  if (data.shepherdId !== undefined)     row.shepherd_id      = data.shepherdId;
-  if (data.status !== undefined)         row.status           = data.status;
-  if (data.sourceType !== undefined)     row.source_type      = data.sourceType;
-  if (data.sourceId !== undefined)       row.source_id        = data.sourceId;
-  if (data.originalSoulId !== undefined) row.original_soul_id = data.originalSoulId;
-  if (data.promotionDate !== undefined)  row.promotion_date   = data.promotionDate?.toISOString() ?? null;
+  if (data.fullName !== undefined)        row.full_name        = data.fullName.trim();
+  if (data.nickname !== undefined)        row.nickname         = data.nickname?.trim() || null;
+  if (data.gender !== undefined)          row.gender           = data.gender;
+  if (data.phone !== undefined)           row.phone            = data.phone;
+  if (data.email !== undefined)           row.email            = data.email?.trim() || null;
+  if (data.departmentIds !== undefined)   row.department_ids   = data.departmentIds;
+  if (data.isHead !== undefined)          row.is_head          = data.isHead;
+  if (data.isShepherd !== undefined)      row.is_shepherd      = data.isShepherd;
+  if (data.shepherdId !== undefined)      row.shepherd_id      = data.shepherdId;
+  if (data.status !== undefined)          row.status           = data.status;
+  if (data.sourceType !== undefined)      row.source_type      = data.sourceType;
+  if (data.sourceId !== undefined)        row.source_id        = data.sourceId;
+  if (data.originalSoulId !== undefined)  row.original_soul_id = data.originalSoulId;
+  if (data.promotionDate !== undefined)   row.promotion_date   = data.promotionDate?.toISOString() ?? null;
   return row;
 }
 
@@ -60,73 +60,43 @@ export class ServantService {
    */
   static async createServant(data: ServantFormData): Promise<string> {
     try {
-      // Duplicate check: same source in same department
-      if (data.sourceType && data.sourceId) {
-        const { data: dup } = await supabase
-          .from('servants')
-          .select('id')
-          .eq('church_id', getChurchId())
-          .eq('source_type', data.sourceType)
-          .eq('source_id', data.sourceId)
-          .eq('department_id', data.departmentId)
-          .limit(1);
-        if (dup && dup.length > 0) {
-          throw new Error('Cette personne est déjà serviteur dans ce département');
-        }
-      } else {
-        // Manual: prevent duplicate phone in same department
-        const { data: phoneSnap } = await supabase
-          .from('servants')
-          .select('id')
-          .eq('church_id', getChurchId())
-          .eq('phone', data.phone)
-          .eq('department_id', data.departmentId)
-          .limit(1);
-        if (phoneSnap && phoneSnap.length > 0) {
-          throw new Error('Ce numéro est déjà utilisé pour un serviteur dans ce département');
-        }
+      const deptIds = data.departmentIds || [];
 
-        // Cross-department warning (non-blocking)
-        try {
-          const { data: globalSnap } = await supabase
-            .from('servants')
-            .select('department_id')
-            .eq('church_id', getChurchId())
-            .eq('phone', data.phone)
-            .eq('status', 'active');
-          const otherDepts = (globalSnap ?? []).filter((d: any) => d.department_id !== data.departmentId);
-          if (otherDepts.length > 0) {
-            console.warn(`[Servants] Numéro ${data.phone} déjà utilisé dans ${otherDepts.length} autre(s) département(s)`);
-          }
-        } catch (e) {
-          console.warn('Cross-department duplicate check failed', e);
-        }
+      // Vérifier si la personne existe déjà (même téléphone) → upsert
+      const { data: existing } = await supabase
+        .from('servants')
+        .select('id, department_ids')
+        .eq('church_id', getChurchId())
+        .eq('phone', data.phone)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        // La personne existe : on ajoute simplement les nouveaux départements
+        const existingDepts: string[] = existing[0].department_ids || [];
+        const merged = [...new Set([...existingDepts, ...deptIds])];
+        const { error } = await supabase
+          .from('servants')
+          .update({
+            department_ids: merged,
+            is_head: data.isHead || false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing[0].id);
+        if (error) throw error;
+        return existing[0].id;
       }
 
-      // Check for existing department head
-      if (data.isHead) {
-        const { data: headSnap } = await supabase
-          .from('servants')
-          .select('id')
-          .eq('church_id', getChurchId())
-          .eq('department_id', data.departmentId)
-          .eq('is_head', true)
-          .eq('status', 'active')
-          .limit(1);
-        if (headSnap && headSnap.length > 0) {
-          throw new Error('Ce département a déjà un responsable');
-        }
-      }
-
+      // Nouvelle personne
       const id = crypto.randomUUID();
-      const row = {
+      const { error } = await supabase.from('servants').insert({
         id,
+        church_id: getChurchId(),
         full_name: data.fullName.trim(),
         nickname: data.nickname?.trim() || null,
         gender: data.gender,
         phone: data.phone,
         email: data.email?.trim() || null,
-        department_id: data.departmentId,
+        department_ids: deptIds,
         is_head: data.isHead,
         is_shepherd: data.isShepherd || false,
         shepherd_id: data.shepherdId || null,
@@ -137,9 +107,7 @@ export class ServantService {
         status: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase.from('servants').insert(row);
+      });
       if (error) throw error;
       return id;
     } catch (error) {
@@ -216,35 +184,19 @@ export class ServantService {
       }
 
       // Check department head conflict
-      const newDepartmentId = data.departmentId || current.departmentId;
-      const newIsHead = data.isHead !== undefined ? data.isHead : current.isHead;
-      if (newIsHead && (data.departmentId || data.isHead !== undefined)) {
-        const { data: headSnap } = await supabase
-          .from('servants')
-          .select('id')
-          .eq('church_id', getChurchId())
-          .eq('department_id', newDepartmentId)
-          .eq('is_head', true)
-          .eq('status', 'active')
-          .limit(1);
-        if (headSnap && headSnap.length > 0 && headSnap[0].id !== id) {
-          throw new Error('Ce département a déjà un responsable');
-        }
-      }
-
       const updateRow: Record<string, any> = {
         updated_at: new Date().toISOString(),
         phone: formattedPhone,
         email: formattedEmail,
       };
-      if (data.fullName)              updateRow.full_name     = data.fullName.trim();
-      if (data.nickname !== undefined) updateRow.nickname     = data.nickname?.trim() || null;
-      if (data.gender)                updateRow.gender        = data.gender;
-      if (data.departmentId)          updateRow.department_id = data.departmentId;
-      if (data.isHead !== undefined)  updateRow.is_head       = data.isHead;
-      if (data.isShepherd !== undefined) updateRow.is_shepherd = data.isShepherd;
-      if (data.shepherdId !== undefined) updateRow.shepherd_id = data.shepherdId;
-      if (data.status !== undefined)  updateRow.status        = data.status;
+      if (data.fullName)                  updateRow.full_name      = data.fullName.trim();
+      if (data.nickname !== undefined)    updateRow.nickname       = data.nickname?.trim() || null;
+      if (data.gender)                    updateRow.gender         = data.gender;
+      if (data.departmentIds !== undefined) updateRow.department_ids = data.departmentIds;
+      if (data.isHead !== undefined)      updateRow.is_head        = data.isHead;
+      if (data.isShepherd !== undefined)  updateRow.is_shepherd    = data.isShepherd;
+      if (data.shepherdId !== undefined)  updateRow.shepherd_id    = data.shepherdId;
+      if (data.status !== undefined)      updateRow.status         = data.status;
 
       const { error } = await supabase.from('servants').update(updateRow).eq('id', id);
       if (error) throw error;
@@ -301,7 +253,7 @@ export class ServantService {
         .from('servants')
         .select('*')
         .eq('church_id', getChurchId())
-        .eq('department_id', departmentId)
+        .contains('department_ids', [departmentId])
         .eq('status', 'active');
       if (error) throw error;
       return (data ?? []).map(rowToServant);
@@ -320,7 +272,7 @@ export class ServantService {
         .from('servants')
         .select('*')
         .eq('church_id', getChurchId())
-        .eq('department_id', departmentId)
+        .contains('department_ids', [departmentId])
         .eq('is_head', true)
         .eq('status', 'active')
         .limit(1);
@@ -340,12 +292,12 @@ export class ServantService {
     try {
       const now = new Date().toISOString();
 
-      // Remove any existing department head
+      // Retirer l'ancien responsable
       const { data: currentHead } = await supabase
         .from('servants')
         .select('id')
         .eq('church_id', getChurchId())
-        .eq('department_id', departmentId)
+        .contains('department_ids', [departmentId])
         .eq('is_head', true)
         .eq('status', 'active')
         .limit(1);
@@ -357,10 +309,15 @@ export class ServantService {
           .eq('id', currentHead[0].id);
       }
 
-      // Assign the new head
+      // Désigner le nouveau responsable (s'assure qu'il est dans le département)
+      const { data: servant } = await supabase
+        .from('servants').select('department_ids').eq('id', servantId).limit(1);
+      const currentDepts: string[] = servant?.[0]?.department_ids || [];
+      const merged = [...new Set([...currentDepts, departmentId])];
+
       const { error } = await supabase
         .from('servants')
-        .update({ department_id: departmentId, is_head: true, updated_at: now })
+        .update({ department_ids: merged, is_head: true, updated_at: now })
         .eq('id', servantId);
       if (error) throw error;
     } catch (error) {
@@ -428,21 +385,19 @@ export class ServantService {
    * Find existing servants for a department restricted to a list of source ids.
    */
   private static async getExistingSourceIds(
-    departmentId: string,
+    _departmentId: string,
     sourceType: ServantSourceType,
     sourceIds: string[]
   ): Promise<Set<string>> {
     const existing = new Set<string>();
     if (sourceIds.length === 0) return existing;
 
-    // chunk into 100 at a time for Supabase .in()
     for (let i = 0; i < sourceIds.length; i += 100) {
       const chunk = sourceIds.slice(i, i + 100);
       const { data } = await supabase
         .from('servants')
         .select('source_id')
         .eq('church_id', getChurchId())
-        .eq('department_id', departmentId)
         .eq('source_type', sourceType)
         .in('source_id', chunk);
       (data ?? []).forEach((d: any) => { if (d.source_id) existing.add(d.source_id); });
@@ -485,7 +440,7 @@ export class ServantService {
             gender: soul.gender || 'male',
             phone: soul.phone || '',
             email: soul.email?.trim() || null,
-            department_id: departmentId,
+            department_ids: [departmentId],
             is_head: false,
             is_shepherd: false,
             shepherd_id: null,
@@ -548,7 +503,7 @@ export class ServantService {
             gender: user.gender || 'male',
             phone: user.phone || '',
             email: user.email?.trim() || null,
-            department_id: departmentId,
+            department_ids: [departmentId],
             is_head: false,
             is_shepherd: isShepherd,
             shepherd_id: null,

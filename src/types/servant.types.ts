@@ -7,7 +7,7 @@ export interface Servant {
   gender: 'male' | 'female';
   phone: string;
   email: string;
-  departmentId: string;
+  departmentIds: string[];
   isHead: boolean;
   isShepherd?: boolean;
   shepherdId?: string;
@@ -28,7 +28,7 @@ export interface ServantFormData {
   gender: 'male' | 'female';
   phone: string;
   email: string;
-  departmentId: string;
+  departmentIds: string[];
   isHead: boolean;
   isShepherd?: boolean;
   shepherdId?: string;

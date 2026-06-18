@@ -103,7 +103,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   useEffect(() => {
     const loadServants = async () => {
       let q = supabase.from('servants').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
-      if (selectedDepartmentId) q = q.eq('department_id', selectedDepartmentId);
+      if (selectedDepartmentId) q = (q as any).contains('department_ids', [selectedDepartmentId]);
       if (statusFilter !== 'all') q = q.eq('status', statusFilter);
       const { data, error } = await q;
       if (error) {
@@ -119,7 +119,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         gender: r.gender,
         phone: r.phone || '',
         email: r.email || '',
-        departmentId: r.department_id || '',
+        departmentIds: r.department_ids || [],
         isHead: r.is_head || false,
         isShepherd: r.is_shepherd || false,
         originalSoulId: r.original_soul_id || null,
@@ -142,48 +142,27 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     setCurrentPage(1);
   }, [searchTerm, selectedDepartmentId]);
 
-  // Identifier les orphelins (département supprimé) — uniquement quand on a la liste des départements
   const validDeptIds = useMemo(() => new Set(departments.map(d => d.id)), [departments]);
   const departmentsLoaded = departments.length > 0;
 
+  // Orphelins = serviteurs sans aucun département valide
   const orphanServants = useMemo(() => {
     if (!departmentsLoaded) return [];
-    return servants.filter(s => !s.departmentId || !validDeptIds.has(s.departmentId));
+    return servants.filter(s => !s.departmentIds?.some(id => validDeptIds.has(id)));
   }, [servants, validDeptIds, departmentsLoaded]);
 
   const validServants = useMemo(() => {
     if (!departmentsLoaded) return servants;
-    return servants.filter(s => s.departmentId && validDeptIds.has(s.departmentId));
+    return servants.filter(s => s.departmentIds?.some(id => validDeptIds.has(id)));
   }, [servants, validDeptIds, departmentsLoaded]);
 
-  // Filtrer par recherche
   const filteredServants = validServants.filter(servant =>
     servant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     servant.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
     servant.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Dédupliquer par téléphone en vue globale (aucun département sélectionné)
-  type ServantWithDepts = Servant & { departmentIds?: string[] };
-  const displayServants: ServantWithDepts[] = useMemo(() => {
-    if (selectedDepartmentId) return filteredServants;
-    const map = new Map<string, ServantWithDepts>();
-    for (const s of filteredServants) {
-      const key = (s.phone && s.phone.trim()) || s.id;
-      const existing = map.get(key);
-      if (existing) {
-        existing.departmentIds = existing.departmentIds || [existing.departmentId];
-        if (!existing.departmentIds.includes(s.departmentId)) {
-          existing.departmentIds.push(s.departmentId);
-        }
-        // Préférer afficher le responsable si l'un des doublons l'est
-        if (s.isHead && !existing.isHead) existing.isHead = true;
-      } else {
-        map.set(key, { ...s, departmentIds: [s.departmentId] });
-      }
-    }
-    return Array.from(map.values());
-  }, [filteredServants, selectedDepartmentId]);
+  const displayServants = filteredServants;
 
   // Trier
   const sortedServants = [...displayServants].sort((a, b) => {
@@ -298,10 +277,10 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
               <ServantListItem
                 variant="card"
                 servant={servant}
-                departmentName={getDepartmentName(servant.departmentId)}
+                departmentName={getDepartmentName(servant.departmentIds?.[0] || '')}
                 departmentNames={
-                  (servant as any).departmentIds && (servant as any).departmentIds.length > 1
-                    ? (servant as any).departmentIds.map((id: string) => getDepartmentName(id))
+                  servant.departmentIds && servant.departmentIds.length > 1
+                    ? servant.departmentIds.map((id: string) => getDepartmentName(id))
                     : undefined
                 }
                 onEdit={() => setEditingServant(servant)}
@@ -379,10 +358,10 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                     )}
                     <ServantListItem
                       servant={servant}
-                      departmentName={getDepartmentName(servant.departmentId)}
+                      departmentName={getDepartmentName(servant.departmentIds?.[0] || '')}
                       departmentNames={
-                        (servant as any).departmentIds && (servant as any).departmentIds.length > 1
-                          ? (servant as any).departmentIds.map((id: string) => getDepartmentName(id))
+                        servant.departmentIds && servant.departmentIds.length > 1
+                          ? servant.departmentIds.map((id: string) => getDepartmentName(id))
                           : undefined
                       }
                       onEdit={() => setEditingServant(servant)}
@@ -411,7 +390,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
           servant={editingServant}
           isOpen={!!editingServant}
           onClose={() => setEditingServant(null)}
-          departmentName={getDepartmentName(editingServant.departmentId)}
+          departmentName={getDepartmentName(editingServant.departmentIds?.[0] || '')}
         />
       )}
 

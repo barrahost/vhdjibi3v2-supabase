@@ -16,28 +16,27 @@ interface Props {
 }
 
 export default function PromoteToServantModal({ isOpen, onClose, soul, onSuccess }: Props) {
-  const [departmentId, setDepartmentId] = useState('');
+  const [departmentIds, setDepartmentIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { departments } = useDepartments();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!departmentId) {
-      toast.error('Choisissez un département');
+    if (departmentIds.length === 0) {
+      toast.error('Sélectionnez au moins un département');
       return;
     }
     setIsSubmitting(true);
     try {
       const now = new Date();
 
-      // Créer l'entrée serviteur
       const servantId = await ServantService.createServant({
         fullName: soul.fullName,
         nickname: soul.nickname,
         gender: soul.gender,
         phone: soul.phone || '',
         email: '',
-        departmentId,
+        departmentIds,
         isHead: false,
         status: 'active',
         sourceType: 'soul',
@@ -92,18 +91,22 @@ export default function PromoteToServantModal({ isOpen, onClose, soul, onSuccess
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Département d'affectation *</label>
-          <select
-            value={departmentId}
-            onChange={e => setDepartmentId(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
-          >
-            <option value="">-- Choisir un département --</option>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Département(s) *</label>
+          <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto divide-y divide-gray-100">
             {departments.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+              <label key={d.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={departmentIds.includes(d.id)}
+                  onChange={e => setDepartmentIds(prev =>
+                    e.target.checked ? [...prev, d.id] : prev.filter(id => id !== d.id)
+                  )}
+                  className="h-4 w-4 text-[#00665C] focus:ring-[#00665C] border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">{d.name}</span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
 
         <p className="text-xs text-gray-500">

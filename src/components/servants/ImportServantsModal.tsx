@@ -84,7 +84,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
           .from('servants')
           .select('source_type, source_id, original_soul_id')
           .eq('church_id', getChurchId())
-          .eq('department_id', selectedDept);
+          .contains('department_ids', [selectedDept]);
         const existingSoulIds = new Set<string>();
         const existingUserIds = new Set<string>();
         (existingServants ?? []).forEach((d: any) => {
@@ -248,7 +248,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
         gender: manualForm.gender,
         phone: phoneValidation.formattedNumber || '',
         email: manualForm.email.trim(),
-        departmentId: selectedDept,
+        departmentIds: selectedDept ? [selectedDept] : [],
         isHead: canSetHead ? manualForm.isHead : false,
         sourceType: 'manual',
       });

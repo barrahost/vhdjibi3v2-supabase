@@ -76,7 +76,7 @@ export default function DepartmentLeaderDashboard() {
     if (!department?.id) return;
 
     const loadServants = async () => {
-      const { data } = await supabase.from('servants').select('*').eq('church_id', getChurchId()).eq('department_id', department.id).eq('status', 'active');
+      const { data } = await (supabase.from('servants').select('*').eq('church_id', getChurchId()) as any).contains('department_ids', [department.id]).eq('status', 'active');
       const servantsData = (data ?? []).map((r: any) => ({
         id: r.id,
         fullName: r.full_name || '',
@@ -84,7 +84,7 @@ export default function DepartmentLeaderDashboard() {
         gender: r.gender,
         phone: r.phone || '',
         email: r.email || '',
-        departmentId: r.department_id || '',
+        departmentIds: r.department_ids || [],
         isHead: r.is_head || false,
         isShepherd: r.is_shepherd || false,
         originalSoulId: r.original_soul_id || null,

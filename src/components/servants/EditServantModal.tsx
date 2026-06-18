@@ -24,7 +24,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
     gender: 'male' as 'male' | 'female',
     phone: '',
     email: '',
-    departmentId: '',
+    departmentIds: [] as string[],
     isHead: false,
     status: 'active' as 'active' | 'inactive'
   });
@@ -39,7 +39,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
         gender: servant.gender,
         phone: servant.phone.replace('+225', ''),
         email: servant.email || '',
-        departmentId: servant.departmentId,
+        departmentIds: servant.departmentIds || [],
         isHead: servant.isHead,
         status: servant.status || 'active'
       });
@@ -57,85 +57,36 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
         return;
       }
 
-      if (!formData.departmentId) {
-        toast.error('Le département est obligatoire');
+      if (formData.departmentIds.length === 0) {
+        toast.error('Sélectionnez au moins un département');
         return;
       }
 
-      // Validation du numéro de téléphone
       const phoneValidation = validatePhoneNumber(formData.phone);
       if (!phoneValidation.isValid) {
-        const errorMessage = phoneValidation.error || 'Erreur de validation du numéro de téléphone';
-        toast.error(errorMessage);
+        toast.error(phoneValidation.error || 'Numéro de téléphone invalide');
         return;
       }
 
-      // Vérifier si le numéro existe déjà (sauf pour le même serviteur)
-      if (phoneValidation.formattedNumber !== servant.phone) {
-        const { data: phoneData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('phone', phoneValidation.formattedNumber).limit(1);
-        if (phoneData && phoneData.length > 0) {
-          toast.error('Ce numéro de téléphone est déjà utilisé');
-          return;
-        }
-      }
-
-      // Vérifier si l'email existe déjà (sauf pour le même serviteur)
-      if (formData.email && formData.email !== servant.email) {
-        const { data: emailData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('email', formData.email.trim()).limit(1);
-        if (emailData && emailData.length > 0) {
-          toast.error('Cet email est déjà utilisé');
-          return;
-        }
-      }
-
-      // Si le département a changé et que c'est un responsable, vérifier qu'il n'y a pas déjà un responsable
-      if (formData.isHead && formData.departmentId !== servant.departmentId) {
-        const { data: headData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
-        if (headData && headData.length > 0) {
-          toast.error('Ce département a déjà un responsable');
-          return;
-        }
-      }
-
-      // Si le serviteur n'est plus responsable mais qu'il l'était avant
-      if (!formData.isHead && servant.isHead) {
-        // Rien de spécial à faire ici, on peut simplement mettre à jour
-      }
-
-      // Si le serviteur devient responsable
-      if (formData.isHead && !servant.isHead) {
-        const { data: headData } = await supabase.from('servants').select('id').eq('church_id', getChurchId()).eq('department_id', formData.departmentId).eq('is_head', true).eq('status', 'active').limit(1);
-        if (headData && headData.length > 0) {
-          toast.error('Ce département a déjà un responsable');
-          return;
-        }
-      }
-
-      // Mise à jour dans Firestore
-      // Supabase: use id directly: const servantRefId = servant.id; // table: servants
       const { error: updateErr } = await supabase.from('servants').update({
         full_name: formData.fullName.trim(),
         nickname: formData.nickname.trim() || null,
         gender: formData.gender,
         phone: phoneValidation.formattedNumber,
         email: formData.email.trim() || null,
-        department_id: formData.departmentId,
+        department_ids: formData.departmentIds,
         is_head: formData.isHead,
         status: formData.status,
         updated_at: new Date().toISOString(),
       }).eq('id', servant.id);
       if (updateErr) throw updateErr;
 
-      // Synchroniser les profils si le statut isHead a changé
       await AutomaticSyncService.syncOnServantUpdate(
-        {
-          isHead: servant.isHead,
-          email: servant.email
-        },
+        { isHead: servant.isHead, email: servant.email },
         {
           fullName: formData.fullName.trim(),
           email: formData.email.trim(),
-          departmentId: formData.departmentId,
+          departmentId: formData.departmentIds[0] || '',
           isHead: formData.isHead
         }
       );
@@ -224,26 +175,31 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Département
+            Département(s) *
           </label>
-          <select
-            required
-            value={formData.departmentId}
-            onChange={(e) => setFormData(prev => ({ ...prev, departmentId: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-            disabled={loadingDepartments}
-          >
-            <option value="">Sélectionner un département</option>
-            {departments.map(department => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
-          {loadingDepartments && (
-            <p className="mt-1 text-sm text-gray-500">
-              Chargement des départements...
-            </p>
+          {loadingDepartments ? (
+            <p className="text-sm text-gray-500">Chargement...</p>
+          ) : (
+            <div className="border border-gray-300 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-100">
+              {departments.map(dept => (
+                <label key={dept.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.departmentIds.includes(dept.id)}
+                    onChange={e => {
+                      setFormData(prev => ({
+                        ...prev,
+                        departmentIds: e.target.checked
+                          ? [...prev.departmentIds, dept.id]
+                          : prev.departmentIds.filter(id => id !== dept.id),
+                      }));
+                    }}
+                    className="h-4 w-4 text-[#00665C] focus:ring-[#00665C] border-gray-300 rounded"
+                  />
+                  <span className="text-sm text-gray-700">{dept.name}</span>
+                </label>
+              ))}
+            </div>
           )}
         </div>
 
