@@ -182,7 +182,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       });
 
       // Ajouter explicitement le statut indécis
-      updateData.isUndecided = formData.general.isUndecided;
+      updateData.is_undecided = formData.general.isUndecided;
 
       // Mise à jour dans Firestore
       

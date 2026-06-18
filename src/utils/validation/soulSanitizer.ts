@@ -1,39 +1,42 @@
 import { Soul } from '../../types/database.types';
 
-export function sanitizeSoulData(data: Partial<Soul>): Partial<Soul> {
+export function sanitizeSoulData(data: Partial<Soul>): Record<string, any> {
   const sanitized: Record<string, any> = {
-    fullName: data.fullName?.trim(),
+    full_name: data.fullName?.trim(),
     gender: data.gender,
     location: data.location?.trim(),
-    isUndecided: data.isUndecided === true,
+    is_undecided: data.isUndecided === true,
     phone: data.phone,
-    firstVisitDate: data.firstVisitDate ? new Date(data.firstVisitDate) : null,
-    shepherdId: data.shepherdId,
+    first_visit_date: data.firstVisitDate ? new Date(data.firstVisitDate) : null,
+    shepherd_id: data.shepherdId ?? null,
     status: data.status || 'active',
-    updatedAt: new Date()
+    updated_at: new Date()
   };
 
-  // Only include nickname if it exists and isn't empty
   if (data.nickname?.trim()) {
     sanitized.nickname = data.nickname.trim();
   }
 
-  // Only include coordinates if they exist and are valid
   if (data.coordinates && data.coordinates.latitude && data.coordinates.longitude) {
     sanitized.coordinates = data.coordinates;
   } else {
-    // Explicitly set coordinates to null if they don't exist or are invalid
     sanitized.coordinates = null;
   }
 
-  // Only include spiritual profile if it exists
   if (data.spiritualProfile) {
-    sanitized.spiritualProfile = data.spiritualProfile;
+    sanitized.spiritual_profile = data.spiritualProfile;
   }
 
-  // Only include photoURL if it exists
   if (data.photoURL !== undefined) {
-    sanitized.photoURL = data.photoURL;
+    sanitized.photo_url = data.photoURL ?? null;
+  }
+
+  if ((data as any).originSource !== undefined) {
+    sanitized.origin_source = (data as any).originSource || null;
+  }
+
+  if ((data as any).serviceFamilyId !== undefined) {
+    sanitized.service_family_id = (data as any).serviceFamilyId ?? null;
   }
 
   return sanitized;
