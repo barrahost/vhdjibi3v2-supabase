@@ -26,7 +26,15 @@ export default function ServiceFamilyList() {
   useEffect(() => {
     const loadFamilies = async () => {
       const { data } = await supabase.from('service_families').select('*').eq('church_id', getChurchId()).order('order', { ascending: true });
-      setFamilies((data ?? []) as any[]);
+      setFamilies((data ?? []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description || '',
+        leader: r.leader || '',
+        leaderId: r.leader_id || '',
+        shepherdIds: r.shepherd_ids || [],
+        order: r.order ?? 0,
+      })));
     };
     loadFamilies();
     const channel = supabase.channel('service_families_list')
