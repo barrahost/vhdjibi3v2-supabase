@@ -24,7 +24,26 @@ export class FamilyLeaderService {
       .eq('church_id', getChurchId())
       .eq('service_family_id', familyId);
     if (error || !data) return [];
-    return data as Soul[];
+    return data.map((row: any) => ({
+      ...row,
+      fullName: row.fullName || row.full_name || '',
+      phone: row.phone || '',
+      location: row.location || '',
+      gender: row.gender || 'male',
+      nickname: row.nickname || '',
+      isUndecided: row.isUndecided ?? row.is_undecided ?? false,
+      shepherdId: row.shepherdId || row.shepherd_id || undefined,
+      serviceFamilyId: row.serviceFamilyId || row.service_family_id || undefined,
+      originSource: row.originSource || row.origin_source || undefined,
+      status: row.status || 'active',
+      photoURL: row.photoURL || row.photo_url || undefined,
+      spiritualProfile: row.spiritualProfile || row.spiritual_profile || undefined,
+      firstVisitDate: row.firstVisitDate
+        ? new Date(row.firstVisitDate)
+        : row.first_visit_date
+        ? new Date(row.first_visit_date)
+        : undefined,
+    } as Soul));
   }
 
   /** Met à jour le berger assigné à une âme. */
