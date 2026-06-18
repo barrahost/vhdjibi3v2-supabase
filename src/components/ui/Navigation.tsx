@@ -176,8 +176,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       }
     }
 
-    // Build souls management menu (for ADN and admins)
-    if (hasPermission(PERMISSIONS.MANAGE_SOULS) || hasPermission(PERMISSIONS.MANAGE_USERS)) {
+    // Build souls management menu (for ADN and admins — not for family leaders)
+    if (activeRole !== ROLES.FAMILY_LEADER && (hasPermission(PERMISSIONS.MANAGE_SOULS) || hasPermission(PERMISSIONS.MANAGE_USERS))) {
       const soulsChildren = [];
       
       if (hasPermission(PERMISSIONS.MANAGE_SOULS) && hasModule('souls')) {
@@ -241,6 +241,14 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     // Build family management menu - only for family leaders
     if (activeRole === ROLES.FAMILY_LEADER) {
       const familyChildren = [];
+
+      // Âmes de la famille — toujours visible pour le chef de famille
+      familyChildren.push({
+        id: 'family-souls',
+        label: 'Âmes',
+        href: '/ma-famille/ames',
+        icon: <Heart className="w-5 h-5" />
+      });
 
       if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
         familyChildren.push(

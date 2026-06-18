@@ -21,6 +21,7 @@ import StatistiquesAdmin from './pages/StatistiquesAdmin';
 import ServantManagement from './pages/ServantManagement';
 
 // Lazy load components
+const FamilyLeaderDashboard = lazy(() => import('./components/dashboard/FamilyLeaderDashboard'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const SoulManagement = lazy(() => import('./pages/SoulManagement'));
@@ -121,6 +122,7 @@ function AppContent() {
           </PrivateRoute>
         }>
           <Route index element={<Dashboard />} />
+          <Route path="/ma-famille/ames" element={<FamilyLeaderDashboard />} />
           <Route path="/ames-indecises" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
               <UndecidedSouls />
