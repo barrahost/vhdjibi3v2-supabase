@@ -54,15 +54,40 @@ export class FamilyLeaderService {
     }).eq('id', soulId);
   }
 
-  /** Récupère les bergers de la famille (depuis shepherdIds). */
-  static async getShepherdsOfFamily(shepherdIds: string[] = []): Promise<{ id: string; fullName: string }[]> {
-    if (shepherdIds.length === 0) return [];
+  /** Récupère les bergers de la famille.
+   *  Priorité : shepherd_ids sur la famille. Fallback : bergers déduits des âmes assignées. */
+  static async getShepherdsOfFamily(shepherdIds: string[] = [], familyId?: string): Promise<{ id: string; fullName: string; soulCount: number }[]> {
+    let ids = [...shepherdIds];
+
+    // Fallback : déduire depuis les âmes si shepherd_ids est vide
+    if (ids.length === 0 && familyId) {
+      const { data: souls } = await supabase
+        .from('souls')
+        .select('shepherd_id')
+        .eq('church_id', getChurchId())
+        .eq('service_family_id', familyId)
+        .not('shepherd_id', 'is', null);
+      if (souls) {
+        ids = [...new Set(souls.map((s: any) => s.shepherd_id).filter(Boolean))];
+      }
+    }
+
+    if (ids.length === 0) return [];
+
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name')
       .eq('church_id', getChurchId())
-      .in('id', shepherdIds);
+      .in('id', ids);
     if (error || !data) return [];
-    return data.map((row: any) => ({ id: row.id, fullName: row.full_name }));
+
+    // Compter les âmes par berger (dans cette famille)
+    const { data: souls } = familyId
+      ? await supabase.from('souls').select('shepherd_id').eq('church_id', getChurchId()).eq('service_family_id', familyId).not('shepherd_id', 'is', null)
+      : { data: [] };
+    const counts: Record<string, number> = {};
+    (souls || []).forEach((s: any) => { if (s.shepherd_id) counts[s.shepherd_id] = (counts[s.shepherd_id] || 0) + 1; });
+
+    return data.map((row: any) => ({ id: row.id, fullName: row.full_name, soulCount: counts[row.id] || 0 }));
   }
 }

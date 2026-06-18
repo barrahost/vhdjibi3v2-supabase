@@ -242,13 +242,27 @@ export default function Navigation({ onItemClick }: NavigationProps) {
     if (activeRole === ROLES.FAMILY_LEADER) {
       const familyChildren = [];
 
-      // Âmes de la famille — toujours visible pour le chef de famille
-      familyChildren.push({
-        id: 'family-souls',
-        label: 'Âmes',
-        href: '/ma-famille/ames',
-        icon: <Heart className="w-5 h-5" />
-      });
+      // Items toujours visibles pour le chef de famille
+      familyChildren.push(
+        {
+          id: 'family-souls',
+          label: 'Âmes',
+          href: '/ma-famille/ames',
+          icon: <Heart className="w-5 h-5" />
+        },
+        {
+          id: 'family-shepherds',
+          label: 'Bergers',
+          href: '/ma-famille/bergers',
+          icon: <Users className="w-5 h-5" />
+        },
+        {
+          id: 'family-progression',
+          label: 'Progression',
+          href: '/ma-famille/progression',
+          icon: <TrendingUp className="w-5 h-5" />
+        }
+      );
 
       if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
         familyChildren.push(

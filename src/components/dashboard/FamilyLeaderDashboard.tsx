@@ -27,7 +27,7 @@ export default function FamilyLeaderDashboard() {
       if (fam) {
         const [s, sh] = await Promise.all([
           FamilyLeaderService.getSoulsByFamilyId(fam.id),
-          FamilyLeaderService.getShepherdsOfFamily(fam.shepherdIds || []),
+          FamilyLeaderService.getShepherdsOfFamily(fam.shepherdIds || [], fam.id),
         ]);
         setSouls(s);
         setShepherds(sh);
