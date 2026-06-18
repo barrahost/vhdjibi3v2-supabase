@@ -32,6 +32,7 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
 
   const { users: leaderCandidates, loading: loadingLeaders } = useUsersByProfile([
     'family_leader',
+    'adn',
     'shepherd',
     'department_leader',
   ]);
