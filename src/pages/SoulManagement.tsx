@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck, UserPlus } from 'lucide-react';
 import ImportSoulsModal from '../components/souls/ImportSoulsModal';
 import { exportData } from '../utils/exportUtils';
 import SoulForm from '../components/souls/SoulForm';
@@ -15,6 +15,7 @@ import { CustomPagination } from '../components/ui/CustomPagination';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
 import EditSoulModal from '../components/souls/EditSoulModal';
+import ConvertSoulToUserModal from '../components/souls/ConvertSoulToUserModal';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
 import AssignToShepherdModal from '../components/souls/AssignToShepherdModal';
 import PickEvangelizedSoulModal from '../components/evangelizedSouls/PickEvangelizedSoulModal';
@@ -77,6 +78,7 @@ export default function SoulManagement() {
   const [currentPage, setCurrentPage] = useState(initialFilters.currentPage);
   const [dateRange, setDateRange] = useState(initialFilters.dateRange);
   const [editingSoul, setEditingSoul] = useState<Soul | null>(null);
+  const [convertingSoul, setConvertingSoul] = useState<Soul | null>(null);
   const [sortConfig, setSortConfig] = useState(initialFilters.sortConfig);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(initialFilters.statusFilter);
   const [unassignedFamilyOnly, setUnassignedFamilyOnly] = useState(false);
@@ -346,6 +348,13 @@ export default function SoulManagement() {
               title="Modifier"
             >
               <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConvertingSoul(soul); }}
+              className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
+              title="Créer un compte utilisateur"
+            >
+              <UserPlus className="w-4 h-4" />
             </button>
             {canDelete && (
               <button
@@ -717,6 +726,15 @@ export default function SoulManagement() {
           soul={editingSoul}
           isOpen={!!editingSoul}
           onClose={() => setEditingSoul(null)}
+        />
+      )}
+
+      {convertingSoul && (
+        <ConvertSoulToUserModal
+          isOpen={!!convertingSoul}
+          onClose={() => setConvertingSoul(null)}
+          soul={convertingSoul}
+          onSuccess={() => setConvertingSoul(null)}
         />
       )}
 
