@@ -17,7 +17,17 @@ export default function DepartmentList() {
   useEffect(() => {
     const loadDepts = async () => {
       const { data } = await supabase.from('departments').select('*').eq('church_id', getChurchId()).order('order', { ascending: true });
-      setDepartments((data ?? []) as Department[]);
+      setDepartments((data ?? []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description || '',
+        leader: r.leader || '',
+        leaderId: r.leader_id || '',
+        order: r.order ?? 0,
+        status: r.status || 'active',
+        createdAt: r.created_at || null,
+        updatedAt: r.updated_at || null,
+      })));
     };
     loadDepts();
     const channel = supabase.channel('departments_list')

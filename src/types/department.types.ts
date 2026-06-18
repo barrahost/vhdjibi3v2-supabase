@@ -3,6 +3,7 @@ export interface Department {
   name: string;
   description: string;
   leader: string;
+  leaderId?: string;
   order: number;
   createdAt: string | Date | null;
   updatedAt: string | Date | null;

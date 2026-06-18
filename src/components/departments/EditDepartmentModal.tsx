@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
+import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -8,7 +9,8 @@ interface Department {
   id: string;
   name: string;
   description: string;
-  leader: string;
+  leader?: string;
+  leaderId?: string;
 }
 
 interface EditDepartmentModalProps {
@@ -21,16 +23,23 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    leader: ''
+    leaderId: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { users: leaderCandidates, loading: loadingLeaders } = useUsersByProfile([
+    'department_leader',
+    'adn',
+    'shepherd',
+    'family_leader',
+  ]);
 
   useEffect(() => {
     if (department) {
       setFormData({
         name: department.name,
-        description: department.description,
-        leader: department.leader
+        description: department.description || '',
+        leaderId: department.leaderId || '',
       });
     }
   }, [department]);
@@ -45,7 +54,6 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
         return;
       }
 
-      // Vérifier si le nom existe déjà (sauf pour le même département)
       if (formData.name.trim() !== department.name) {
         const { data: nameData } = await supabase
           .from('departments')
@@ -54,25 +62,28 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
           .eq('name', formData.name.trim())
           .neq('id', department.id)
           .limit(1);
-        
+
         if (nameData && nameData.length > 0) {
           toast.error('Un département avec ce nom existe déjà');
           return;
         }
       }
 
+      const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
+
       const { error: updateErr } = await supabase
         .from('departments')
         .update({
           name: formData.name.trim(),
-          description: formData.description,
-          leader: formData.leader.trim(),
+          description: formData.description.trim(),
+          leader: leaderUser?.fullName || department.leader || '',
+          leader_id: formData.leaderId || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', department.id);
-      
+
       if (updateErr) throw updateErr;
-      
+
       toast.success('Département modifié avec succès');
       onClose();
     } catch (error: any) {
@@ -84,11 +95,7 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Modifier un département"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Modifier un département">
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -107,12 +114,24 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Responsable du département
           </label>
-          <input
-            type="text"
-            value={formData.leader}
-            onChange={(e) => setFormData(prev => ({ ...prev, leader: e.target.value }))}
+          <select
+            value={formData.leaderId}
+            onChange={(e) => setFormData(prev => ({ ...prev, leaderId: e.target.value }))}
+            disabled={loadingLeaders}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          />
+          >
+            <option value="">-- Sélectionner un responsable --</option>
+            {leaderCandidates.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.fullName}{u.nickname ? ` (${u.nickname})` : ''}
+              </option>
+            ))}
+          </select>
+          {!formData.leaderId && department.leader && (
+            <p className="mt-1 text-xs text-amber-600">
+              Responsable actuel (texte legacy) : <strong>{department.leader}</strong> — sélectionnez un utilisateur pour le lier
+            </p>
+          )}
         </div>
 
         <div>
