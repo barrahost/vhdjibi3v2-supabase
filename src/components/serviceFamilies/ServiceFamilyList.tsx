@@ -22,6 +22,9 @@ export default function ServiceFamilyList() {
   const [editingFamily, setEditingFamily] = useState<ServiceFamily | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [reordering, setReordering] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const reload = () => setReloadKey(k => k + 1);
 
   useEffect(() => {
     const loadFamilies = async () => {
@@ -37,11 +40,11 @@ export default function ServiceFamilyList() {
       })));
     };
     loadFamilies();
-    const channel = supabase.channel('service_families_list')
+    const channel = supabase.channel('service_families_list_' + reloadKey)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'service_families' }, () => loadFamilies())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [reloadKey]);
 
   const handleMove = async (familyId: string, direction: 'up' | 'down') => {
     try {
@@ -130,6 +133,7 @@ export default function ServiceFamilyList() {
           family={editingFamily}
           isOpen={!!editingFamily}
           onClose={() => setEditingFamily(null)}
+          onSuccess={() => { setEditingFamily(null); reload(); }}
         />
       )}
     </div>

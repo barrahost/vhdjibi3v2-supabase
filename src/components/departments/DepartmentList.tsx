@@ -13,6 +13,9 @@ export default function DepartmentList() {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [reordering, setReordering] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const reload = () => setReloadKey(k => k + 1);
 
   useEffect(() => {
     const loadDepts = async () => {
@@ -30,11 +33,11 @@ export default function DepartmentList() {
       })));
     };
     loadDepts();
-    const channel = supabase.channel('departments_list')
+    const channel = supabase.channel('departments_list_' + reloadKey)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => loadDepts())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [reloadKey]);
 
   const handleMove = async (departmentId: string, direction: 'up' | 'down') => {
     try {
@@ -119,6 +122,7 @@ export default function DepartmentList() {
           department={editingDepartment}
           isOpen={!!editingDepartment}
           onClose={() => setEditingDepartment(null)}
+          onSuccess={() => { setEditingDepartment(null); reload(); }}
         />
       )}
     </div>

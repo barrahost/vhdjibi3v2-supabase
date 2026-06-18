@@ -17,9 +17,10 @@ interface EditDepartmentModalProps {
   department: Department;
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function EditDepartmentModal({ department, isOpen, onClose }: EditDepartmentModalProps) {
+export default function EditDepartmentModal({ department, isOpen, onClose, onSuccess }: EditDepartmentModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -85,7 +86,7 @@ export default function EditDepartmentModal({ department, isOpen, onClose }: Edi
       if (updateErr) throw updateErr;
 
       toast.success('Département modifié avec succès');
-      onClose();
+      if (onSuccess) onSuccess(); else onClose();
     } catch (error: any) {
       console.error('Error updating department:', error);
       toast.error(error.message || 'Erreur lors de la modification');

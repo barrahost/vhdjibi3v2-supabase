@@ -19,9 +19,10 @@ interface EditServiceFamilyModalProps {
   family: ServiceFamily;
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function EditServiceFamilyModal({ family, isOpen, onClose }: EditServiceFamilyModalProps) {
+export default function EditServiceFamilyModal({ family, isOpen, onClose, onSuccess }: EditServiceFamilyModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -90,7 +91,7 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose }: Edit
       if (updateErr) throw updateErr;
 
       toast.success('Famille modifiée avec succès');
-      onClose();
+      if (onSuccess) onSuccess(); else onClose();
     } catch (error: any) {
       console.error('Error updating service family:', error);
       toast.error(error.message || 'Erreur lors de la modification');
