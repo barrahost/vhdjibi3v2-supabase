@@ -91,6 +91,7 @@ export default function DepartmentList() {
                   <DepartmentListItem
                     department={department}
                     onEdit={() => setEditingDepartment(department)}
+                    onDeleted={reload}
                   />
                 </div>
                 <div className="px-4 flex flex-col space-y-1">

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Pencil, Trash2, Users, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -18,42 +17,25 @@ interface ServiceFamily {
 interface ServiceFamilyListItemProps {
   family: ServiceFamily;
   onEdit: () => void;
+  onDeleted?: () => void;
 }
 
-export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyListItemProps) {
+export default function ServiceFamilyListItem({ family, onEdit, onDeleted }: ServiceFamilyListItemProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
-  const [leaderName, setLeaderName] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadLeader = async () => {
-      if (!family.leaderId) {
-        setLeaderName(null);
-        return;
-      }
-      try {
-        const snap = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('id', family.leaderId).single();
-        if (snap.exists()) {
-          setLeaderName(snap.data().fullName || null);
-        }
-      } catch (err) {
-        console.error('Error loading leader:', err);
-      }
-    };
-    loadLeader();
-  }, [family.leaderId]);
 
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer cette famille ?')) {
       try {
-        const { error: _deleteErr } = await supabase.from('serviceFamilies').delete().eq('id', family.id);
+        const { error } = await supabase.from('service_families').delete().eq('id', family.id).eq('church_id', getChurchId());
+        if (error) throw error;
         toast.success('Famille supprimée avec succès');
+        onDeleted?.();
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');
       }
     }
   };
 
-  const displayedLeader = leaderName || family.leader;
   const shepherdCount = family.shepherdIds?.length || 0;
 
   return (
@@ -62,10 +44,10 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-medium text-gray-900">{family.name}</h3>
-            {displayedLeader && (
+            {family.leader && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">
                 <UserCheck className="w-3 h-3 mr-1" />
-                {displayedLeader}
+                {family.leader}
               </span>
             )}
             {shepherdCount > 0 && (
@@ -96,7 +78,7 @@ export default function ServiceFamilyListItem({ family, onEdit }: ServiceFamilyL
           </button>
         </div>
       </div>
-    <ConfirmModal {...confirmModalProps} />
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

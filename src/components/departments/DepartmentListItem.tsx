@@ -15,15 +15,17 @@ interface Department {
 interface DepartmentListItemProps {
   department: Department;
   onEdit: () => void;
+  onDeleted?: () => void;
 }
 
-export default function DepartmentListItem({ department, onEdit }: DepartmentListItemProps) {
+export default function DepartmentListItem({ department, onEdit, onDeleted }: DepartmentListItemProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) {
       try {
         const { error: _deleteErr } = await supabase.from('departments').delete().eq('id', department.id);
         toast.success('Département supprimé avec succès');
+        onDeleted?.();
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');
       }

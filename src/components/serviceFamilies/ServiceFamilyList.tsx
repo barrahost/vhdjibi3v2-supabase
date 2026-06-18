@@ -102,6 +102,7 @@ export default function ServiceFamilyList() {
                   <ServiceFamilyListItem
                     family={family}
                     onEdit={() => setEditingFamily(family)}
+                    onDeleted={reload}
                   />
                 </div>
                 <div className="px-4 flex flex-col space-y-1">
