@@ -131,7 +131,6 @@ export default function ServantListItem({ servant, departmentName, departmentNam
             </div>
             {actions}
           </div>
-          <div className="mt-2.5">{roleBadges}</div>
           <div className="mt-2 flex items-start gap-2">
             <span className="text-xs font-medium text-gray-400 uppercase pt-0.5">Département</span>
             <div className="min-w-0 text-sm text-gray-600">{departmentDisplay}</div>
@@ -157,9 +156,6 @@ export default function ServantListItem({ servant, departmentName, departmentNam
       </td>
       <td className="px-6 py-4 text-sm text-gray-500">
         {departmentDisplay}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        {roleBadges}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         {actions}

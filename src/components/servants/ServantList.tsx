@@ -17,7 +17,7 @@ import { getChurchId } from '../../lib/churchId';
 
 const ITEMS_PER_PAGE = 10;
 
-type SortField = 'fullName' | 'department' | 'isHead';
+type SortField = 'fullName' | 'department';
 type SortDirection = 'asc' | 'desc';
 
 interface ServantListProps {
@@ -171,8 +171,6 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     switch (field) {
       case 'fullName':
         return a.fullName.localeCompare(b.fullName) * modifier;
-      case 'isHead':
-        return ((a.isHead === b.isHead) ? 0 : a.isHead ? 1 : -1) * modifier;
       default:
         return 0;
     }
@@ -322,17 +320,6 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Département
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <button
-                    onClick={() => handleSort('isHead')}
-                    className="group flex items-center space-x-1"
-                  >
-                    <span>Rôle</span>
-                    <ArrowUpDown className={`w-4 h-4 transition-colors ${
-                      sortConfig.field === 'isHead' ? 'text-[#00665C]' : 'text-gray-400 group-hover:text-gray-600'
-                    }`} />
-                  </button>
-                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -341,7 +328,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedServants.length === 0 ? (
                 <tr>
-                  <td colSpan={onSelectionChange ? 6 : 5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={onSelectionChange ? 5 : 4} className="px-6 py-4 text-center text-gray-500">
                     Aucun serviteur trouvé
                   </td>
                 </tr>
