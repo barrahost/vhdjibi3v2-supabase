@@ -5,6 +5,7 @@ import { Search, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import ServantListItem from './ServantListItem';
 import EditServantModal from './EditServantModal';
 import OrphanedServantsModal from './OrphanedServantsModal';
+import ConvertServantToUserModal from './ConvertServantToUserModal';
 import { CustomPagination } from '../ui/CustomPagination';
 import { useDepartments } from '../../hooks/useDepartments';
 import { Checkbox } from '../ui/checkbox';
@@ -35,6 +36,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingServant, setEditingServant] = useState<Servant | null>(null);
+  const [convertingServant, setConvertingServant] = useState<Servant | null>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{
     field: SortField;
@@ -303,6 +305,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                     : undefined
                 }
                 onEdit={() => setEditingServant(servant)}
+                onConvert={isAdmin ? (s) => setConvertingServant(s) : undefined}
               />
             </div>
           ))
@@ -383,6 +386,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                           : undefined
                       }
                       onEdit={() => setEditingServant(servant)}
+                      onConvert={isAdmin ? (s) => setConvertingServant(s) : undefined}
                     />
                   </tr>
                 ))
@@ -416,6 +420,15 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         onClose={() => setShowOrphanModal(false)}
         orphans={orphanServants}
       />
+
+      {convertingServant && (
+        <ConvertServantToUserModal
+          isOpen={!!convertingServant}
+          onClose={() => setConvertingServant(null)}
+          servant={convertingServant}
+          onSuccess={() => setConvertingServant(null)}
+        />
+      )}
     </div>
   );
 }

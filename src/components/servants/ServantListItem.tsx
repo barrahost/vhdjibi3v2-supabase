@@ -1,5 +1,5 @@
 import { Servant } from '../../types/servant.types';
-import { Pencil, Trash2, Phone } from 'lucide-react';
+import { Pencil, Trash2, Phone, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -11,11 +11,12 @@ interface ServantListItemProps {
   departmentName: string;
   departmentNames?: string[];
   onEdit: () => void;
+  onConvert?: (servant: Servant) => void;
   /** 'row' (cellules de tableau, defaut) ou 'card' (carte mobile) */
   variant?: 'row' | 'card';
 }
 
-export default function ServantListItem({ servant, departmentName, departmentNames, onEdit, variant = 'row' }: ServantListItemProps) {
+export default function ServantListItem({ servant, departmentName, departmentNames, onEdit, onConvert, variant = 'row' }: ServantListItemProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer ce serviteur ?')) {
@@ -86,6 +87,15 @@ export default function ServantListItem({ servant, departmentName, departmentNam
       >
         <Pencil className="w-4 h-4" />
       </button>
+      {onConvert && (
+        <button
+          onClick={() => onConvert(servant)}
+          className="p-1.5 text-[#00665C] hover:bg-[#00665C]/10 rounded"
+          title="Créer un compte utilisateur"
+        >
+          <UserPlus className="w-4 h-4" />
+        </button>
+      )}
       <button
         onClick={handleDelete}
         className="p-1.5 text-red-600 hover:bg-red-50 rounded"

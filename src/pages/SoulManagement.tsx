@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck, UserPlus } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck, Shield } from 'lucide-react';
 import ImportSoulsModal from '../components/souls/ImportSoulsModal';
 import { exportData } from '../utils/exportUtils';
 import SoulForm from '../components/souls/SoulForm';
@@ -15,7 +15,7 @@ import { CustomPagination } from '../components/ui/CustomPagination';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
 import EditSoulModal from '../components/souls/EditSoulModal';
-import ConvertSoulToUserModal from '../components/souls/ConvertSoulToUserModal';
+import PromoteToServantModal from '../components/souls/PromoteToServantModal';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
 import AssignToShepherdModal from '../components/souls/AssignToShepherdModal';
 import PickEvangelizedSoulModal from '../components/evangelizedSouls/PickEvangelizedSoulModal';
@@ -78,7 +78,7 @@ export default function SoulManagement() {
   const [currentPage, setCurrentPage] = useState(initialFilters.currentPage);
   const [dateRange, setDateRange] = useState(initialFilters.dateRange);
   const [editingSoul, setEditingSoul] = useState<Soul | null>(null);
-  const [convertingSoul, setConvertingSoul] = useState<Soul | null>(null);
+  const [promotingSoul, setPromotingSoul] = useState<Soul | null>(null);
   const [sortConfig, setSortConfig] = useState(initialFilters.sortConfig);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(initialFilters.statusFilter);
   const [unassignedFamilyOnly, setUnassignedFamilyOnly] = useState(false);
@@ -349,13 +349,15 @@ export default function SoulManagement() {
             >
               <Pencil className="w-4 h-4" />
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setConvertingSoul(soul); }}
-              className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
-              title="Créer un compte utilisateur"
-            >
-              <UserPlus className="w-4 h-4" />
-            </button>
+            {soul.spiritualProfile?.isBornAgain && soul.spiritualProfile?.isBaptized && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setPromotingSoul(soul); }}
+                className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
+                title="Promouvoir en serviteur"
+              >
+                <Shield className="w-4 h-4" />
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(soul.id); }}
@@ -460,25 +462,28 @@ export default function SoulManagement() {
       const { data, error } = await q;
       if (error) throw error;
 
-      const soulsData: Soul[] = (data || []).map((row: any) => ({
-        ...row,
-        id: row.id,
-        fullName: row.fullName || row.full_name || '',
-        phone: row.phone || '',
-        location: row.location || '',
-        gender: row.gender || 'male',
-        isUndecided: row.isUndecided ?? row.is_undecided ?? false,
-        shepherdId: row.shepherdId || row.shepherd_id,
-        evangelistId: row.evangelistId || row.evangelist_id,
-        status: row.status || 'active',
-        photoURL: row.photoURL || row.photo_url,
-        firstVisitDate: row.firstVisitDate
-          ? new Date(row.firstVisitDate)
-          : row.first_visit_date
-          ? new Date(row.first_visit_date)
-          : undefined,
-        createdAt: row.createdAt || row.created_at,
-      } as Soul));
+      const soulsData: Soul[] = (data || [])
+        .filter((row: any) => !row.is_servant)
+        .map((row: any) => ({
+          ...row,
+          id: row.id,
+          fullName: row.fullName || row.full_name || '',
+          phone: row.phone || '',
+          location: row.location || '',
+          gender: row.gender || 'male',
+          isUndecided: row.isUndecided ?? row.is_undecided ?? false,
+          shepherdId: row.shepherdId || row.shepherd_id,
+          evangelistId: row.evangelistId || row.evangelist_id,
+          status: row.status || 'active',
+          photoURL: row.photoURL || row.photo_url,
+          firstVisitDate: row.firstVisitDate
+            ? new Date(row.firstVisitDate)
+            : row.first_visit_date
+            ? new Date(row.first_visit_date)
+            : undefined,
+          createdAt: row.createdAt || row.created_at,
+          spiritualProfile: row.spiritual_profile || row.spiritualProfile || {},
+        } as Soul));
       setSouls(soulsData);
     } catch (error) {
       console.error('Error loading souls:', error);
@@ -729,12 +734,12 @@ export default function SoulManagement() {
         />
       )}
 
-      {convertingSoul && (
-        <ConvertSoulToUserModal
-          isOpen={!!convertingSoul}
-          onClose={() => setConvertingSoul(null)}
-          soul={convertingSoul}
-          onSuccess={() => setConvertingSoul(null)}
+      {promotingSoul && (
+        <PromoteToServantModal
+          isOpen={!!promotingSoul}
+          onClose={() => setPromotingSoul(null)}
+          soul={promotingSoul}
+          onSuccess={() => { setPromotingSoul(null); fetchSouls(); }}
         />
       )}
 
