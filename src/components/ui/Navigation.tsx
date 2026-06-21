@@ -341,8 +341,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       });
     }
 
-    // Statistiques dédiées (Admin/ADN avec VIEW_STATS)
-    if (hasPermission(PERMISSIONS.VIEW_STATS) && activeRole !== ROLES.EVANGELIST && activeRole !== ROLES.SHEPHERD && activeRole !== ROLES.DEPARTMENT_LEADER && hasModule('statistics')) {
+    // Statistiques dédiées (Admin avec VIEW_STATS — masqué pour ADN)
+    if (hasPermission(PERMISSIONS.VIEW_STATS) && activeRole !== ROLES.EVANGELIST && activeRole !== ROLES.SHEPHERD && activeRole !== ROLES.DEPARTMENT_LEADER && activeRole !== ROLES.ADN && hasModule('statistics')) {
       items.push({
         id: 'statistics',
         label: 'Statistiques',
@@ -396,8 +396,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       }
     }
 
-    // Replay des enseignements - accessible à tous les utilisateurs authentifiés
-    if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && hasModule('audio')) {
+    // Replay des enseignements - accessible à tous les utilisateurs authentifiés (masqué pour ADN)
+    if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && activeRole !== ROLES.ADN && hasModule('audio')) {
       items.push({
         id: 'replay-teachings-public',
         label: 'Replay des enseignements',
@@ -406,8 +406,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       });
     }
 
-    // Build content & communication menu - for admins only
-    if (hasPermission(PERMISSIONS.MANAGE_AUDIO) || hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) {
+    // Build content & communication menu - for admins only (masqué pour ADN)
+    if ((hasPermission(PERMISSIONS.MANAGE_AUDIO) || hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) && activeRole !== ROLES.ADN) {
       const contentChildren = [];
       
       if (hasPermission(PERMISSIONS.MANAGE_AUDIO) && hasModule('audio')) {
@@ -446,8 +446,8 @@ export default function Navigation({ onItemClick }: NavigationProps) {
       }
     }
 
-    // Outils pastoraux (Carte des âmes, Anniversaires)
-    if (hasPermission(PERMISSIONS.VIEW_STATS) && (hasModule('soul_map') || hasModule('birthdays'))) {
+    // Outils pastoraux (Carte des âmes, Anniversaires) — masqué pour ADN
+    if (hasPermission(PERMISSIONS.VIEW_STATS) && activeRole !== ROLES.ADN && (hasModule('soul_map') || hasModule('birthdays'))) {
       const pastoralChildren = [];
       if (hasModule('soul_map')) {
         pastoralChildren.push({
