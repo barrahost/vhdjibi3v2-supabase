@@ -13,7 +13,12 @@ export class FamilyLeaderService {
       .limit(1)
       .single();
     if (error || !data) return null;
-    return { id: data.id, ...data } as ServiceFamily;
+    return {
+      ...data,
+      id: data.id,
+      leaderId: data.leader_id ?? undefined,
+      shepherdIds: data.shepherd_ids ?? [],
+    } as ServiceFamily;
   }
 
   /** Liste les âmes assignées à une famille. */
