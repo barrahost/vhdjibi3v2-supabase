@@ -156,7 +156,22 @@ export function ADNDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Tableau de bord ADN</h1>
+      {/* En-tête + CTA */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-0.5">Tableau de bord ADN</h1>
+        </div>
+        <button
+          onClick={() => navigate('/ames')}
+          className="flex items-center gap-2 h-12 px-5 text-sm font-semibold bg-brand-700 text-white rounded-xl hover:bg-brand-800 transition-colors self-start sm:self-auto"
+        >
+          <User className="w-4 h-4" />
+          Gérer les âmes
+        </button>
+      </div>
 
       <PendingActionsWidget role="adn" />
 
@@ -168,7 +183,7 @@ export function ADNDashboard() {
             onClick={() => setPeriod(p)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               period === p
-                ? 'bg-[#00665C] text-white'
+                ? 'bg-brand-700 text-white'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
@@ -178,7 +193,7 @@ export function ADNDashboard() {
       </div>
 
       {/* Hero card — métrique principale */}
-      <div className="bg-gradient-to-br from-[#00665C] to-[#00887A] rounded-2xl p-6 text-white shadow-lg">
+      <div className="bg-gradient-to-br from-brand-700 to-brand-500 rounded-2xl p-6 text-white shadow-lg">
         <p className="text-sm font-medium opacity-80">Total des âmes enregistrées</p>
         <p className="text-5xl font-bold mt-1 tracking-tight">{stats.totalSouls}</p>
         <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm opacity-95">
@@ -247,8 +262,8 @@ export function ADNDashboard() {
       </div>
 
       {/* Répartition par famille de service */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <h2 className="font-semibold text-[#00665C] mb-3">Répartition par famille de service</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <h2 className="font-semibold text-brand-700 mb-3">Répartition par famille de service</h2>
         <div className="space-y-2">
           {families.map(fam => {
             const count = byFamily.get(fam.id) || 0;
@@ -257,7 +272,7 @@ export function ADNDashboard() {
               <div key={fam.id} className="flex items-center gap-3">
                 <span className="text-sm text-gray-700 w-32 sm:w-40 truncate" title={fam.name}>{fam.name}</span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#00665C] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-full bg-brand-700 rounded-full transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 <span className="text-sm font-medium text-gray-900 w-16 text-right tabular-nums">
                   {count} <span className="text-xs text-gray-500">({pct}%)</span>
@@ -286,14 +301,14 @@ export function ADNDashboard() {
         </div>
       </div>
       <div>
-        <h2 className="text-lg font-semibold text-[#00665C] mb-4">
+        <h2 className="text-lg font-semibold text-brand-700 mb-4">
           Évolution des âmes enregistrées
         </h2>
         <SoulEvolutionChart />
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-[#00665C] mb-4">
+        <h2 className="text-lg font-semibold text-brand-700 mb-4">
           Activités récentes
         </h2>
         <RecentActivity />

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ChangelogModal } from './ChangelogModal';
 import { useChurch } from '../../contexts/ChurchContext';
 
-export function Footer() {
+export function Footer({ className = '' }: { className?: string }) {
   const location = useLocation();
   const { church } = useChurch();
   const copyrightName = church?.copyrightName || church?.name || 'Bergerie';
@@ -15,7 +15,7 @@ export function Footer() {
   if (isLoginPage && location.pathname === '/login') return null;
 
   return (
-    <footer className={`mt-auto py-4 px-6 border-t ${location.pathname === '/replay' ? 'bg-white/80 backdrop-blur-sm' : 'bg-white'}`}>
+    <footer className={`mt-auto py-4 px-6 border-t ${location.pathname === '/replay' ? 'bg-white/80 backdrop-blur-sm' : 'bg-white'} ${className}`}>
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         <div className="text-center text-sm text-gray-500 space-y-1 flex flex-col items-center">
           © {new Date().getFullYear()} {copyrightName}. Tous droits réservés.

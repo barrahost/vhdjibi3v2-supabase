@@ -26,48 +26,42 @@ export function StatCard({
   icon: Icon,
   trend,
   trendLabel,
-  iconClassName = "text-[#F2B636]",
+  iconClassName = 'text-amber-500',
   className = '',
   details,
   onClick,
-  linkLabel
+  linkLabel,
 }: StatCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isClickable = !!onClick;
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!onClick) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onClick();
-    }
-  };
 
   return (
     <div
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? onClick : undefined}
-      onKeyDown={isClickable ? handleKeyDown : undefined}
+      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
       className={`
-        bg-white p-3 sm:p-6 rounded-lg shadow-sm border border-l-4 border-l-[#00665C] relative
-        ${isClickable ? 'cursor-pointer transition-all hover:shadow-md hover:border-l-[#F2B636] focus:outline-none focus:ring-2 focus:ring-[#00665C]/40' : ''}
+        bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative
+        ${isClickable ? 'cursor-pointer transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-700/30' : ''}
         ${className}
       `}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs sm:text-base font-medium text-gray-600 leading-tight">{title}</p>
-          <p className="text-2xl sm:text-3xl font-semibold text-[#00665C] mt-0.5">{value}</p>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            <span className="font-medium text-[#F2B636]">{trend}</span> {trendLabel}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight truncate">{title}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            <span className="font-semibold text-brand-700">{trend}</span> {trendLabel}
           </p>
         </div>
-        <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${iconClassName} flex-shrink-0`} />
+        <div className={`w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 ${iconClassName}`}>
+          <Icon className="w-5 h-5" />
+        </div>
       </div>
 
       {isClickable && linkLabel && (
-        <div className="mt-3 inline-flex items-center text-xs font-medium text-[#00665C]">
+        <div className="mt-3 inline-flex items-center text-xs font-medium text-brand-700">
           {linkLabel}
           <ArrowRight className="w-3 h-3 ml-1" />
         </div>
@@ -76,28 +70,16 @@ export function StatCard({
       {details && (
         <>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
             className="absolute bottom-2 right-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label={isExpanded ? 'Réduire les détails' : 'Afficher les détails'}
           >
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-
-          <div className={`
-            mt-4 pt-4 border-t space-y-2 transition-all duration-300
-            ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}
-          `}>
+          <div className={`mt-4 pt-4 border-t space-y-2 transition-all duration-300 ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
             {details.map((detail, index) => (
               <div key={index} className="flex justify-between items-center text-sm">
-                <span className="text-sm text-gray-600">{detail.label}</span>
-                <span className="text-sm font-medium text-gray-900">{detail.value}</span>
+                <span className="text-gray-600">{detail.label}</span>
+                <span className="font-medium text-gray-900">{detail.value}</span>
               </div>
             ))}
           </div>

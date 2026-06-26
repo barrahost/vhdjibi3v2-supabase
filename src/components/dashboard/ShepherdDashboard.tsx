@@ -227,12 +227,28 @@ export function ShepherdDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Mon Tableau de bord</h1>
+      {/* En-tête + CTA */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-0.5">Mon Tableau de bord</h1>
+        </div>
+        <button
+          onClick={() => setInteractionSoul(souls[0] ?? null)}
+          disabled={souls.length === 0}
+          className="flex items-center gap-2 h-12 px-5 text-sm font-semibold bg-brand-700 text-white rounded-xl hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors self-start sm:self-auto"
+        >
+          <Phone className="w-4 h-4" />
+          Ajouter une interaction
+        </button>
+      </div>
 
       {shepherdId && <PendingActionsWidget role="shepherd" shepherdId={shepherdId} />}
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Mes âmes"
           value={stats.totalSouls}
@@ -270,9 +286,9 @@ export function ShepherdDashboard() {
       </div>
 
       {/* Mes âmes — suivi par urgence de contact */}
-      <div className="bg-white rounded-lg shadow-sm border">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="p-4 border-b flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-[#00665C]">Mes âmes — suivi</h2>
+          <h2 className="text-lg font-semibold text-brand-700">Mes âmes — suivi</h2>
           <span className="text-xs text-gray-500 flex-shrink-0">
             {stats.soulsNeedingAttention} à contacter
           </span>
@@ -306,7 +322,7 @@ export function ShepherdDashboard() {
                       <a
                         href={telHref(soul.phone)!}
                         title="Appeler"
-                        className="inline-flex items-center justify-center w-8 h-8 text-[#00665C] border border-[#00665C]/40 rounded-lg hover:bg-[#00665C]/10 transition-colors"
+                        className="inline-flex items-center justify-center w-8 h-8 text-brand-700 border border-[#00665C]/40 rounded-lg hover:bg-brand-700/10 transition-colors"
                       >
                         <Phone className="w-3.5 h-3.5" />
                       </a>
@@ -324,7 +340,7 @@ export function ShepherdDashboard() {
                     )}
                     <button
                       onClick={() => setInteractionSoul(soul)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-[#00665C] text-white rounded-lg hover:bg-[#00554C] transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition-colors"
                     >
                       <Phone className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Contacter</span>
@@ -338,8 +354,8 @@ export function ShepherdDashboard() {
       </div>
 
       {/* Progression spirituelle */}
-      <div className="bg-white border rounded-lg p-4 shadow-sm">
-        <h3 className="font-semibold text-[#00665C] text-sm mb-4">Progression spirituelle de mes âmes</h3>
+      <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+        <h3 className="font-semibold text-brand-700 text-sm mb-4">Progression spirituelle de mes âmes</h3>
         {[
           { label: 'Né de nouveau', count: spiritualStats.byStatus.bornAgain, color: '#0F6E56' },
           { label: 'Baptisé',       count: spiritualStats.byStatus.baptized,  color: '#1D9E75' },

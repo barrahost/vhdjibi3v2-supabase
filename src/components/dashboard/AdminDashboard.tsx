@@ -138,37 +138,47 @@ export function AdminDashboard() {
     <div className="space-y-6">
 
       {/* En-tête */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-0.5">Tableau de bord</h1>
         </div>
-        <button
-          onClick={() => navigate('/statistiques')}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/5 self-start sm:self-auto"
-        >
-          <BarChart2 className="w-4 h-4" />
-          Voir les statistiques
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          {alerts.length > 0 && (
+            <button
+              onClick={() => navigate('/ames?filter=unassigned')}
+              className="flex items-center gap-2 h-11 px-4 text-sm font-medium bg-brand-700 text-white rounded-xl hover:bg-brand-800 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              {alerts.length} action{alerts.length > 1 ? 's' : ''} requise{alerts.length > 1 ? 's' : ''}
+            </button>
+          )}
+          <button
+            onClick={() => navigate('/statistiques')}
+            className="flex items-center gap-2 h-11 px-4 text-sm font-medium text-brand-700 border border-brand-700 rounded-xl hover:bg-brand-50 transition-colors"
+          >
+            <BarChart2 className="w-4 h-4" />
+            Statistiques
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map(kpi => (
           <button
             key={kpi.label}
             onClick={() => kpi.href && navigate(kpi.href)}
-            className={`bg-white border rounded-lg p-4 text-left hover:shadow-sm transition-shadow ${kpi.alert ? 'border-amber-300 bg-amber-50' : ''}`}
+            className="bg-white border border-gray-100 rounded-2xl p-4 text-left hover:shadow-md transition-shadow"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className={`${kpi.color}`}>{kpi.icon}</span>
-              {kpi.alert && <AlertTriangle className="w-4 h-4 text-amber-500" />}
-            </div>
-            <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
-            <p className="text-xs font-medium text-gray-700 mt-0.5">{kpi.label}</p>
-            {kpi.sub && <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>}
+            <span className={`inline-flex ${kpi.color} mb-2`}>{kpi.icon}</span>
+            <p className="text-3xl font-bold text-gray-900">{kpi.value}</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mt-1 leading-tight">{kpi.label}</p>
+            {kpi.sub && (
+              <p className={`text-xs mt-1 ${kpi.alert ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>{kpi.sub}</p>
+            )}
           </button>
         ))}
       </div>
@@ -176,20 +186,20 @@ export function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Colonne gauche : Alertes + Accès rapides */}
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           {/* Alertes */}
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
               <h2 className="font-semibold text-gray-900 text-sm">Actions requises</h2>
               {alerts.length > 0 && (
-                <span className="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                <span className="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                   {alerts.length}
                 </span>
               )}
             </div>
-            <div className="divide-y">
+            <div className="divide-y divide-gray-50">
               {alerts.length === 0 ? (
                 <div className="px-4 py-4 flex items-center gap-2 text-sm text-green-700">
                   <CheckCircle2 className="w-4 h-4" />
@@ -198,10 +208,10 @@ export function AdminDashboard() {
               ) : alerts.map(alert => (
                 <div key={alert.id} className="px-4 py-3 flex items-center gap-3 text-sm">
                   <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span className="flex-1 text-gray-800">{alert.label}</span>
+                  <span className="flex-1 text-gray-700 text-xs">{alert.label}</span>
                   <button
                     onClick={() => navigate(alert.href)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 border border-brand-200 rounded-lg transition-colors"
                   >
                     Voir <ArrowRight className="w-3 h-3" />
                   </button>
@@ -211,13 +221,13 @@ export function AdminDashboard() {
           </div>
 
           {/* Accès rapides */}
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50">
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900 text-sm">Accès rapides</h2>
             </div>
             <div className="p-3 grid grid-cols-2 gap-2">
               {[
-                { label: 'Ajouter une âme', icon: <Plus className="w-4 h-4" />, href: '/ames', color: 'bg-[#00665C] text-white hover:bg-[#00665C]/90' },
+                { label: 'Ajouter une âme', icon: <Plus className="w-4 h-4" />, href: '/ames', color: 'bg-brand-700 text-white hover:bg-brand-800' },
                 { label: 'Âmes évangélisées', icon: <Megaphone className="w-4 h-4" />, href: '/ames-evangelisees', color: 'bg-amber-500 text-white hover:bg-amber-600' },
                 { label: 'Statistiques', icon: <BarChart2 className="w-4 h-4" />, href: '/statistiques', color: 'bg-blue-600 text-white hover:bg-blue-700' },
                 { label: 'Carte des âmes', icon: <Map className="w-4 h-4" />, href: '/carte', color: 'bg-purple-600 text-white hover:bg-purple-700' },
@@ -227,7 +237,7 @@ export function AdminDashboard() {
                 <button
                   key={item.label}
                   onClick={() => navigate(item.href)}
-                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg text-xs font-medium transition-colors ${item.color}`}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl text-xs font-medium transition-colors ${item.color}`}
                 >
                   {item.icon}
                   <span className="text-center leading-tight">{item.label}</span>
@@ -238,36 +248,36 @@ export function AdminDashboard() {
         </div>
 
         {/* Colonne droite : Activité récente */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
 
           {/* Dernières âmes */}
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#00665C]" />
+                <Users className="w-4 h-4 text-brand-700" />
                 <h2 className="font-semibold text-gray-900 text-sm">Dernières âmes ajoutées</h2>
               </div>
-              <button onClick={() => navigate('/ames')} className="text-xs text-[#00665C] hover:underline flex items-center gap-1">
+              <button onClick={() => navigate('/ames')} className="text-xs text-brand-700 hover:underline flex items-center gap-1">
                 Voir tout <ArrowRight className="w-3 h-3" />
               </button>
             </div>
-            <div className="divide-y">
+            <div className="divide-y divide-gray-50">
               {recentSouls.length === 0 ? (
                 <p className="px-4 py-4 text-sm text-gray-400">Aucune âme récente</p>
               ) : recentSouls.map(soul => (
-                <div key={soul.id} className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#00665C]/10 flex items-center justify-center text-xs font-semibold text-[#00665C]">
+                <div key={soul.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-brand-50 flex items-center justify-center text-xs font-bold text-brand-700 flex-shrink-0">
                       {(soul.fullName || '?')[0].toUpperCase()}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{soul.fullName}</p>
-                      <p className="text-xs text-gray-400">{soul.location}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{soul.fullName}</p>
+                      <p className="text-xs text-gray-400 truncate">{soul.location}</p>
                     </div>
                   </div>
                   {soul.shepherdId
-                    ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Assignée</span>
-                    : <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">Sans berger</span>
+                    ? <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 flex-shrink-0">Assignée</span>
+                    : <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 flex-shrink-0">Sans berger</span>
                   }
                 </div>
               ))}
@@ -275,35 +285,32 @@ export function AdminDashboard() {
           </div>
 
           {/* Dernières interactions */}
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-600" />
                 <h2 className="font-semibold text-gray-900 text-sm">Interactions récentes</h2>
               </div>
-              <button onClick={() => navigate('/interactions')} className="text-xs text-[#00665C] hover:underline flex items-center gap-1">
+              <button onClick={() => navigate('/interactions')} className="text-xs text-brand-700 hover:underline flex items-center gap-1">
                 Voir tout <ArrowRight className="w-3 h-3" />
               </button>
             </div>
-            <div className="divide-y">
+            <div className="divide-y divide-gray-50">
               {recentInteractions.length === 0 ? (
                 <p className="px-4 py-4 text-sm text-gray-400">Aucune interaction récente</p>
               ) : recentInteractions.map(inter => (
-                <div key={inter.id} className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                      inter.type === 'call' ? 'bg-blue-100 text-blue-700' :
-                      inter.type === 'visit' ? 'bg-green-100 text-green-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {inter.type === 'call' ? '📞' : inter.type === 'visit' ? '🏠' : '💬'}
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {inter.type === 'call' ? 'Appel' : inter.type === 'visit' ? 'Visite' : 'Message'}
-                      </p>
-                      <p className="text-xs text-gray-400">{formatDate(inter.date)}</p>
-                    </div>
+                <div key={inter.id} className="px-4 py-3 flex items-center gap-3">
+                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${
+                    inter.type === 'call' ? 'bg-blue-50' :
+                    inter.type === 'visit' ? 'bg-green-50' : 'bg-amber-50'
+                  }`}>
+                    {inter.type === 'call' ? '📞' : inter.type === 'visit' ? '🏠' : '💬'}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {inter.type === 'call' ? 'Appel' : inter.type === 'visit' ? 'Visite' : 'Message'}
+                    </p>
+                    <p className="text-xs text-gray-400">{formatDate(inter.date)}</p>
                   </div>
                 </div>
               ))}
@@ -313,10 +320,10 @@ export function AdminDashboard() {
       </div>
 
       {/* Évolution des âmes */}
-      <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 text-sm">Évolution de la congrégation</h2>
-          <button onClick={() => navigate('/statistiques')} className="text-xs text-[#00665C] hover:underline flex items-center gap-1">
+          <button onClick={() => navigate('/statistiques')} className="text-xs text-brand-700 hover:underline flex items-center gap-1">
             Stats complètes <ArrowRight className="w-3 h-3" />
           </button>
         </div>

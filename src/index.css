@@ -25,7 +25,17 @@
     --border: 214.3 31.8% 91.4%; /* very light gray */
     --input: 214.3 31.8% 91.4%; /* very light gray */
     --ring: 222.2 84% 4.9%; /* black */
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Brand colors */
+    --brand-50:  #F0F9F8;
+    --brand-100: #D9F0EE;
+    --brand-200: #B3E0DB;
+    --brand-500: #00877A;
+    --brand-600: #007267;
+    --brand-700: #00665C;
+    --brand-800: #00524A;
+    --brand-900: #00443C;
 
     /* Variables pour la sidebar */
     --sidebar-background: 0 0% 100%;

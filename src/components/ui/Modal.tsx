@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -10,9 +11,7 @@ interface ModalProps {
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
 
     if (isOpen) {
@@ -29,29 +28,32 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[calc(100vh-32px)] flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-[#00665C]">{title}</h2>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95dvh] sm:max-h-[calc(100vh-32px)] flex flex-col">
+        {/* Handle bar on mobile */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Fermer"
           >
-            <span className="sr-only">Fermer</span>
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-5 w-5" />
           </button>
         </div>
+
         <div className="flex-1 overflow-auto">
           {children}
         </div>

@@ -3,10 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPageTitle } from '../../utils/pageTitle';
 import { useUserProfile } from '../../contexts/UserProfileContext';
-import { User as UserIcon, LogOut } from 'lucide-react';
+import { User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ProfileSwitcher } from './ProfileSwitcher';
 import { ChurchSelector } from './ChurchSelector';
+import { Logo } from './Logo';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -27,7 +28,6 @@ export function Header() {
         const currentUserId = localUser.id;
         if (!currentUserId) return;
 
-        // Chercher dans users
         const { data: userRows } = await supabase
           .from('users')
           .select('full_name, photo_url')
@@ -41,7 +41,6 @@ export function Header() {
           return;
         }
 
-        // Chercher dans admins
         const { data: adminRows } = await supabase
           .from('admins')
           .select('full_name, photo_url')
@@ -88,58 +87,85 @@ export function Header() {
 
   if (!user) return null;
 
+  const showNotificationBell =
+    (activeRole || userRole) === 'shepherd' ||
+    (userRole as any) === 'intern' ||
+    (activeRole || userRole) === 'admin' ||
+    (activeRole || userRole) === 'super_admin' ||
+    (activeRole || userRole) === 'adn';
+
+  const Avatar = () => (
+    <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {userPhotoURL ? (
+        <img
+          src={userPhotoURL}
+          alt="Photo de profil"
+          className="w-8 h-8 object-cover"
+          onError={() => setUserPhotoURL(null)}
+        />
+      ) : (
+        <UserIcon className="w-4 h-4 text-amber-500" />
+      )}
+    </div>
+  );
+
   return (
-    <header className="bg-white border-b px-6 py-3">
-      <div className="flex items-center justify-between gap-4">
-        {/* Sélecteur d'église (super admin central uniquement) */}
-        <ChurchSelector />
-
-        {pageTitle ? (
-          <h1 className="flex-1 text-base sm:text-lg font-semibold text-gray-900 truncate">
-            {pageTitle}
-          </h1>
-        ) : (
-          <div className="flex-1" />
-        )}
-
-        <div className="flex items-center space-x-4">
+    <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+      {/* Mobile header */}
+      <div className="flex lg:hidden items-center justify-between px-4 h-14">
+        <Logo className="h-8 w-auto" />
+        <div className="flex items-center gap-2">
+          <ChurchSelector />
           <ProfileSwitcher />
+          {showNotificationBell && <NotificationBell />}
+          <button
+            onClick={openProfileModal}
+            className="p-1 rounded-full"
+            aria-label="Profil"
+          >
+            <Avatar />
+          </button>
+        </div>
+      </div>
 
-          {((activeRole || userRole) === 'shepherd' || (userRole as any) === 'intern' || (activeRole || userRole) === 'admin' || (activeRole || userRole) === 'super_admin' || (activeRole || userRole) === 'adn') && <NotificationBell />}
+      {/* Desktop header */}
+      <div className="hidden lg:flex items-center justify-between gap-4 px-6 h-16">
+        <div className="flex items-center gap-3">
+          <ChurchSelector />
+          {pageTitle && (
+            <h1 className="text-base font-semibold text-gray-900 truncate">
+              {pageTitle}
+            </h1>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <ProfileSwitcher />
+          {showNotificationBell && <NotificationBell />}
 
           <button
             onClick={openProfileModal}
-            className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-[#F2B636]/10 flex items-center justify-center">
-              {userPhotoURL ? (
-                <img
-                  src={userPhotoURL}
-                  alt="Photo de profil"
-                  className="w-8 h-8 rounded-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    setUserPhotoURL(null);
-                  }}
-                />
-              ) : (
-                <UserIcon className="w-5 h-5 text-[#F2B636]" />
-              )}
+            <Avatar />
+            <div className="text-left hidden xl:block">
+              <p className="text-sm font-medium text-gray-900 leading-tight">
+                {userFullName || getRoleLabel()}
+              </p>
+              <p className="text-xs text-gray-500 leading-tight">{getRoleLabel()}</p>
             </div>
-            <div className="text-left">
-              <p className="text-sm font-medium text-gray-900">{userFullName || getRoleLabel()}</p>
-              <p className="text-xs text-gray-500">{getRoleLabel()}</p>
-            </div>
+            <ChevronDown className="w-4 h-4 text-gray-400 hidden xl:block" />
           </button>
 
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 rounded-md transition-colors duration-200 ease-in-out border border-red-600"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-gray-200 hover:border-red-200"
           >
-            <LogOut className="w-4 h-4 mr-2" />
-            {isLoggingOut ? 'Déconnexion...' : 'Déconnexion'}
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {isLoggingOut ? 'Déconnexion...' : 'Déconnexion'}
+            </span>
           </button>
         </div>
       </div>
