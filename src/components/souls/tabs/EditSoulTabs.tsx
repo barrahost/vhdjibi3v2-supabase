@@ -17,6 +17,16 @@ interface EditSoulTabsProps {
       shepherdId: string | undefined;
       status: 'active' | 'inactive';
       photo: File | null;
+      originSource?: 'culte' | 'evangelisation' | '';
+      serviceFamilyId?: string;
+      email?: string;
+      profession?: string;
+      attendedCommunity?: string;
+      isRegular?: boolean | null;
+      ageRange?: string;
+      maritalStatus?: string;
+      decision?: '' | 'give_life' | 'member' | 'undecided';
+      prayerRequest?: string;
     };
     spiritual: Soul['spiritualProfile'];
   };

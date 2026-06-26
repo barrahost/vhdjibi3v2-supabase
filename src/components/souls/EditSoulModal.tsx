@@ -39,6 +39,14 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       photo: null as File | null,
       originSource: '' as '' | 'culte' | 'evangelisation',
       serviceFamilyId: undefined as string | undefined,
+      email: '',
+      profession: '',
+      attendedCommunity: '',
+      isRegular: null as boolean | null,
+      ageRange: '',
+      maritalStatus: '',
+      decision: '' as '' | 'give_life' | 'member' | 'undecided',
+      prayerRequest: '',
     },
     spiritual: {} as Soul['spiritualProfile']
   });
@@ -92,6 +100,15 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           photo: null,
           originSource: (soul.originSource as 'culte' | 'evangelisation') || '',
           serviceFamilyId: soul.serviceFamilyId,
+          email: soul.email || '',
+          profession: soul.profession || '',
+          attendedCommunity: soul.attendedCommunity || '',
+          isRegular: soul.isRegular ?? null,
+          ageRange: soul.ageRange || '',
+          maritalStatus: soul.maritalStatus || '',
+          decision: (soul.decision as '' | 'give_life' | 'member' | 'undecided')
+            || (soul.isUndecided ? 'undecided' : ''),
+          prayerRequest: soul.prayerRequest || '',
         },
         spiritual: soul.spiritualProfile
       });
@@ -130,6 +147,9 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
         phone: phoneValidation.formattedNumber as string,
         shepherdId: formData.general.shepherdId ?? undefined,
         originSource: rawOrigin === '' ? undefined : rawOrigin,
+        ageRange: (restGeneral.ageRange || undefined) as Soul['ageRange'],
+        maritalStatus: (restGeneral.maritalStatus || undefined) as Soul['maritalStatus'],
+        decision: (restGeneral.decision || undefined) as Soul['decision'],
         spiritualProfile: formData.spiritual
       };
 

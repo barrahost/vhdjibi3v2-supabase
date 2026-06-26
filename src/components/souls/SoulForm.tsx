@@ -35,6 +35,14 @@ const initialFormData = {
     status: 'active' as 'active' | 'inactive',
     originSource: '' as '' | 'culte' | 'evangelisation',
     serviceFamilyId: undefined as string | undefined,
+    email: '',
+    profession: '',
+    attendedCommunity: '',
+    isRegular: null as boolean | null,
+    ageRange: '',
+    maritalStatus: '',
+    decision: '' as '' | 'give_life' | 'member' | 'undecided',
+    prayerRequest: '',
   },
   spiritual: {
     isBornAgain: false,
@@ -124,7 +132,7 @@ export default function SoulForm() {
         nickname: formData.general.nickname.trim() || null,
         gender: formData.general.gender,
         phone: formData.general.phone,
-        is_undecided: formData.general.isUndecided,
+        is_undecided: formData.general.decision === 'undecided',
         location: formData.general.location.trim(),
         coordinates: formData.general.coordinates,
         first_visit_date: new Date(formData.general.firstVisitDate).toISOString(),
@@ -133,6 +141,14 @@ export default function SoulForm() {
         service_family_id: formData.general.serviceFamilyId || null,
         spiritual_profile: formData.spiritual,
         status: 'active',
+        email: formData.general.email.trim() || null,
+        profession: formData.general.profession.trim() || null,
+        attended_community: formData.general.attendedCommunity.trim() || null,
+        is_regular: formData.general.isRegular,
+        age_range: formData.general.ageRange || null,
+        marital_status: formData.general.maritalStatus || null,
+        decision: formData.general.decision || null,
+        prayer_request: formData.general.prayerRequest.trim() || null,
       };
 
       const userStr = localStorage.getItem('user');

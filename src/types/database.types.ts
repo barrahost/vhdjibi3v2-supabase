@@ -67,7 +67,20 @@ export interface Soul {
   // Nouveaux champs ADN
   originSource?: 'culte' | 'evangelisation'; // Provenance de l'âme
   serviceFamilyId?: string; // Famille de service assignée par ADN
+  // Champs carte de bienvenue Vases d'Honneur
+  email?: string;
+  profession?: string;
+  attendedCommunity?: string; // Communauté fréquentée
+  isRegular?: boolean | null; // Régulier (Oui/Non)
+  ageRange?: AgeRange; // Tranche d'âge
+  maritalStatus?: MaritalStatus; // Situation matrimoniale
+  decision?: SoulDecision; // Ma décision aujourd'hui (3 états)
+  prayerRequest?: string; // Observations ou besoin de prière
 }
+
+export type AgeRange = '10-15' | '16-20' | '21-27' | '28-35' | '36-45' | '46-59' | '60+';
+export type MaritalStatus = 'marie' | 'concubinage' | 'fiance' | 'seul';
+export type SoulDecision = 'give_life' | 'member' | 'undecided';
 
 // Types pour les familles de service
 export interface ServiceFamily {

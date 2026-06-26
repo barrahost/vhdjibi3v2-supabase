@@ -483,6 +483,14 @@ export default function SoulManagement() {
             : undefined,
           createdAt: row.createdAt || row.created_at,
           spiritualProfile: row.spiritual_profile || row.spiritualProfile || {},
+          email: row.email ?? undefined,
+          profession: row.profession ?? undefined,
+          attendedCommunity: row.attended_community ?? undefined,
+          isRegular: row.is_regular ?? null,
+          ageRange: row.age_range ?? undefined,
+          maritalStatus: row.marital_status ?? undefined,
+          decision: row.decision ?? undefined,
+          prayerRequest: row.prayer_request ?? undefined,
         } as Soul));
       setSouls(soulsData);
     } catch (error) {

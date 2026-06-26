@@ -2,7 +2,6 @@ import { Input } from '../../ui/input';
 import { LocationField } from '../form/LocationField';
 import { GenderRadioGroup } from '../../ui/GenderRadioGroup';
 import ShepherdSelect from '../ShepherdSelect';
-import { Switch } from '../../ui/switch';
 import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { useServiceFamilies } from '../../../hooks/useServiceFamilies';
@@ -25,11 +24,28 @@ interface GeneralInfoTabProps {
     photo: File | null;
     originSource?: 'culte' | 'evangelisation' | '';
     serviceFamilyId?: string;
+    // Champs carte de bienvenue
+    email?: string;
+    profession?: string;
+    attendedCommunity?: string;
+    isRegular?: boolean | null;
+    ageRange?: string;
+    maritalStatus?: string;
+    decision?: '' | 'give_life' | 'member' | 'undecided';
+    prayerRequest?: string;
   };
   onChange: (data: any) => void;
   isShepherd?: boolean;
   currentShepherdId?: string | undefined;
 }
+
+const AGE_RANGES = ['10-15', '16-20', '21-27', '28-35', '36-45', '46-59', '60+'];
+const MARITAL_STATUSES: { value: string; label: string }[] = [
+  { value: 'marie', label: 'Marié(e)' },
+  { value: 'concubinage', label: 'Concubinage' },
+  { value: 'fiance', label: 'Fiancé(e)' },
+  { value: 'seul', label: 'Seul(e)' },
+];
 
 export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }: GeneralInfoTabProps) {
   const [shepherdName, setShepherdName] = useState<string | null>(null);
@@ -142,6 +158,102 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         onCoordinatesChange={(coordinates) => onChange({ ...data, coordinates })}
       />
 
+      <Input
+        label="E-mail"
+        id="email"
+        type="email"
+        placeholder="ex: nom@email.com"
+        value={data.email || ''}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, email: e.target.value })}
+      />
+
+      <Input
+        label="Profession"
+        id="profession"
+        type="text"
+        placeholder="ex: Aide ménagère"
+        value={data.profession || ''}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, profession: e.target.value })}
+      />
+
+      <Input
+        label="Communauté fréquentée"
+        id="attendedCommunity"
+        type="text"
+        placeholder="ex: Oloivah"
+        value={data.attendedCommunity || ''}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, attendedCommunity: e.target.value })}
+      />
+
+      {/* Régulier ? */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Y êtes-vous régulier(e) ?
+        </label>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="isRegular"
+              checked={data.isRegular === true}
+              onChange={() => onChange({ ...data, isRegular: true })}
+              className="text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm text-gray-700">Oui</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="isRegular"
+              checked={data.isRegular === false}
+              onChange={() => onChange({ ...data, isRegular: false })}
+              className="text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm text-gray-700">Non</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Tranche d'âge */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tranche d'âge
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {AGE_RANGES.map((range) => (
+            <button
+              type="button"
+              key={range}
+              onClick={() => onChange({ ...data, ageRange: data.ageRange === range ? '' : range })}
+              className={`px-3 py-1.5 text-sm rounded-md border ${
+                data.ageRange === range
+                  ? 'bg-[#00665C] text-white border-[#00665C]'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {range}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Situation matrimoniale */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Situation matrimoniale
+        </label>
+        <select
+          value={data.maritalStatus || ''}
+          onChange={(e) => onChange({ ...data, maritalStatus: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+        >
+          <option value="">-- Sélectionner --</option>
+          {MARITAL_STATUSES.map((m) => (
+            <option key={m.value} value={m.value}>{m.label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Provenance de l'âme */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -203,19 +315,58 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Switch
-          checked={data.isUndecided || false}
-          onCheckedChange={(checked: boolean) => {
-            onChange({
-              ...data,
-              isUndecided: checked === true,
-              shepherdId: checked ? undefined : data.shepherdId
-            });
-          }}
-          label="Âme Indécis(e)"
-          description="Cette âme n'est pas encore prête à être suivie"
-          disabled={isShepherd || false}
+      {/* Ma décision aujourd'hui (pilote isUndecided) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Ma décision aujourd'hui
+        </label>
+        <div className="space-y-2">
+          {[
+            { value: 'give_life', label: 'Je veux donner ma vie à Jésus-Christ' },
+            { value: 'member', label: "Je décide d'être membre" },
+            { value: 'undecided', label: 'Indécis(e)' },
+          ].map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-center gap-2 ${isShepherd ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+            >
+              <input
+                type="radio"
+                name="decision"
+                value={opt.value}
+                checked={data.decision === opt.value}
+                disabled={isShepherd || false}
+                onChange={() => {
+                  const isUndecided = opt.value === 'undecided';
+                  onChange({
+                    ...data,
+                    decision: opt.value,
+                    isUndecided,
+                    shepherdId: isUndecided ? undefined : data.shepherdId,
+                  });
+                }}
+                className="text-[#00665C] focus:ring-[#00665C]"
+              />
+              <span className="text-sm text-gray-700">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Une âme « Indécis(e) » n'est pas encore prête à être suivie et ne peut pas être assignée à un berger.
+        </p>
+      </div>
+
+      {/* Observations ou besoin de prière */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Observations ou besoin de prière
+        </label>
+        <textarea
+          rows={3}
+          value={data.prayerRequest || ''}
+          onChange={(e) => onChange({ ...data, prayerRequest: e.target.value })}
+          placeholder="Notes, sujets de prière..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
         />
       </div>
 
