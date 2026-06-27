@@ -391,19 +391,38 @@ export default function InteractionsManagement() {
         </h1>
       </div>
 
-      <div className="space-y-4">
-        <CollapsibleFilters activeCount={activeFiltersCount} storageKey="filters:interactions:open">
+      <div className="space-y-3">
+        {/* Recherche — toujours visible */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder={
+              isEvangelistView
+                ? 'Rechercher par âme ou notes...'
+                : 'Rechercher par âme, berger ou notes...'
+            }
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 h-9 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/30 focus:border-brand-700"
+          />
+        </div>
+        <p className="text-xs text-gray-400 px-0.5">
+          {filteredInteractions.length} résultat{filteredInteractions.length !== 1 ? 's' : ''}
+        </p>
 
-          {isAdminView && (
+        {/* Filtre berger — admins seulement */}
+        {isAdminView && (
+          <CollapsibleFilters activeCount={selectedActorId ? 1 : 0} storageKey="filters:interactions:open">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
                 Filtrer par intervenant(e)
               </label>
               <div className="relative">
                 <select
                   value={selectedActorId || ''}
                   onChange={e => setSelectedActorId(e.target.value || null)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C] appearance-none"
+                  className="w-full h-9 px-3 text-sm border border-gray-200 rounded-xl focus:ring-brand-700 focus:border-brand-700 appearance-none bg-white"
                 >
                   <option value="">Tous les intervenants</option>
                   {actorList.filter(a => isShepherdUser(a as any)).length > 0 && (
@@ -430,26 +449,8 @@ export default function InteractionsManagement() {
                 </div>
               </div>
             </div>
-          )}
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder={
-                isEvangelistView
-                  ? 'Rechercher par ame evangelisee ou notes...'
-                  : 'Rechercher par ame, intervenant ou notes...'
-              }
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              {filteredInteractions.length} resultat{filteredInteractions.length !== 1 ? 's' : ''} trouve{filteredInteractions.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </CollapsibleFilters>
+          </CollapsibleFilters>
+        )}
 
         <CustomTable data={paginatedInteractions} columns={columns} mobileCard={renderInteractionMobileCard} />
 
