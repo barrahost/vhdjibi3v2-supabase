@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { formatDate } from '../utils/dateUtils';
 import { CustomTable } from '../components/ui/CustomTable';
-import { Search } from 'lucide-react';
+import { Search, CheckCircle2, XCircle, CalendarDays } from 'lucide-react';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
+import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
@@ -176,74 +177,110 @@ export default function AttendanceView() {
     );
   }
 
+  const activeFilterCount = [
+    selectedShepherdId !== null,
+    dateRange.startDate !== new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    dateRange.endDate !== new Date().toISOString().split('T')[0],
+  ].filter(Boolean).length;
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Historique des Presences</h1>
+    <div className="space-y-3 sm:space-y-5">
+      <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Historique des présences</h1>
+
+      {/* Recherche */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Rechercher une âme..."
+          value={searchTerm}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+          className="w-full pl-9 pr-4 h-9 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/30 focus:border-brand-700"
+        />
       </div>
+      <p className="text-xs text-gray-400 -mt-1 px-0.5">
+        {filteredAttendances.length} présence{filteredAttendances.length !== 1 ? 's' : ''}
+      </p>
 
-      <div className="space-y-4">
-        <div className="bg-white p-4 rounded-lg border space-y-4">
-          <h3 className="text-lg font-medium text-gray-900">Filtres</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de debut
-              </label>
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de fin
-              </label>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              />
-            </div>
-          </div>
-
-          <ShepherdFilter
-            value={selectedShepherdId}
-            onChange={setSelectedShepherdId}
-          />
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+      {/* Filtres collapsibles */}
+      <CollapsibleFilters activeCount={activeFilterCount} storageKey="filters:attendance:open">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Du</label>
             <input
-              type="text"
-              placeholder="Rechercher une ame..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
+              type="date"
+              value={dateRange.startDate}
+              onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              className="w-full h-9 px-2 text-sm border border-gray-200 rounded-xl focus:ring-brand-700 focus:border-brand-700"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Au</label>
+            <input
+              type="date"
+              value={dateRange.endDate}
+              onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              className="w-full h-9 px-2 text-sm border border-gray-200 rounded-xl focus:ring-brand-700 focus:border-brand-700"
             />
           </div>
         </div>
+        <ShepherdFilter value={selectedShepherdId} onChange={setSelectedShepherdId} />
+      </CollapsibleFilters>
 
-        <CustomTable
-          data={paginatedAttendances}
-          columns={columns}
+      {/* Liste */}
+      <CustomTable
+        data={paginatedAttendances}
+        columns={columns}
+        mobileCard={(row: any) => {
+          const soul = souls[row.soulId];
+          const shepherd = shepherds[row.shepherdId];
+          const soulName = soul?.full_name || soul?.fullName || 'Âme inconnue';
+          const shepherdName = shepherd ? (shepherd.full_name || shepherd.fullName) : null;
+          const isPresent = row.present;
+          return (
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              {/* Avatar */}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isPresent ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <span className={`text-xs font-bold ${isPresent ? 'text-green-700' : 'text-red-600'}`}>
+                  {soulName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              {/* Infos */}
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold text-gray-900 block truncate">{soulName}</span>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <CalendarDays className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                  <span className="text-[10px] text-gray-400">{formatDate(row.date)}</span>
+                  {shepherdName && (
+                    <>
+                      <span className="text-gray-200 text-[10px]">·</span>
+                      <span className="text-[10px] text-brand-700 font-medium truncate">{shepherdName}</span>
+                    </>
+                  )}
+                </div>
+                {row.notes && (
+                  <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{row.notes}</p>
+                )}
+              </div>
+              {/* Statut */}
+              {isPresent
+                ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                : <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              }
+            </div>
+          );
+        }}
+      />
+
+      {totalPages > 1 && (
+        <CustomPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredAttendances.length}
+          itemsPerPage={ITEMS_PER_PAGE}
         />
-
-        {totalPages > 1 && (
-          <CustomPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={filteredAttendances.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }
