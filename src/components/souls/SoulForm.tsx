@@ -109,7 +109,7 @@ function StepIndicator({ step }: { step: number }) {
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
-export default function SoulForm() {
+export default function SoulForm({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate();
   const { activeRole, userRole } = useAuth();
   const { families, loading: loadingFamilies } = useServiceFamilies(true);
@@ -321,7 +321,7 @@ export default function SoulForm() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/ames')}
+            onClick={() => onClose ? onClose() : navigate('/ames')}
             className="flex-1 flex items-center justify-center gap-2 h-12 px-4 text-sm font-semibold text-brand-700 bg-white border border-brand-200 hover:bg-brand-50 rounded-xl transition-colors"
           >
             <List className="w-4 h-4" />
@@ -659,7 +659,7 @@ export default function SoulForm() {
         ) : (
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => onClose ? onClose() : navigate(-1)}
             className="flex items-center gap-2 h-12 px-5 text-sm font-medium text-gray-400 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
           >
             Annuler

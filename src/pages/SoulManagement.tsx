@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
+import { Modal } from '../components/ui/Modal';
 
 const ITEMS_PER_PAGE = 10;
 const FILTERS_STORAGE_KEY = 'souls:filters:v1';
@@ -600,21 +601,24 @@ export default function SoulManagement() {
             </button>
           )}
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => setShowForm(true)}
             className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
           >
             <Plus className="w-4 h-4 mr-2" />
-            {showForm ? 'Masquer le formulaire' : 'Ajouter une ame'}
+            Ajouter une ame
           </button>
         </div>
       </div>
 
-      {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-xl font-semibold text-[#00665C] mb-4">Ajouter une ame</h2>
-          <SoulForm />
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title="Ajouter une âme"
+      >
+        <div className="px-6 py-5">
+          <SoulForm onClose={() => setShowForm(false)} />
         </div>
-      )}
+      </Modal>
 
       <div className="space-y-4">
         <CollapsibleFilters
