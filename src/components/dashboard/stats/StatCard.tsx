@@ -42,21 +42,21 @@ export function StatCard({
       onClick={isClickable ? onClick : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
       className={`
-        bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative
+        bg-white p-3 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative
         ${isClickable ? 'cursor-pointer transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-700/30' : ''}
         ${className}
       `}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight truncate">{title}</p>
-          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">{value}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            <span className="font-semibold text-brand-700">{trend}</span> {trendLabel}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-tight line-clamp-2">{title}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 leading-none">{value}</p>
+          <p className="text-[10px] text-gray-500 mt-1 leading-tight">
+            <span className="font-semibold text-brand-700">{trend}</span>{' '}{trendLabel}
           </p>
         </div>
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 ${iconClassName}`}>
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 ${iconClassName}`}>
+          <Icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
         </div>
       </div>
 

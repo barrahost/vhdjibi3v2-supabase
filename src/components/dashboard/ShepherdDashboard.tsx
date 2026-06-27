@@ -280,7 +280,7 @@ export function ShepherdDashboard() {
           value={spiritualStats.spiritualProgressRate}
           icon={Sparkles}
           trend={`${spiritualStats.spiritualProgressRate}%`}
-          trendLabel="né de nouveau ou +"
+          trendLabel="né de nouveau+"
           iconClassName="text-green-600"
         />
       </div>
