@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MoreHorizontal, X } from 'lucide-react';
+import { MoreHorizontal, X, LogOut } from 'lucide-react';
 import { useNavigationItems, NavItem } from '../../hooks/useNavigationItems';
+import { useAuth } from '../../contexts/AuthContext';
 import Navigation from './Navigation';
+import toast from 'react-hot-toast';
 
 function BadgeDot({ count }: { count: number }) {
   if (!count || count <= 0) return null;
@@ -37,8 +39,22 @@ function getMobilePrimaryTabs(items: NavItem[]): Array<{ id: string; label: stri
 
 export function MobileBottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const items = useNavigationItems();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout?.();
+      toast.success('Déconnexion réussie');
+    } catch {
+      toast.error('Erreur lors de la déconnexion');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
   const primaryTabs = getMobilePrimaryTabs(items);
 
   const isTabActive = (href: string) =>
@@ -110,8 +126,20 @@ export function MobileBottomNav() {
             </div>
 
             {/* Full nav */}
-            <div className="flex-1 overflow-y-auto px-4 pb-8">
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
               <Navigation onItemClick={() => setMoreOpen(false)} />
+            </div>
+
+            {/* Déconnexion */}
+            <div className="flex-shrink-0 px-4 pb-8 pt-2 border-t border-gray-100">
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? 'Déconnexion...' : 'Se déconnecter'}
+              </button>
             </div>
           </div>
         </div>
