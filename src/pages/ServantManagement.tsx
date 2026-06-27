@@ -82,9 +82,9 @@ export default function ServantManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Gestion des Serviteurs</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-foreground">Gestion des Serviteurs</h1>
         <div className="flex flex-wrap items-center gap-2">
           {selectedServantIds.length > 0 && canManageServants && (
             <Button

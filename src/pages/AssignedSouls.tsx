@@ -254,9 +254,9 @@ export default function AssignedSouls() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Mes Âmes Assignées</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Mes Âmes Assignées</h1>
         <div className="flex items-center gap-2 text-sm">
           <label className="text-gray-600">Trier par :</label>
           <select

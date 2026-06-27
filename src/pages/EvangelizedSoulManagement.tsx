@@ -507,7 +507,7 @@ export default function EvangelizedSoulManagement() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header — desktop layout */}
       <div className="hidden sm:flex sm:justify-between sm:items-center gap-3">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
@@ -516,21 +516,21 @@ export default function EvangelizedSoulManagement() {
         <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && unassignedCount > 0 && (
             <button onClick={() => setShowDistributeModal(true)}
-              className="flex items-center px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 border border-amber-400 rounded-md">
-              <Shuffle className="w-4 h-4 mr-1.5" /> Répartir ({unassignedCount} non attribuées)
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 font-medium text-amber-700 hover:bg-amber-50 border border-amber-400 rounded-md">
+              <Shuffle className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" /> Répartir ({unassignedCount} non attribuées)
             </button>
           )}
           <button onClick={handleExport}
-            className="flex items-center px-3 py-2 text-sm font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md">
-            <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Export Excel
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md">
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" /> Export Excel
           </button>
           <DownloadTemplateButton />
           {canCreateEvangelized && <ImportEvangelizedSoulsFromExcel />}
           {canCreateEvangelized && (
             <button onClick={() => setShowForm(!showForm)}
               data-tour="btn-add-evangelized-soul"
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md">
-              <Plus className="w-4 h-4 mr-2" />
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md">
+              <Plus className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
               {showForm ? 'Masquer' : 'Ajouter une âme'}
             </button>
           )}

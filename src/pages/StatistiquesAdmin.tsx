@@ -133,11 +133,11 @@ export default function StatistiquesAdmin() {
   const active = TABS.find(t => t.id === activeTab)!;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart2 className="w-6 h-6 text-[#00665C]" />
             Statistiques
           </h1>
@@ -149,9 +149,9 @@ export default function StatistiquesAdmin() {
           <button
             onClick={handleExportCsv}
             disabled={exporting}
-            className="self-start inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] rounded-md hover:bg-[#00665C]/10 disabled:opacity-60"
+            className="self-start inline-flex items-center gap-2 px-2.5 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 font-medium text-[#00665C] bg-white border border-[#00665C] rounded-md hover:bg-[#00665C]/10 disabled:opacity-60"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {exporting ? 'Export en cours...' : 'Exporter (CSV)'}
           </button>
         )}

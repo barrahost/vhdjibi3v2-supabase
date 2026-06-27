@@ -42,16 +42,16 @@ export default function UserManagement() {
   const selectedUsers = ((window as any).currentUsers || []).filter((user: any) => selectedUserIds.includes(user.id));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
         <div className="flex flex-wrap items-center gap-2">
           {selectedUserIds.length > 0 && (
             <button
               onClick={() => setShowBulkModal(true)}
-              className="flex items-center px-4 py-2 text-sm font-medium text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10"
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10"
             >
-              <Users className="w-4 h-4 mr-2" />
+              <Users className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
               Assigner un rôle ({selectedUserIds.length})
             </button>
           )}
@@ -59,9 +59,9 @@ export default function UserManagement() {
           <ImportUsersFromExcel />
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
             {showForm ? 'Masquer le formulaire' : 'Ajouter un utilisateur'}
           </button>
         </div>

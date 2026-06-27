@@ -691,13 +691,13 @@ export default function AudioManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des Audios de cultes</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Gestion des Audios de cultes</h1>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setActiveTab('teachings')}
-            className={`px-4 py-2 text-sm font-medium rounded-md ${
+            className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 rounded-md ${
               activeTab === 'teachings'
                 ? 'bg-[#00665C] text-white'
                 : 'text-gray-700 bg-white border border-gray-300'
@@ -707,7 +707,7 @@ export default function AudioManagement() {
           </button>
           <button
             onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 text-sm font-medium rounded-md ${
+            className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 rounded-md ${
               activeTab === 'categories'
                 ? 'bg-[#00665C] text-white'
                 : 'text-gray-700 bg-white border border-gray-300'
@@ -717,7 +717,7 @@ export default function AudioManagement() {
           </button>
           <button
             onClick={() => setActiveTab('speakers')}
-            className={`px-4 py-2 text-sm font-medium rounded-md ${
+            className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 rounded-md ${
               activeTab === 'speakers'
                 ? 'bg-[#00665C] text-white'
                 : 'text-gray-700 bg-white border border-gray-300'
@@ -728,9 +728,9 @@ export default function AudioManagement() {
           {activeTab === 'teachings' && (
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
               Ajouter
             </button>
           )}

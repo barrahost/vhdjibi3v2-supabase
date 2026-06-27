@@ -41,8 +41,8 @@ export default function FamilyShepherdsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Bergers — Famille {familyName}</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Bergers — Famille {familyName}</h1>
 
       {shepherds.length === 0 ? (
         <div className="bg-white border rounded-lg p-8 text-center text-gray-500">

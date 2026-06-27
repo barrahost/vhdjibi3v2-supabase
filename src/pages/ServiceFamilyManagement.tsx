@@ -7,14 +7,14 @@ export default function ServiceFamilyManagement() {
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des Familles de Service</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Gestion des Familles de Service</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+          className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
           {showForm ? 'Masquer le formulaire' : 'Ajouter une famille'}
         </button>
       </div>

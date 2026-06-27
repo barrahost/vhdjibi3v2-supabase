@@ -89,8 +89,8 @@ export default function FamilyProgressionPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Progression — Famille {familyName}</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Progression — Famille {familyName}</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard title="Total" value={stats.total} icon={Heart} trend="" trendLabel="âmes" iconClassName="text-[#00665C]" />

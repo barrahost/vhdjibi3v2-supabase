@@ -104,15 +104,15 @@ export default function SMSManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des SMS</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Gestion des SMS</h1>
         <div className="flex flex-wrap items-center gap-2">
           {canManageUndecidedSouls && (
             <div className="flex space-x-2">
               <button
                 onClick={() => setActiveTab('shepherd')}
-                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 rounded-md ${
                   activeTab === 'shepherd'
                     ? 'bg-[#00665C] text-white'
                     : 'text-gray-700 bg-white border border-gray-300'
@@ -122,7 +122,7 @@ export default function SMSManagement() {
               </button>
               <button
                 onClick={() => setActiveTab('undecided')}
-                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                className={`px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 rounded-md ${
                   activeTab === 'undecided'
                     ? 'bg-[#00665C] text-white'
                     : 'text-gray-700 bg-white border border-gray-300'
@@ -135,9 +135,9 @@ export default function SMSManagement() {
           <button
             onClick={loadSmsCredit}
             disabled={loadingCredit}
-            className="flex items-center px-4 py-2 text-sm font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md"
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md"
           >
-            <CreditCard className="w-4 h-4 mr-2" />
+            <CreditCard className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
             {loadingCredit ? 'Chargement...' : 'Vérifier le crédit SMS'}
           </button>
         </div>

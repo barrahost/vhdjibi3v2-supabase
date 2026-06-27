@@ -177,8 +177,8 @@ export default function ShepherdReminders() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Rappels des Berger(e)s</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Rappels des Berger(e)s</h1>
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

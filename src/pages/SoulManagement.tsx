@@ -569,44 +569,51 @@ export default function SoulManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Gestion des Ames</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {hasPermission(PERMISSIONS.EXPORT_DATA) && (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Gestion des Ames</h1>
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+          {/* Ligne 1 mobile : actions secondaires */}
+          <div className="flex items-center gap-1.5">
+            {hasPermission(PERMISSIONS.EXPORT_DATA) && (
+              <button
+                onClick={() => exportData({ data: sortedSouls, type: 'souls', format: 'xlsx' })}
+                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                Export
+              </button>
+            )}
+            {canImport && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-[#00665C] bg-white border border-[#00665C] hover:bg-[#00665C]/10 rounded-md"
+              >
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                Importer
+              </button>
+            )}
+          </div>
+          {/* Ligne 2 mobile : actions primaires */}
+          <div className="flex items-center gap-1.5">
+            {canImport && (
+              <button
+                onClick={() => setShowPickEvangelizedModal(true)}
+                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
+              >
+                <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                <span className="sm:hidden">Recevoir évangélisée</span>
+                <span className="hidden sm:inline">Recevoir une ame evangelisee</span>
+              </button>
+            )}
             <button
-              onClick={() => exportData({ data: sortedSouls, type: 'souls', format: 'xlsx' })}
-              className="flex items-center px-3 py-2 text-sm font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md"
+              onClick={() => setShowForm(true)}
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
             >
-              <FileSpreadsheet className="w-4 h-4 mr-1.5" />
-              Export Excel
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+              Ajouter
             </button>
-          )}
-          {canImport && (
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center px-4 py-2 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] hover:bg-[#00665C]/10 rounded-md"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Importer Excel
-            </button>
-          )}
-          {canImport && (
-            <button
-              onClick={() => setShowPickEvangelizedModal(true)}
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
-            >
-              <UserCheck className="w-4 h-4 mr-2" />
-              Recevoir une ame evangelisee
-            </button>
-          )}
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Ajouter une ame
-          </button>
+          </div>
         </div>
       </div>
 
@@ -723,6 +730,44 @@ export default function SoulManagement() {
         <CustomTable
           data={paginatedSouls}
           columns={columns(paginatedSouls)}
+          mobileCard={(soul: Soul) => (
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              onClick={() => setEditingSoul(soul)}
+            >
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {soul.photoURL
+                  ? <img src={soul.photoURL} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-sm font-bold text-brand-700">{soul.fullName?.charAt(0)?.toUpperCase() || '?'}</span>
+                }
+              </div>
+
+              {/* Info principale */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900 truncate">{soul.fullName}</span>
+                  {soul.isUndecided && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 rounded">Indécis</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                  <span>{soul.phone || '—'}</span>
+                  <span className="text-gray-300">·</span>
+                  <span>{formatDate(soul.firstVisitDate)}</span>
+                </div>
+                {soul.shepherdId && shepherdNames[soul.shepherdId] && (
+                  <p className="text-xs text-brand-700 mt-0.5 truncate">{shepherdNames[soul.shepherdId]}</p>
+                )}
+              </div>
+
+              {/* Indicateur statut + action */}
+              <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${soul.shepherdId ? 'bg-brand-700' : 'bg-gray-300'}`} />
+                <Pencil className="w-3.5 h-3.5 text-gray-300" />
+              </div>
+            </div>
+          )}
         />
 
         {totalPages > 1 && (

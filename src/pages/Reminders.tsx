@@ -89,13 +89,13 @@ export default function Reminders() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Rappels</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Rappels</h1>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setActiveTab('list')}
-            className={`px-4 py-2 text-sm font-medium rounded-md ${
+            className={`px-2.5 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 font-medium rounded-md ${
               activeTab === 'list'
                 ? 'bg-[#00665C] text-white'
                 : 'text-gray-700 bg-white border border-gray-300'
@@ -105,7 +105,7 @@ export default function Reminders() {
           </button>
           <button
             onClick={() => setActiveTab('calendar')}
-            className={`px-4 py-2 text-sm font-medium rounded-md ${
+            className={`px-2.5 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 font-medium rounded-md ${
               activeTab === 'calendar'
                 ? 'bg-[#00665C] text-white'
                 : 'text-gray-700 bg-white border border-gray-300'
@@ -115,7 +115,7 @@ export default function Reminders() {
           </button>
           <button
             onClick={() => setActiveTab('stats')}
-            className={`px-4 py-2 text-sm font-medium rounded-md ${
+            className={`px-2.5 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 font-medium rounded-md ${
               activeTab === 'stats'
                 ? 'bg-[#00665C] text-white'
                 : 'text-gray-700 bg-white border border-gray-300'

@@ -84,10 +84,10 @@ export default function BugReports() {
   const counts = { all: reports.length, open: reports.filter(r => r.status === 'open').length, in_progress: reports.filter(r => r.status === 'in_progress').length, resolved: reports.filter(r => r.status === 'resolved').length };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Bug className="w-6 h-6 text-red-600" /> Signalements de bugs
           </h1>
           <p className="text-sm text-gray-500 mt-1">{counts.open} ouvert{counts.open > 1 ? 's' : ''} · {counts.in_progress} en cours · {counts.resolved} résolu{counts.resolved > 1 ? 's' : ''}</p>
