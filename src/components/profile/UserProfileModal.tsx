@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
-import { User, Mail, Phone, Calendar, Shield, Save, X, Camera, Navigation, AlertCircle, Trash2, Key, MapPin, PlayCircle } from 'lucide-react';
-import { useOnboarding } from '../../hooks/useOnboarding';
+import { User, Mail, Phone, Calendar, Shield, Save, X, Camera, Navigation, AlertCircle, Trash2, Key, MapPin } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { StorageService } from '../../services/storage.service';
@@ -26,7 +25,6 @@ interface UserData {
 
 export function UserProfileModal() {
   const { user, userRole } = useAuth();
-  const { restart: restartTour, tourRole } = useOnboarding();
   const { isProfileModalOpen, closeProfileModal } = useUserProfile();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -578,16 +576,6 @@ export function UserProfileModal() {
                   <Key className="w-4 h-4" />
                   <span className="text-sm font-medium">Changer mon mot de passe</span>
                 </button>
-                {tourRole && (
-                  <button
-                    type="button"
-                    onClick={() => { closeProfileModal(); setTimeout(restartTour, 150); }}
-                    className="flex items-center space-x-2 px-3 py-2 bg-[#00665C]/10 text-[#00665C] rounded-md hover:bg-[#00665C]/20 transition-colors w-full"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Revoir le tutoriel de démarrage</span>
-                  </button>
-                )}
               </>
             )}
           </div>

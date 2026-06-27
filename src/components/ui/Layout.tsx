@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useOnboarding } from '../../hooks/useOnboarding';
 import { Header } from './Header';
 import Navigation from './Navigation';
 import { Logo } from './Logo';
@@ -10,11 +9,9 @@ import { BackToTop } from './BackToTop';
 import { PWAInstallBanner } from './PWAInstallBanner';
 import BugReportButton from './BugReportButton';
 import { MobileBottomNav } from './MobileBottomNav';
-import { OnboardingTour } from '../onboarding/OnboardingTour';
 import { SMSStatusBanner } from '../sms/SMSStatusBanner';
 
 export default function Layout() {
-  const { isActive: isTourActive, currentStep, tourRole, advance, skip } = useOnboarding();
   const { user } = useAuth();
 
   if (!user) return null;
@@ -50,14 +47,6 @@ export default function Layout() {
       <PWAInstallBanner />
       <BugReportButton />
 
-      {isTourActive && tourRole && (
-        <OnboardingTour
-          role={tourRole}
-          step={currentStep}
-          onAdvance={advance}
-          onSkip={skip}
-        />
-      )}
     </div>
   );
 }

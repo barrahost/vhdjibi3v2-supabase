@@ -10,7 +10,7 @@ import { ChurchProvider } from './contexts/ChurchContext';
 import { useAuth } from './contexts/AuthContext';
 import UndecidedSouls from './pages/UndecidedSouls';
 import { UserProfileProvider } from './contexts/UserProfileContext';
-import { OnboardingProvider } from './contexts/OnboardingContext';
+
 import { CookieBanner } from './components/gdpr/CookieBanner';
 import { UserProfileModal } from './components/profile/UserProfileModal';
 import { PERMISSIONS } from './constants/roles';
@@ -347,9 +347,9 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <UserProfileProvider>
-          <OnboardingProvider>
+
             <AppContent />
-          </OnboardingProvider>
+
           </UserProfileProvider>
         </AuthProvider>
       </BrowserRouter>
