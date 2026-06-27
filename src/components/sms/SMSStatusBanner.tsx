@@ -59,35 +59,34 @@ export function SMSStatusBanner() {
   if (!cfg) return null;
 
   return (
-    <div className={`border rounded-lg px-4 py-3 mx-6 mt-4 flex items-start gap-3 ${cfg.bg}`}>
-      {cfg.icon}
-
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold ${cfg.textColor}`}>{cfg.title}</p>
-        <p className={`text-sm mt-0.5 ${cfg.mutedColor}`}>{cfg.message}</p>
+    <div className={`flex items-center gap-2 px-4 h-7 border-b overflow-hidden flex-shrink-0 ${cfg.bg}`}>
+      <span className="flex-shrink-0 opacity-70">
+        {status === 'api_error'
+          ? <WifiOff className="w-3.5 h-3.5 text-red-500" />
+          : <AlertTriangle className="w-3.5 h-3.5 text-orange-500" />
+        }
+      </span>
+      <div className="flex-1 overflow-hidden min-w-0">
+        {/* @ts-ignore */}
+        <marquee scrollamount="3" className={`text-xs font-medium ${cfg.textColor}`}>
+          {cfg.title} — {cfg.message}
+        </marquee>
       </div>
-
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Bouton rafraîchir (utile pour api_error) */}
+      <button
+        onClick={refresh}
+        className={`flex-shrink-0 p-0.5 rounded hover:bg-white/60 transition-colors ${cfg.mutedColor}`}
+        title="Vérifier à nouveau"
+      >
+        <RefreshCw className="w-3 h-3" />
+      </button>
+      {cfg.dismissible && (
         <button
-          onClick={refresh}
-          className={`p-1 rounded hover:bg-white/60 transition-colors ${cfg.mutedColor}`}
-          title="Vérifier à nouveau"
+          onClick={() => setDismissed(true)}
+          className={`flex-shrink-0 p-0.5 rounded hover:bg-white/60 transition-colors ${cfg.mutedColor}`}
         >
-          <RefreshCw className="w-4 h-4" />
+          <X className="w-3 h-3" />
         </button>
-
-        {/* Bouton fermer uniquement pour "low" */}
-        {cfg.dismissible && (
-          <button
-            onClick={() => setDismissed(true)}
-            className={`p-1 rounded hover:bg-white/60 transition-colors ${cfg.mutedColor}`}
-            title="Fermer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

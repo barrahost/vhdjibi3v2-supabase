@@ -47,18 +47,6 @@ export default function BugReportButton() {
 
   return (
     <>
-      {/* Bouton flottant */}
-      <button
-        onClick={() => setOpen(true)}
-        title="Signaler un bug"
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-full shadow-lg transition-all duration-200 group"
-      >
-        <Bug className="w-4 h-4" />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
-          Signaler un bug
-        </span>
-      </button>
-
       {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
