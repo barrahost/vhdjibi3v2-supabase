@@ -281,7 +281,54 @@ export default function AssignedSouls() {
         />
       </div>
 
-      <CustomTable data={sortedSouls} columns={columns} />
+      <CustomTable
+        data={sortedSouls}
+        columns={columns}
+        mobileCard={(soul: Soul) => {
+          const lastContact = lastContactMap.get(soul.id) || null;
+          return (
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              onClick={() => setEditingSoul(soul)}
+            >
+              <div className="w-9 h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center flex-shrink-0">
+                {(soul as any).photoURL
+                  ? <img src={(soul as any).photoURL} alt={soul.fullName} className="w-9 h-9 rounded-full object-cover" />
+                  : <span className="text-sm font-bold text-brand-700">{soul.fullName?.charAt(0)?.toUpperCase() || '?'}</span>
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold text-gray-900 truncate block">{soul.fullName}</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <LastContactBadge date={lastContact} />
+                  {soul.phone && <span className="text-[10px] text-gray-400 truncate">{soul.phone}</span>}
+                </div>
+              </div>
+              <div className="flex-shrink-0 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                {telHref(soul.phone) && (
+                  <a href={telHref(soul.phone)!} title="Appeler"
+                    className="inline-flex items-center justify-center w-7 h-7 text-brand-700 border border-[#00665C]/40 rounded hover:bg-brand-700/10 transition-colors">
+                    <Phone className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {whatsappHref(soul.phone) && (
+                  <a href={whatsappHref(soul.phone)!} target="_blank" rel="noopener noreferrer" title="WhatsApp"
+                    className="inline-flex items-center justify-center w-7 h-7 text-[#25D366] border border-[#25D366]/40 rounded hover:bg-[#25D366]/10 transition-colors">
+                    <MessageCircle className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                <button
+                  onClick={() => setInteractingSoul(soul)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-brand-700 hover:bg-brand-800 rounded transition-colors">
+                  <Phone className="w-3 h-3" />
+                  Contacter
+                </button>
+              </div>
+            </div>
+          );
+        }}
+        onRowClick={(soul: any) => setEditingSoul(soul)}
+      />
 
       {editingSoul && shepherdId && (
         <EditSoulModal
