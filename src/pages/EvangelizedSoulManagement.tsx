@@ -415,82 +415,61 @@ export default function EvangelizedSoulManagement() {
       .join('')
       .toUpperCase();
     return (
-      <div className="p-4">
-        {/* Top row: avatar + name + status */}
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-[#E1F5EE] text-[#0F6E56] flex items-center justify-center text-sm font-semibold flex-shrink-0">
-            {initials}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-full bg-[#E1F5EE] text-[#0F6E56] flex items-center justify-center text-sm font-bold flex-shrink-0">
+          {initials}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-gray-900 truncate">{s.fullName}</span>
+            {isImported
+              ? <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded"><CheckCircle2 className="w-2.5 h-2.5" /> Reçue</span>
+              : <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">En suivi</span>
+            }
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-gray-900 text-sm leading-tight">{s.fullName}</p>
-              {s.nickname && <span className="text-xs text-gray-400">({s.nickname})</span>}
-            </div>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className={"text-xs px-1.5 py-0.5 rounded-full font-medium " + (s.gender === 'male' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700')}>
-                {s.gender === 'male' ? 'Homme' : 'Femme'}
-              </span>
-              {isImported ? (
-                <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
-                  <CheckCircle2 className="w-3 h-3" /> Reçue
-                </span>
-              ) : (
-                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">En suivi</span>
-              )}
-            </div>
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+            <span>{s.phone || '—'}</span>
+            {lastContact && <><span className="text-gray-300">·</span><LastContactBadge date={lastContact} /></>}
           </div>
         </div>
 
-        {/* Info rows */}
-        <div className="space-y-1.5 mb-3">
-          {s.phone && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              <span>{s.phone}</span>
-            </div>
-          )}
-          {s.location && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="text-gray-400 flex-shrink-0 text-xs">📍</span>
-              <span className="truncate">{s.location}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">Dernier contact :</span>
-            <LastContactBadge date={lastContact} />
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
+        {/* Actions */}
+        <div className="flex-shrink-0 flex items-center gap-1">
           {(isAdmin || isEvangelist) && !isImported && (
             <button
               onClick={e => { e.stopPropagation(); setInteractingSoul(s); }}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+              className="p-1.5 text-[#00665C] hover:bg-[#00665C]/10 rounded"
+              title="Contacter"
             >
-              <Phone className="w-3.5 h-3.5" /> Contacter
+              <Phone className="w-4 h-4" />
             </button>
           )}
           {canImportToSouls && !isImported && (
             <button
               onClick={e => { e.stopPropagation(); setImporting(s); }}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
+              className="p-1.5 text-[#F2B636] hover:bg-amber-50 rounded"
+              title="Recevoir"
             >
-              <Download className="w-3.5 h-3.5" /> Recevoir
+              <Download className="w-4 h-4" />
             </button>
           )}
           {(isAdmin || isADN || isEvangelist) && (
             <button
               onClick={e => { e.stopPropagation(); setEditing(s); }}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md"
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+              title="Modifier"
             >
-              <Pencil className="w-3.5 h-3.5" /> Modifier
+              <Pencil className="w-4 h-4" />
             </button>
           )}
           {isAdmin && !isImported && (
             <button
               onClick={e => { e.stopPropagation(); handleDelete(s.id); }}
-              className="flex items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded-md"
+              className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+              title="Supprimer"
             >
               <Trash2 className="w-4 h-4" />
             </button>

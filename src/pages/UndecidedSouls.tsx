@@ -197,6 +197,32 @@ export default function UndecidedSouls() {
         <CustomTable
           data={paginatedSouls}
           columns={columns}
+          mobileCard={(soul: Soul) => (
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              onClick={() => setEditingSoul(soul)}
+            >
+              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-amber-700">{soul.fullName?.charAt(0)?.toUpperCase() || '?'}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900 truncate">{soul.fullName}</span>
+                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 rounded">Indécis</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                  <span>{soul.phone || '—'}</span>
+                  {soul.firstVisitDate && <><span className="text-gray-300">·</span><span>{formatDate(soul.firstVisitDate)}</span></>}
+                </div>
+              </div>
+              <button
+                onClick={e => { e.stopPropagation(); setMessagingSoul(soul); }}
+                className="flex-shrink-0 p-1.5 text-[#00665C] hover:bg-[#00665C]/10 rounded"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           onRowClick={(soul: any) => setEditingSoul(soul)}
         />
 
