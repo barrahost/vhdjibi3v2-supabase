@@ -286,21 +286,25 @@ export default function AssignedSouls() {
         columns={columns}
         mobileCard={(soul: Soul) => {
           const lastContact = lastContactMap.get(soul.id) || null;
+          const days = lastContact ? Math.floor((Date.now() - lastContact.getTime()) / 86400000) : null;
+          const badgeCls = days === null
+            ? 'bg-gray-100 text-gray-600'
+            : days > 14 ? 'bg-red-100 text-red-700'
+            : days > 7  ? 'bg-yellow-100 text-yellow-700'
+            : 'bg-green-100 text-green-700';
+          const badgeLabel = days === null ? 'Jamais' : days === 0 ? "Auj." : days === 1 ? 'Hier' : `${days}j`;
           return (
-            <div
-              className="flex items-center gap-3 px-4 py-3"
-              onClick={() => setEditingSoul(soul)}
-            >
-              <div className="w-9 h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-2.5 px-3 py-2.5" onClick={() => setEditingSoul(soul)}>
+              <div className="w-8 h-8 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center flex-shrink-0">
                 {(soul as any).photoURL
-                  ? <img src={(soul as any).photoURL} alt={soul.fullName} className="w-9 h-9 rounded-full object-cover" />
-                  : <span className="text-sm font-bold text-brand-700">{soul.fullName?.charAt(0)?.toUpperCase() || '?'}</span>
+                  ? <img src={(soul as any).photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  : <span className="text-xs font-bold text-brand-700">{soul.fullName?.charAt(0)?.toUpperCase() || '?'}</span>
                 }
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold text-gray-900 truncate block">{soul.fullName}</span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <LastContactBadge date={lastContact} />
+                <span className="text-sm font-semibold text-gray-900 block truncate">{soul.fullName}</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${badgeCls}`}>{badgeLabel}</span>
                   {soul.phone && <span className="text-[10px] text-gray-400 truncate">{soul.phone}</span>}
                 </div>
               </div>
@@ -319,8 +323,7 @@ export default function AssignedSouls() {
                 )}
                 <button
                   onClick={() => setInteractingSoul(soul)}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-brand-700 hover:bg-brand-800 rounded transition-colors">
-                  <Phone className="w-3 h-3" />
+                  className="h-7 px-2 text-[10px] font-semibold text-white bg-brand-700 hover:bg-brand-800 rounded transition-colors">
                   Contacter
                 </button>
               </div>
