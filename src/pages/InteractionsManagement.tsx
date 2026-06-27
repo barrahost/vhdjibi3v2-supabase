@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, MessageCircle, Phone, Users, ChevronDown, Trash2 } from 'lucide-react';
+import { Search, MessageCircle, Phone, Users, ChevronDown, Trash2, MessageSquare, FileText } from 'lucide-react';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { CustomTable } from '../components/ui/CustomTable';
 import { formatDate } from '../utils/dateUtils';
@@ -320,63 +320,56 @@ export default function InteractionsManagement() {
   const renderInteractionMobileCard = (interaction: any) => {
     const soul = souls[interaction.soulId];
     const actor = actors[interaction.shepherdId];
-    const typeIcons: Record<string, string> = {
-      call: '📞', visit: '🤝', sms: '💬', message: '✉️', other: '📝',
+
+    const typeConfig: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
+      call:    { icon: <Phone className="w-3 h-3" />,         label: 'Appel',   cls: 'bg-blue-100 text-blue-700' },
+      visit:   { icon: <Users className="w-3 h-3" />,         label: 'Visite',  cls: 'bg-green-100 text-green-700' },
+      sms:     { icon: <MessageSquare className="w-3 h-3" />, label: 'SMS',     cls: 'bg-purple-100 text-purple-700' },
+      message: { icon: <MessageCircle className="w-3 h-3" />, label: 'Message', cls: 'bg-indigo-100 text-indigo-700' },
+      other:   { icon: <FileText className="w-3 h-3" />,      label: 'Autre',   cls: 'bg-gray-100 text-gray-600' },
     };
-    const typeLabels: Record<string, string> = {
-      call: 'Appel', visit: 'Visite', sms: 'SMS', message: 'Message', other: 'Autre',
-    };
-    const typeColors: Record<string, string> = {
-      call: 'bg-blue-100 text-blue-700',
-      visit: 'bg-green-100 text-green-700',
-      sms: 'bg-purple-100 text-purple-700',
-      message: 'bg-indigo-100 text-indigo-700',
-      other: 'bg-gray-100 text-gray-700',
-    };
+    const tc = typeConfig[interaction.type] ?? typeConfig.other;
+
+    const soulName = soul?.fullName ?? interaction.soul_snapshot_name;
+    const actorName = actor?.fullName ?? interaction.actor_snapshot_name;
+
+    const dateStr = interaction.date instanceof Date
+      ? interaction.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+      : '—';
+
     return (
-      <div className="p-4">
-        {/* Top row: type badge + date */}
-        <div className="flex items-center justify-between mb-2.5">
-          <span className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold " + (typeColors[interaction.type] || 'bg-gray-100 text-gray-700')}>
-            <span>{typeIcons[interaction.type] || '📝'}</span>
-            {typeLabels[interaction.type] || interaction.type}
+      <div className="px-3 py-2.5">
+        {/* Ligne 1 : badge type + date */}
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${tc.cls}`}>
+            {tc.icon}
+            {tc.label}
           </span>
-          <span className="text-xs text-gray-400 font-medium">
-            {interaction.date instanceof Date
-              ? interaction.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
-              : '—'}
-          </span>
+          <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{dateStr}</span>
         </div>
 
-        {/* Soul */}
-        <div className="flex items-start gap-2 mb-2">
-          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Âme</span>
-          {soul || interaction.soul_snapshot_name ? (
-            <span className={"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium " + (soul ? "bg-[#F2B636]/10 text-[#c8941a]" : "bg-gray-100 text-gray-500 italic")}>
-              {soul ? soul.fullName : interaction.soul_snapshot_name + ' (supprimé)'}
+        {/* Ligne 2 : âme + berger sur la même ligne */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {soulName ? (
+            <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${soul ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500 italic'}`}>
+              {soulName}{!soul && ' (supprimé)'}
             </span>
           ) : (
-            <span className="text-xs text-gray-400 italic">Inconnue</span>
+            <span className="text-[10px] text-gray-400 italic">Âme inconnue</span>
           )}
-        </div>
-
-        {/* Actor */}
-        <div className="flex items-start gap-2 mb-2">
-          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">{actorColumnLabel}</span>
-          {actor || interaction.actor_snapshot_name ? (
-            <span className={"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium " + (actor ? "bg-[#00665C]/10 text-[#00665C]" : "bg-gray-100 text-gray-500 italic")}>
-              {actor ? actor.fullName : interaction.actor_snapshot_name + ' (supprimé)'}
+          <span className="text-gray-300 text-[10px]">·</span>
+          {actorName ? (
+            <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${actor ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500 italic'}`}>
+              {actorName}{!actor && ' (supprimé)'}
             </span>
           ) : (
-            <span className="text-xs text-gray-400 italic">Inconnu(e)</span>
+            <span className="text-[10px] text-gray-400 italic">Inconnu(e)</span>
           )}
         </div>
 
         {/* Notes */}
         {interaction.notes && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500 line-clamp-2">{interaction.notes}</p>
-          </div>
+          <p className="mt-1.5 text-[11px] text-gray-500 line-clamp-1">{interaction.notes}</p>
         )}
       </div>
     );
