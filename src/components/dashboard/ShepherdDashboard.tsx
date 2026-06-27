@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
 import { StatCard } from './stats/StatCard';
-import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle } from 'lucide-react';
+import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle, Search, X } from 'lucide-react';
 import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
@@ -18,6 +18,8 @@ export function ShepherdDashboard() {
   const [shepherdId, setShepherdId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactionSoul, setInteractionSoul] = useState<Soul | null>(null);
+  const [soulPickerOpen, setSoulPickerOpen] = useState(false);
+  const [soulPickerSearch, setSoulPickerSearch] = useState('');
 
   // 1) Identifier le berger une seule fois
   useEffect(() => {
@@ -236,7 +238,7 @@ export function ShepherdDashboard() {
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900 mt-0.5">Mon tableau de bord</h1>
         </div>
         <button
-          onClick={() => setInteractionSoul(souls[0] ?? null)}
+          onClick={() => { setSoulPickerSearch(''); setSoulPickerOpen(true); }}
           disabled={souls.length === 0}
           className="flex items-center gap-1.5 h-9 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm font-semibold bg-brand-700 text-white rounded-xl hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
         >
@@ -387,6 +389,73 @@ export function ShepherdDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Sélecteur d'âme */}
+      {soulPickerOpen && (
+        <div className="fixed inset-0 z-50" onClick={() => setSoulPickerOpen(false)}>
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[75dvh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pb-2 flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-900">Pour quelle âme ?</p>
+              <button onClick={() => setSoulPickerOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Recherche */}
+            <div className="px-4 pb-2 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Rechercher..."
+                  value={soulPickerSearch}
+                  onChange={e => setSoulPickerSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-700/30"
+                />
+              </div>
+            </div>
+            {/* Liste */}
+            <div className="flex-1 overflow-y-auto divide-y">
+              {soulsWithLastContact
+                .filter(s => s.fullName.toLowerCase().includes(soulPickerSearch.toLowerCase()))
+                .map(soul => {
+                  const badge = getContactBadge(soul.daysSince);
+                  return (
+                    <button
+                      key={soul.id}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left transition-colors"
+                      onClick={() => { setSoulPickerOpen(false); setInteractionSoul(soul); }}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-brand-700">{soul.fullName?.charAt(0)?.toUpperCase() || '?'}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{soul.fullName}</p>
+                        <p className="text-[10px] text-gray-400">{soul.phone || '—'}</p>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${badge.color}`}>
+                        {badge.label}
+                      </span>
+                    </button>
+                  );
+                })
+              }
+              {soulsWithLastContact.filter(s => s.fullName.toLowerCase().includes(soulPickerSearch.toLowerCase())).length === 0 && (
+                <p className="py-8 text-center text-sm text-gray-400">Aucun résultat</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {interactionSoul && shepherdId && (
         <InteractionModal
