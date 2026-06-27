@@ -615,9 +615,7 @@ export default function SoulManagement() {
         onClose={() => setShowForm(false)}
         title="Ajouter une âme"
       >
-        <div className="px-6 py-5">
-          <SoulForm onClose={() => setShowForm(false)} />
-        </div>
+        <SoulForm onClose={() => setShowForm(false)} />
       </Modal>
 
       <div className="space-y-4">
