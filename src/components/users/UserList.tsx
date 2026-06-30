@@ -286,10 +286,10 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
 
     loadUsers();
   }, [filter, statusFilter]);
-  // Réinitialiser la page courante quand le filtre change
+  // Réinitialiser la page courante quand le filtre ou la recherche change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter]);
+  }, [filter, searchTerm]);
 
   const filteredUsers = users.filter(user =>
     user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
