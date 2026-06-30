@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { User } from '../../types/user.types';
-import { Search, Pencil, Trash2, User as UserIcon, Building2 } from 'lucide-react';
+import { Search, Pencil, Trash2, User as UserIcon, Building2, Link2 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../constants/roles';
 import UserListItem from './UserListItem';
@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
+import { GenerateConfirmationLinkModal } from './GenerateConfirmationLinkModal';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins' | 'department_leader' | 'family_leader' | 'evangelist';
@@ -29,18 +30,20 @@ interface UserListProps {
 }
 
 // Component for action buttons with servant status check
-function ActionButtons({ 
-  user, 
-  canEditUsers, 
-  canDeleteUsers, 
+function ActionButtons({
+  user,
+  canEditUsers,
+  canDeleteUsers,
   onPromoteShepherd,
+  onGenerateLink,
   onEdit,
   onDelete
-}: { 
-  user: User; 
+}: {
+  user: User;
   canEditUsers: boolean;
   canDeleteUsers: boolean;
   onPromoteShepherd?: (userId: string, userName: string) => void;
+  onGenerateLink?: (userId: string, userName: string) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -56,20 +59,18 @@ function ActionButtons({
   // Check if already a department head in servants collection OR has department_leader profile
   const isAlreadyDepartmentLeader = hasDepartmentLeaderProfile || servantStatus.isDepartmentHead;
   
-  // Show promote button only if: is shepherd, not already department leader, and not loading
-  const canPromote = onPromoteShepherd && 
-                     hasShepherdProfile && 
-                     !isAlreadyDepartmentLeader && 
+  const canPromote = onPromoteShepherd &&
+                     hasShepherdProfile &&
+                     !isAlreadyDepartmentLeader &&
                      !servantStatus.loading;
-  
+
+  const canGenerateLink = onGenerateLink && hasShepherdProfile && canEditUsers;
+
   return (
     <div className="flex justify-end space-x-2">
       {canEditUsers && (
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
           title="Modifier"
         >
@@ -78,22 +79,25 @@ function ActionButtons({
       )}
       {canPromote && (
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onPromoteShepherd(user.id, user.fullName);
-          }}
+          onClick={(e) => { e.stopPropagation(); onPromoteShepherd(user.id, user.fullName); }}
           className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
           title="Promouvoir responsable de département"
         >
           <Building2 className="w-4 h-4" />
         </button>
       )}
+      {canGenerateLink && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onGenerateLink(user.id, user.fullName); }}
+          className="p-1 text-purple-600 hover:bg-purple-50 rounded transition-colors"
+          title="Générer lien de confirmation des âmes"
+        >
+          <Link2 className="w-4 h-4" />
+        </button>
+      )}
       {canDeleteUsers && (
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
           title="Supprimer"
         >
@@ -115,6 +119,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [confirmLinkUser, setConfirmLinkUser] = useState<{ id: string; name: string } | null>(null);
   const [sortConfig, setSortConfig] = useState({
     field: 'fullName' as keyof User,
     direction: 'asc' as 'asc' | 'desc'
@@ -454,6 +459,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
             canEditUsers={canEditUsers}
             canDeleteUsers={canDeleteUsers}
             onPromoteShepherd={onPromoteShepherd}
+            onGenerateLink={(id, name) => setConfirmLinkUser({ id, name })}
             onEdit={() => setEditingUser(user)}
             onDelete={() => handleDelete(user.id, user.id)}
           />
@@ -508,6 +514,14 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
           onClose={() => setEditingUser(null)}
         />
       )}
+
+      <GenerateConfirmationLinkModal
+        isOpen={!!confirmLinkUser}
+        onClose={() => setConfirmLinkUser(null)}
+        shepherdId={confirmLinkUser?.id ?? ''}
+        shepherdName={confirmLinkUser?.name ?? ''}
+      />
+
       <ConfirmModal {...confirmModalProps} />
     </div>
   );

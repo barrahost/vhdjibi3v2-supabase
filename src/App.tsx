@@ -50,6 +50,7 @@ const BirthdayConfirmation = lazy(() => import('./pages/BirthdayConfirmation'));
 const ReplayTeachings = lazy(() => import('./pages/ReplayTeachings'));
 const AudioManagement = lazy(() => import('./pages/AudioManagement'));
 const ChurchesManagement = lazy(() => import('./pages/ChurchesManagement'));
+const ShepherdConfirmation = lazy(() => import('./pages/ShepherdConfirmation'));
 
 // Loading component
 function PageLoader() {
@@ -114,6 +115,11 @@ function AppContent() {
         <Route path="/anniversaires/merci" element={
           <Suspense fallback={<PageLoader />}>
             <BirthdayConfirmation />
+          </Suspense>
+        } />
+        <Route path="/confirm/:token" element={
+          <Suspense fallback={<PageLoader />}>
+            <ShepherdConfirmation />
           </Suspense>
         } />
         <Route path="/" element={
