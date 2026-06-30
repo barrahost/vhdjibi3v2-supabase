@@ -225,7 +225,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
       onClose={onClose}
       title="Modifier un utilisateur"
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <PhotoUpload
           onChange={(file) => setFormData(prev => ({ ...prev, photo: file }))}
           currentPhotoURL={user.photoURL}
