@@ -64,7 +64,7 @@ function ActionButtons({
                      !isAlreadyDepartmentLeader &&
                      !servantStatus.loading;
 
-  const canGenerateLink = onGenerateLink && hasShepherdProfile && canEditUsers;
+  const canGenerateLink = onGenerateLink && canEditUsers;
 
   return (
     <div className="flex justify-end space-x-2">
