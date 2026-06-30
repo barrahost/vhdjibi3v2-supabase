@@ -20,6 +20,8 @@ Usage
 import sys
 import re
 import json
+import secrets
+import string
 import unicodedata
 import argparse
 from pathlib import Path
@@ -47,6 +49,11 @@ ENV = load_env()
 SUPABASE_URL = ENV["VITE_SUPABASE_URL"]
 SUPABASE_KEY = ENV["VITE_SUPABASE_PUBLISHABLE_KEY"]
 CHURCH_ID    = "bergerie"
+
+_NANOID_ALPHABET = string.ascii_letters + string.digits
+
+def nanoid(size=21):
+    return ''.join(secrets.choice(_NANOID_ALPHABET) for _ in range(size))
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -352,18 +359,38 @@ def do_import(results):
     errors   = []
 
     for r in to_import:
+        # Formater le téléphone en +225XXXXXXXX
+        raw_digits = re.sub(r"[^\d]", "", r["tel_raw"] or "")
+        if raw_digits.startswith("225"):
+            phone_fmt = "+" + raw_digits
+        elif raw_digits.startswith("0") and len(raw_digits) >= 9:
+            phone_fmt = "+225" + raw_digits[1:]
+        elif len(raw_digits) == 8:
+            phone_fmt = "+225" + raw_digits
+        else:
+            phone_fmt = "+225" + raw_digits
+
+        # Profil spirituel en JSONB
+        spiritual_profile = {
+            "isBornAgain":             r["ndn"],
+            "isBaptized":              r["baptise"],
+            "isEnrolledInAcademy":     r["acad_vdh"],
+            "isEnrolledInLifeBearers": r["ecole_pdv"],
+            "departments":             [],
+        }
+
         payload = {
+            "id":               nanoid(),
             "church_id":        CHURCH_ID,
             "full_name":        r["nom"],
             "nickname":         r["surnom"],
             "gender":           "male" if r["genre"] in ("H", "h") else "female",
-            "phone":            r["tel"],
+            "phone":            phone_fmt,
             "location":         r["lieu"],
             "first_visit_date": r["prem_visite"],
-            "is_born_again":    r["ndn"],
-            "is_baptized":      r["baptise"],
-            "is_enrolled_in_academy": r["acad_vdh"],
+            "spiritual_profile": spiritual_profile,
             "status":           "active",
+            "is_undecided":     True,
         }
         payload = {k: v for k, v in payload.items() if v is not None and v != ""}
         resp = requests.post(url, headers={**HEADERS, "Prefer": "return=minimal"},

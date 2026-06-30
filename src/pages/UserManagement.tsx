@@ -4,9 +4,11 @@ import UserList from '../components/users/UserList';
 import UserForm from '../components/users/UserForm';
 import BulkRoleAssignmentModal from '../components/users/BulkRoleAssignmentModal';
 import PromoteShepherdModal from '../components/users/PromoteShepherdModal';
-import { Plus, Users, FileSpreadsheet } from 'lucide-react';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { Plus, Users, UserX } from 'lucide-react';
 import ImportUsersFromExcel from '../components/users/ImportUsersFromExcel';
 import DownloadUserTemplateButton from '../components/users/DownloadUserTemplateButton';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function UserManagement() {
@@ -17,6 +19,9 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promotingUser, setPromotingUser] = useState<{ userId: string; userName: string } | null>(null);
+  const [showBulkDeactivateConfirm, setShowBulkDeactivateConfirm] = useState(false);
+  const [bulkDeactivating, setBulkDeactivating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSelectionChange = (userIds: string[]) => {
     setSelectedUserIds(userIds);
@@ -26,6 +31,27 @@ export default function UserManagement() {
     setSelectedUserIds([]);
     setShowBulkModal(false);
     toast.success('Rôles assignés avec succès');
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedUserIds.length === 0) return;
+    setBulkDeactivating(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ status: 'inactive' })
+        .in('id', selectedUserIds);
+      if (error) throw error;
+      toast.success(`${selectedUserIds.length} utilisateur(s) désactivé(s)`);
+      setSelectedUserIds([]);
+      setRefreshKey(k => k + 1);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la désactivation');
+    } finally {
+      setBulkDeactivating(false);
+      setShowBulkDeactivateConfirm(false);
+    }
   };
 
   const handlePromoteShepherd = (userId: string, userName: string) => {
@@ -47,13 +73,23 @@ export default function UserManagement() {
         <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
         <div className="flex flex-wrap items-center gap-2">
           {selectedUserIds.length > 0 && (
-            <button
-              onClick={() => setShowBulkModal(true)}
-              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10"
-            >
-              <Users className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
-              Assigner un rôle ({selectedUserIds.length})
-            </button>
+            <>
+              <button
+                onClick={() => setShowBulkDeactivateConfirm(true)}
+                disabled={bulkDeactivating}
+                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-red-600 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
+              >
+                <UserX className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
+                Désactiver ({selectedUserIds.length})
+              </button>
+              <button
+                onClick={() => setShowBulkModal(true)}
+                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10"
+              >
+                <Users className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
+                Assigner un rôle ({selectedUserIds.length})
+              </button>
+            </>
           )}
           <DownloadUserTemplateButton />
           <ImportUsersFromExcel />
@@ -118,8 +154,9 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <UserList 
-        filter={roleFilter} 
+      <UserList
+        key={refreshKey}
+        filter={roleFilter}
         statusFilter={statusFilter}
         selectedUserIds={selectedUserIds}
         onSelectionChange={handleSelectionChange}
@@ -133,6 +170,18 @@ export default function UserManagement() {
         selectedUserIds={selectedUserIds}
         selectedUsers={selectedUsers}
         onSuccess={handleBulkAssignmentSuccess}
+      />
+
+      {/* Confirmation désactivation en masse */}
+      <ConfirmModal
+        isOpen={showBulkDeactivateConfirm}
+        title="Désactiver les utilisateurs"
+        message={`Désactiver ${selectedUserIds.length} utilisateur(s) ? Ils ne pourront plus se connecter tant qu'ils sont inactifs.`}
+        confirmLabel={bulkDeactivating ? 'Désactivation...' : 'Désactiver'}
+        cancelLabel="Annuler"
+        variant="danger"
+        onConfirm={handleBulkDeactivate}
+        onCancel={() => setShowBulkDeactivateConfirm(false)}
       />
 
       {/* Modal de promotion berger → responsable de département */}
