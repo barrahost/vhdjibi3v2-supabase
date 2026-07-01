@@ -51,6 +51,8 @@ const ReplayTeachings = lazy(() => import('./pages/ReplayTeachings'));
 const AudioManagement = lazy(() => import('./pages/AudioManagement'));
 const ChurchesManagement = lazy(() => import('./pages/ChurchesManagement'));
 const ShepherdConfirmation = lazy(() => import('./pages/ShepherdConfirmation'));
+const LeaveRequestForm = lazy(() => import('./pages/LeaveRequestForm'));
+const LeaveManagement = lazy(() => import('./pages/LeaveManagement'));
 
 // Loading component
 function PageLoader() {
@@ -120,6 +122,11 @@ function AppContent() {
         <Route path="/confirm/:token" element={
           <Suspense fallback={<PageLoader />}>
             <ShepherdConfirmation />
+          </Suspense>
+        } />
+        <Route path="/conge" element={
+          <Suspense fallback={<PageLoader />}>
+            <LeaveRequestForm />
           </Suspense>
         } />
         <Route path="/" element={
@@ -330,6 +337,15 @@ function AppContent() {
           <Route path="bug-reports" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS]}>
               <BugReports />
+            </PrivateRoute>
+          } />
+
+          {/* Congés */}
+          <Route path="conges" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_LEAVES]}>
+              <Suspense fallback={<PageLoader />}>
+                <LeaveManagement />
+              </Suspense>
             </PrivateRoute>
           } />
 

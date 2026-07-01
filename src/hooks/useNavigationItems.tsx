@@ -24,6 +24,7 @@ import {
   Shield,
   Megaphone,
   Building2,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChurch } from '../contexts/ChurchContext';
@@ -252,6 +253,16 @@ export function useNavigationItems(): NavItem[] {
     if (children.length > 0) {
       items.push({ id: 'pastoral-tools', label: 'Outils pastoraux', icon: <Map className="w-5 h-5" />, children });
     }
+  }
+
+  // Congés (admin / super_admin)
+  if (hasPermission(PERMISSIONS.MANAGE_LEAVES)) {
+    items.push({
+      id: 'leaves',
+      label: 'Congés',
+      icon: <CalendarDays className="w-5 h-5" />,
+      href: '/conges',
+    });
   }
 
   // Configuration
