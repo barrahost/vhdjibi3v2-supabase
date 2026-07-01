@@ -20,6 +20,7 @@ import { getChurchId } from '../../lib/churchId';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { GenerateConfirmationLinkModal } from './GenerateConfirmationLinkModal';
+import { ShepherdConfirmationService } from '../../services/shepherdConfirmation.service';
 
 interface UserListProps {
   filter: 'all' | 'shepherds' | 'adn' | 'admins' | 'department_leader' | 'family_leader' | 'evangelist';
@@ -36,6 +37,7 @@ function ActionButtons({
   canDeleteUsers,
   onPromoteShepherd,
   onGenerateLink,
+  confirmationStatus,
   onEdit,
   onDelete
 }: {
@@ -44,6 +46,7 @@ function ActionButtons({
   canDeleteUsers: boolean;
   onPromoteShepherd?: (userId: string, userName: string) => void;
   onGenerateLink?: (userId: string, userName: string) => void;
+  confirmationStatus?: { status: string; usedAt?: Date };
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -89,10 +92,21 @@ function ActionButtons({
       {canGenerateLink && (
         <button
           onClick={(e) => { e.stopPropagation(); onGenerateLink(user.id, user.fullName); }}
-          className="p-1 text-purple-600 hover:bg-purple-50 rounded transition-colors"
-          title="Générer lien de confirmation des âmes"
+          className="relative p-1 text-purple-600 hover:bg-purple-50 rounded transition-colors"
+          title={
+            confirmationStatus?.status === 'used'
+              ? 'Liste validée'
+              : confirmationStatus?.status === 'pending'
+              ? 'Lien en attente'
+              : 'Générer lien de confirmation'
+          }
         >
           <Link2 className="w-4 h-4" />
+          {confirmationStatus && (
+            <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
+              confirmationStatus.status === 'used' ? 'bg-green-500' : 'bg-amber-400'
+            }`} />
+          )}
         </button>
       )}
       {canDeleteUsers && (
@@ -120,6 +134,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
   const [currentPage, setCurrentPage] = useState(1);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [confirmLinkUser, setConfirmLinkUser] = useState<{ id: string; name: string } | null>(null);
+  const [confirmationStatuses, setConfirmationStatuses] = useState<Record<string, { status: string; usedAt?: Date }>>({});
   const [sortConfig, setSortConfig] = useState({
     field: 'fullName' as keyof User,
     direction: 'asc' as 'asc' | 'desc'
@@ -281,6 +296,15 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
         }
 
         setUsers(filteredUsers);
+
+        // Charger les statuts de confirmation en parallèle
+        ShepherdConfirmationService.getAllStatuses().then(statusMap => {
+          const simplified: Record<string, { status: string; usedAt?: Date }> = {};
+          Object.entries(statusMap).forEach(([id, t]) => {
+            simplified[id] = { status: t.status, usedAt: (t as any).usedAt };
+          });
+          setConfirmationStatuses(simplified);
+        }).catch(() => {/* table pas encore créée : silencieux */});
       } catch (error) {
         console.error('Error loading users:', error);
         toast.error('Erreur lors du chargement des utilisateurs');
@@ -460,6 +484,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
             canDeleteUsers={canDeleteUsers}
             onPromoteShepherd={onPromoteShepherd}
             onGenerateLink={(id, name) => setConfirmLinkUser({ id, name })}
+            confirmationStatus={confirmationStatuses[user.id]}
             onEdit={() => setEditingUser(user)}
             onDelete={() => handleDelete(user.id, user.id)}
           />

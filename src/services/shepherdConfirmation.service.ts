@@ -31,6 +31,7 @@ function mapToken(r: any): ConfirmationToken {
     status: r.status,
     expiresAt: new Date(r.expires_at),
     createdAt: new Date(r.created_at),
+    usedAt: r.used_at ? new Date(r.used_at) : undefined,
   };
 }
 
@@ -106,5 +107,35 @@ export const ShepherdConfirmationService = {
       .maybeSingle();
 
     return data ? mapToken(data) : null;
+  },
+
+  // Retourne le token le plus récent (peu importe le statut) pour un berger
+  async getLatestToken(shepherdId: string): Promise<ConfirmationToken | null> {
+    const { data } = await supabase
+      .from('shepherd_confirmation_tokens')
+      .select('*')
+      .eq('church_id', getChurchId())
+      .eq('shepherd_id', shepherdId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return data ? mapToken(data) : null;
+  },
+
+  // Charge les statuts de tous les bergers d'une église en une seule requête
+  async getAllStatuses(): Promise<Record<string, ConfirmationToken>> {
+    const { data } = await supabase
+      .from('shepherd_confirmation_tokens')
+      .select('*')
+      .eq('church_id', getChurchId())
+      .order('created_at', { ascending: false });
+
+    // Pour chaque shepherd_id, garder uniquement le token le plus récent
+    const map: Record<string, ConfirmationToken> = {};
+    (data ?? []).forEach((r: any) => {
+      if (!map[r.shepherd_id]) map[r.shepherd_id] = mapToken(r);
+    });
+    return map;
   },
 };
