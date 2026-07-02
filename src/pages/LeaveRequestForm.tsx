@@ -87,6 +87,12 @@ function newPeriod(): PeriodInput {
   return { id: Math.random().toString(36).slice(2), startDate: '', endDate: '' };
 }
 
+function isValidCiPhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('225')) return digits.length === 13;
+  return digits.length === 10;
+}
+
 const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
 
 function normalize(s: string): string {
@@ -108,6 +114,7 @@ export default function LeaveRequestForm() {
   const [errors, setErrors] = useState<string[]>([]);
   const [existingPending, setExistingPending] = useState<LeavePeriod[]>([]);
   const [submittedCount, setSubmittedCount] = useState(0);
+  const [phone, setPhone] = useState('');
 
   // Recherche du nom + saisie manuelle de secours
   const [searchTerm, setSearchTerm] = useState('');
@@ -195,6 +202,9 @@ export default function LeaveRequestForm() {
   const handleSubmit = async () => {
     const valid = periods.filter(p => p.startDate && p.endDate);
     const errs = validatePeriods(valid);
+    if (!isValidCiPhone(phone)) {
+      errs.push('Numéro de téléphone invalide (10 chiffres, ex: 07XXXXXXXX)');
+    }
     if (errs.length > 0) { setErrors(errs); return; }
     if (!selectedUser || valid.length === 0) return;
 
@@ -205,7 +215,8 @@ export default function LeaveRequestForm() {
         selectedUser.fullName,
         selectedUser.id.startsWith(MANUAL_PREFIX) ? 'Non listé' : getRoleLabel(selectedUser.roles),
         getChurchId(),
-        valid.map(p => ({ start_date: p.startDate, end_date: p.endDate }))
+        valid.map(p => ({ start_date: p.startDate, end_date: p.endDate })),
+        phone.trim()
       );
       setSubmittedCount(valid.length);
       setPageState('done');
@@ -216,7 +227,7 @@ export default function LeaveRequestForm() {
   };
 
   const completePeriods = periods.filter(p => p.startDate && p.endDate);
-  const canSubmit = selectedUser && completePeriods.length > 0 && errors.length === 0;
+  const canSubmit = selectedUser && completePeriods.length > 0 && errors.length === 0 && isValidCiPhone(phone);
 
   // ── États non-ready ─────────────────────────────────────────────────────
 
@@ -386,6 +397,24 @@ export default function LeaveRequestForm() {
                 Tu as déjà {existingPending.length} demande{existingPending.length > 1 ? 's' : ''} en cours :{' '}
                 {existingPending.map(p => `${formatFr(p.start_date)} → ${formatFr(p.end_date)}`).join(', ')}.{' '}
                 <span className="font-medium">Ta nouvelle soumission les remplacera.</span>
+              </div>
+            )}
+
+            {selectedUser && (
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  Ton numéro WhatsApp (pour te tenir informé)
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="07 XX XX XX XX"
+                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+                {phone.length > 0 && !isValidCiPhone(phone) && (
+                  <p className="text-xs text-red-500 mt-1">Numéro invalide (10 chiffres)</p>
+                )}
               </div>
             )}
           </div>

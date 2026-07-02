@@ -45,6 +45,8 @@ export function UserProfileModal() {
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('notif_sound_enabled') === 'true');
   const [browserNotifEnabled, setBrowserNotifEnabled] = useState(() => localStorage.getItem('notif_browser_enabled') === 'true');
   const [browserNotifBlocked, setBrowserNotifBlocked] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
 
   const toggleSound = (checked: boolean) => {
     setSoundEnabled(checked);
@@ -72,6 +74,25 @@ export function UserProfileModal() {
         localStorage.setItem('notif_browser_enabled', 'false');
       }
     });
+  };
+
+  const toggleWhatsappOptIn = async (checked: boolean) => {
+    if (!userData) return;
+    setWhatsappSaving(true);
+    setWhatsappOptIn(checked);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ whatsapp_opt_in: checked })
+        .eq('id', userData.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating whatsapp_opt_in:', error);
+      setWhatsappOptIn(!checked);
+      toast.error('Erreur lors de la mise à jour de la préférence WhatsApp');
+    } finally {
+      setWhatsappSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -111,6 +132,7 @@ export function UserProfileModal() {
             useGeolocation: !!data.coordinates,
             photo: null
           });
+          setWhatsappOptIn(!!data.whatsapp_opt_in);
           return;
         }
 
@@ -649,6 +671,22 @@ export function UserProfileModal() {
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>Autorisation refusée. Active les notifications pour ce site dans les réglages de ton navigateur.</span>
                 </div>
+              )}
+
+              {userRole !== 'super_admin' && userRole !== 'admin' && (
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="flex items-center gap-2 text-sm text-gray-700">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    Rappels de suivi par WhatsApp
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={whatsappOptIn}
+                    disabled={whatsappSaving}
+                    onChange={(e) => toggleWhatsappOptIn(e.target.checked)}
+                    className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                  />
+                </label>
               )}
             </div>
           )}
