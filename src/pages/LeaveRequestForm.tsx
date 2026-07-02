@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { CheckCircle2, AlertCircle, Loader2, Plus, X, CalendarDays, ChevronDown } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Plus, X, CalendarDays, Search, Pencil } from 'lucide-react';
 import { LeaveRequestService, LeaveUser, LeavePeriod } from '../services/leaveRequest.service';
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
@@ -87,6 +87,18 @@ function newPeriod(): PeriodInput {
   return { id: Math.random().toString(36).slice(2), startDate: '', endDate: '' };
 }
 
+const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
+
+function normalize(s: string): string {
+  return s.normalize('NFD').replace(DIACRITICS_RE, '').toLowerCase().trim();
+}
+
+function slugify(s: string): string {
+  return normalize(s).replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
+}
+
+const MANUAL_PREFIX = 'manual:';
+
 export default function LeaveRequestForm() {
   const { loading: churchLoading } = useChurch();
   const [pageState, setPageState] = useState<PageState>('loading');
@@ -97,6 +109,13 @@ export default function LeaveRequestForm() {
   const [existingPending, setExistingPending] = useState<LeavePeriod[]>([]);
   const [submittedCount, setSubmittedCount] = useState(0);
 
+  // Recherche du nom + saisie manuelle de secours
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const comboBoxRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (churchLoading) return;
     const churchId = getChurchId();
@@ -105,19 +124,53 @@ export default function LeaveRequestForm() {
       .catch(() => setPageState('error'));
   }, [churchLoading]);
 
-  const handleUserSelect = async (userId: string) => {
-    const user = users.find(u => u.id === userId) ?? null;
-    setSelectedUser(user);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (comboBoxRef.current && !comboBoxRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredUsers = searchTerm.trim()
+    ? users.filter(u => normalize(u.fullName).includes(normalize(searchTerm)))
+    : users;
+
+  const loadExistingFor = async (user: LeaveUser) => {
     setPeriods([newPeriod()]);
     setErrors([]);
     setExistingPending([]);
-    if (!user) return;
     try {
       const existing = await LeaveRequestService.getUserExistingRequests(user.id, getChurchId());
       setExistingPending(existing);
     } catch {
       // silent — not critical
     }
+  };
+
+  const selectFromList = (user: LeaveUser) => {
+    setSelectedUser(user);
+    setSearchTerm(user.fullName);
+    setDropdownOpen(false);
+    loadExistingFor(user);
+  };
+
+  const confirmManualName = () => {
+    const name = manualName.trim();
+    if (!name) return;
+    const user: LeaveUser = { id: `${MANUAL_PREFIX}${slugify(name)}`, fullName: name, roles: [] };
+    setSelectedUser(user);
+    loadExistingFor(user);
+  };
+
+  const clearSelection = () => {
+    setSelectedUser(null);
+    setSearchTerm('');
+    setManualMode(false);
+    setManualName('');
+    setExistingPending([]);
   };
 
   const updatePeriod = (id: string, field: 'startDate' | 'endDate', value: string) => {
@@ -150,7 +203,7 @@ export default function LeaveRequestForm() {
       await LeaveRequestService.submitRequests(
         selectedUser.id,
         selectedUser.fullName,
-        getRoleLabel(selectedUser.roles),
+        selectedUser.id.startsWith(MANUAL_PREFIX) ? 'Non listé' : getRoleLabel(selectedUser.roles),
         getChurchId(),
         valid.map(p => ({ start_date: p.startDate, end_date: p.endDate }))
       );
@@ -240,21 +293,93 @@ export default function LeaveRequestForm() {
           {/* Étape 1 — Identification */}
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
             <h2 className="text-sm font-semibold text-gray-700">1. Qui êtes-vous ?</h2>
-            <div className="relative">
-              <select
-                value={selectedUser?.id ?? ''}
-                onChange={e => handleUserSelect(e.target.value)}
-                className="w-full h-12 pl-3 pr-10 border border-gray-200 rounded-xl text-sm appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
-              >
-                <option value="">-- Sélectionner mon nom --</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName} {u.roles.length > 0 ? `(${getRoleLabel(u.roles)})` : ''}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+
+            {selectedUser ? (
+              <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{selectedUser.fullName}</p>
+                  <p className="text-xs text-gray-400">
+                    {selectedUser.id.startsWith(MANUAL_PREFIX)
+                      ? 'Saisi manuellement'
+                      : (selectedUser.roles.length > 0 ? getRoleLabel(selectedUser.roles) : 'Utilisateur')}
+                  </p>
+                </div>
+                <button
+                  onClick={clearSelection}
+                  className="flex-shrink-0 text-xs font-medium text-[#00665C] hover:underline"
+                >
+                  Changer
+                </button>
+              </div>
+            ) : manualMode ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={manualName}
+                  onChange={e => setManualName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && confirmManualName()}
+                  placeholder="Ton nom et prénoms"
+                  autoFocus
+                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={confirmManualName}
+                    disabled={!manualName.trim()}
+                    className="flex-1 h-10 bg-[#00665C] text-white text-sm font-medium rounded-xl disabled:opacity-40"
+                  >
+                    Valider mon nom
+                  </button>
+                  <button
+                    onClick={() => { setManualMode(false); setManualName(''); }}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    ← Chercher dans la liste
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div ref={comboBoxRef} className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => { setSearchTerm(e.target.value); setDropdownOpen(true); }}
+                    onFocus={() => setDropdownOpen(true)}
+                    placeholder="Rechercher mon nom..."
+                    className="w-full h-12 pl-9 pr-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                  />
+                  {dropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-lg">
+                      {filteredUsers.length === 0 ? (
+                        <p className="px-3 py-3 text-xs text-gray-400">Aucun résultat</p>
+                      ) : (
+                        filteredUsers.map(u => (
+                          <button
+                            key={u.id}
+                            onClick={() => selectFromList(u)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-gray-50 text-sm border-b border-gray-50 last:border-0"
+                          >
+                            <span className="text-gray-800">{u.fullName}</span>
+                            {u.roles.length > 0 && (
+                              <span className="text-gray-400 text-xs ml-1.5">({getRoleLabel(u.roles)})</span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setManualMode(true); setDropdownOpen(false); setManualName(searchTerm); }}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#00665C]"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Je ne trouve pas mon nom — le saisir moi-même
+                </button>
+              </div>
+            )}
 
             {existingPending.length > 0 && (
               <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700 leading-relaxed">
