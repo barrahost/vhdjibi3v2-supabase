@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNotifications } from '../../hooks/useNotifications';
+import { useNotificationsFeed } from '../../hooks/useNotificationsFeed';
 import { useAdminNotifications } from '../../hooks/useAdminNotifications';
 import NotificationsModal from './NotificationsModal';
-import AdminNotificationsModal from './AdminNotificationsModal';
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'adn'];
 
@@ -15,12 +14,21 @@ export function NotificationBell() {
   const effectiveRole = (activeRole || userRole) as string;
   const isAdmin = ADMIN_ROLES.includes(effectiveRole);
 
-  // Shepherd notifications
-  const { notifications, notificationsCount } = useNotifications(
-    !isAdmin ? user?.uid : undefined
-  );
+  const roles = useMemo(() => {
+    const r = [userRole, activeRole].filter(Boolean) as string[];
+    return [...new Set(r)];
+  }, [userRole, activeRole]);
 
-  // Admin notifications
+  const userId = user?.uid;
+
+  const {
+    notifications,
+    unreadCount: feedUnreadCount,
+    loading: feedLoading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotificationsFeed(userId, roles);
+
   const {
     alerts,
     totalCount: adminCount,
@@ -28,7 +36,7 @@ export function NotificationBell() {
     refresh: adminRefresh,
   } = useAdminNotifications();
 
-  const count = isAdmin ? adminCount : notificationsCount;
+  const badgeCount = feedUnreadCount + (isAdmin ? adminCount : 0);
 
   return (
     <>
@@ -39,28 +47,26 @@ export function NotificationBell() {
         title="Notifications"
       >
         <Bell className="w-5 h-5" />
-        {count > 0 && (
+        {badgeCount > 0 && (
           <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-medium text-white bg-red-500 rounded-full">
-            {count > 99 ? '99+' : count}
+            {badgeCount > 99 ? '99+' : badgeCount}
           </span>
         )}
       </button>
 
-      {isAdmin ? (
-        <AdminNotificationsModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          alerts={alerts}
-          loading={adminLoading}
-          onRefresh={() => { adminRefresh(); }}
-        />
-      ) : (
-        <NotificationsModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          notifications={notifications}
-        />
-      )}
+      <NotificationsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        showAlertsTab={isAdmin}
+        alerts={alerts}
+        alertsLoading={adminLoading}
+        onRefreshAlerts={adminRefresh}
+        notifications={notifications}
+        unreadCount={feedUnreadCount}
+        feedLoading={feedLoading}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+      />
     </>
   );
 }

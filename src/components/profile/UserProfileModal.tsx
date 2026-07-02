@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
-import { User, Mail, Phone, Calendar, Shield, Save, X, Camera, Navigation, AlertCircle, Trash2, Key, MapPin } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Shield, Save, X, Camera, Navigation, AlertCircle, Trash2, Key, MapPin, Bell, Volume2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { StorageService } from '../../services/storage.service';
@@ -42,6 +42,37 @@ export function UserProfileModal() {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('notif_sound_enabled') === 'true');
+  const [browserNotifEnabled, setBrowserNotifEnabled] = useState(() => localStorage.getItem('notif_browser_enabled') === 'true');
+  const [browserNotifBlocked, setBrowserNotifBlocked] = useState(false);
+
+  const toggleSound = (checked: boolean) => {
+    setSoundEnabled(checked);
+    localStorage.setItem('notif_sound_enabled', String(checked));
+  };
+
+  const toggleBrowserNotif = (checked: boolean) => {
+    if (!checked) {
+      setBrowserNotifEnabled(false);
+      localStorage.setItem('notif_browser_enabled', 'false');
+      return;
+    }
+    if (!('Notification' in window)) {
+      toast.error("Votre navigateur ne supporte pas les notifications");
+      return;
+    }
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        setBrowserNotifEnabled(true);
+        setBrowserNotifBlocked(false);
+        localStorage.setItem('notif_browser_enabled', 'true');
+      } else {
+        setBrowserNotifEnabled(false);
+        setBrowserNotifBlocked(true);
+        localStorage.setItem('notif_browser_enabled', 'false');
+      }
+    });
+  };
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -579,6 +610,48 @@ export function UserProfileModal() {
               </>
             )}
           </div>
+
+          {/* Préférences de notifications */}
+          {!isEditing && (
+            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">
+                Notifications
+              </h3>
+
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="flex items-center gap-2 text-sm text-gray-700">
+                  <Volume2 className="w-4 h-4 text-gray-400" />
+                  Son des notifications
+                </span>
+                <input
+                  type="checkbox"
+                  checked={soundEnabled}
+                  onChange={(e) => toggleSound(e.target.checked)}
+                  className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                />
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="flex items-center gap-2 text-sm text-gray-700">
+                  <Bell className="w-4 h-4 text-gray-400" />
+                  Notifications du navigateur
+                </span>
+                <input
+                  type="checkbox"
+                  checked={browserNotifEnabled}
+                  onChange={(e) => toggleBrowserNotif(e.target.checked)}
+                  className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                />
+              </label>
+
+              {browserNotifBlocked && (
+                <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Autorisation refusée. Active les notifications pour ce site dans les réglages de ton navigateur.</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
