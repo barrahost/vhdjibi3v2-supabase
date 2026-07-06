@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type SMSStatusType = 'loading' | 'ok' | 'low' | 'empty' | 'api_error';
+export type SMSStatusType = 'loading' | 'ok' | 'low' | 'empty' | 'api_error' | 'unsupported';
 
 export interface SMSStatusResult {
   status: SMSStatusType;
@@ -31,6 +31,14 @@ export function useSMSStatus(): SMSStatusResult {
         setStatus('api_error');
         setCredits(null);
         setSmsCount(null);
+        return;
+      }
+
+      if (data.unsupported) {
+        setStatus('unsupported');
+        setCredits(null);
+        setSmsCount(null);
+        setSmsCostXOF(typeof data.smsCostXOF === 'number' ? data.smsCostXOF : DEFAULT_SMS_COST_XOF);
         return;
       }
 

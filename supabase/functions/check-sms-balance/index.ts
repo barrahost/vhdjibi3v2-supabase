@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 interface SMSConfig {
+  provider: string;
   apiKey: string;
   username: string;
   smsCostXOF: number;
@@ -16,6 +17,7 @@ interface SMSConfig {
 // Charge la config SMS depuis app_settings, avec fallback sur les env vars
 async function loadSMSConfig(): Promise<SMSConfig> {
   const fallback: SMSConfig = {
+    provider:   Deno.env.get('SMS_PROVIDER') || 'africastalking',
     apiKey:     Deno.env.get('AT_API_KEY') || '',
     username:   Deno.env.get('AT_USERNAME') || 'vhdjibi3',
     smsCostXOF: parseFloat(Deno.env.get('AT_SMS_COST_XOF') || '24'),
@@ -37,8 +39,9 @@ async function loadSMSConfig(): Promise<SMSConfig> {
 
     const cfg = data.value as Record<string, any>;
     return {
-      apiKey:     cfg.apiKey     || fallback.apiKey,
-      username:   cfg.username   || fallback.username,
+      provider:   cfg.provider || fallback.provider,
+      apiKey:     cfg.africastalking?.apiKey   ?? cfg.apiKey   ?? fallback.apiKey,
+      username:   cfg.africastalking?.username ?? cfg.username ?? fallback.username,
       smsCostXOF: cfg.smsCostXOF || fallback.smsCostXOF,
     };
   } catch {
@@ -57,6 +60,14 @@ serve(async (req) => {
   }
 
   const cfg = await loadSMSConfig();
+
+  if (cfg.provider !== 'africastalking') {
+    // Orange CI n'expose pas de solde consultable via API — à vérifier depuis la console développeur.
+    return new Response(
+      JSON.stringify({ credits: null, smsCount: null, currency: 'XOF', smsCostXOF: cfg.smsCostXOF, unsupported: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
+  }
 
   try {
     if (!cfg.apiKey) throw new Error("Configuration Africa's Talking manquante (AT_API_KEY)");
