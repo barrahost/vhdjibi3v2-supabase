@@ -5,17 +5,35 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY    = 2000;
 const MAX_BACKOFF    = 30000;
-const AT_API_URL     = 'https://api.africastalking.com/version1/messaging';
+const AT_API_URL      = 'https://api.africastalking.com/version1/messaging';
+const ORANGE_TOKEN_URL = 'https://api.orange.com/oauth/v3/token';
+const ORANGE_SMS_BASE  = 'https://api.orange.com/smsmessaging/v1/outbound';
+const ORANGE_MAX_TPS   = 5; // limite Orange : 5 SMS/seconde
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface SMSConfig {
+type Provider = 'africastalking' | 'orange';
+
+interface AfricasTalkingConfig {
   apiKey: string;
   username: string;
   senderId: string;
+}
+
+interface OrangeConfig {
+  clientId: string;
+  clientSecret: string;
+  senderNumber: string; // numéro CI associé au contrat, ex: 225XXXXXXXXX
+  senderName: string;   // nom d'expéditeur approuvé, ex: AGCDJIBI3
+}
+
+interface SMSConfig {
+  provider: Provider;
+  africastalking: AfricasTalkingConfig;
+  orange: OrangeConfig;
 }
 
 interface SendSMSRequest {
@@ -26,12 +44,21 @@ interface SendSMSRequest {
   scheduleTime?: string;
 }
 
-// Charge la config SMS depuis app_settings, avec fallback sur les env vars
+// Charge la config SMS depuis app_settings (clé 'sms'), avec fallback sur les env vars
 async function loadSMSConfig(): Promise<SMSConfig> {
   const fallback: SMSConfig = {
-    apiKey:   Deno.env.get('AT_API_KEY') || '',
-    username: Deno.env.get('AT_USERNAME') || 'vhdjibi3',
-    senderId: Deno.env.get('AT_SENDER_ID') || '',
+    provider: (Deno.env.get('SMS_PROVIDER') as Provider) || 'africastalking',
+    africastalking: {
+      apiKey:   Deno.env.get('AT_API_KEY') || '',
+      username: Deno.env.get('AT_USERNAME') || 'vhdjibi3',
+      senderId: Deno.env.get('AT_SENDER_ID') || '',
+    },
+    orange: {
+      clientId:     Deno.env.get('ORANGE_CLIENT_ID') || '',
+      clientSecret: Deno.env.get('ORANGE_CLIENT_SECRET') || '',
+      senderNumber: Deno.env.get('ORANGE_SENDER_NUMBER') || '',
+      senderName:   Deno.env.get('ORANGE_SENDER_NAME') || '',
+    },
   };
 
   try {
@@ -50,9 +77,18 @@ async function loadSMSConfig(): Promise<SMSConfig> {
 
     const cfg = data.value as Record<string, any>;
     return {
-      apiKey:   cfg.apiKey   || fallback.apiKey,
-      username: cfg.username || fallback.username,
-      senderId: cfg.senderId !== undefined ? cfg.senderId : fallback.senderId,
+      provider: cfg.provider || fallback.provider,
+      africastalking: {
+        apiKey:   cfg.africastalking?.apiKey   ?? cfg.apiKey   ?? fallback.africastalking.apiKey,
+        username: cfg.africastalking?.username ?? cfg.username ?? fallback.africastalking.username,
+        senderId: cfg.africastalking?.senderId ?? cfg.senderId ?? fallback.africastalking.senderId,
+      },
+      orange: {
+        clientId:     cfg.orange?.clientId     || fallback.orange.clientId,
+        clientSecret: cfg.orange?.clientSecret || fallback.orange.clientSecret,
+        senderNumber: cfg.orange?.senderNumber || fallback.orange.senderNumber,
+        senderName:   cfg.orange?.senderName   || fallback.orange.senderName,
+      },
     };
   } catch {
     return fallback;
@@ -104,6 +140,113 @@ async function fetchWithRetry(url: string, options: RequestInit, attempt = 1): P
   }
 }
 
+// ============================================================
+// Africa's Talking — envoi en un seul appel (destinataires séparés par virgule)
+// ============================================================
+async function sendViaAfricasTalking(
+  cfg: AfricasTalkingConfig,
+  formattedPhones: string[],
+  message: string,
+  scheduleTime?: string
+): Promise<any> {
+  if (!cfg.apiKey) throw new Error("Configuration Africa's Talking manquante (apiKey)");
+
+  const params = new URLSearchParams({
+    username: cfg.username,
+    to:       formattedPhones.join(','),
+    message,
+  });
+  if (cfg.senderId) params.append('from', cfg.senderId);
+  if (scheduleTime) params.append('scheduledDelivery', new Date(scheduleTime).toISOString());
+
+  const response = await fetchWithRetry(AT_API_URL, {
+    method:  'POST',
+    headers: {
+      'apiKey':       cfg.apiKey,
+      'Accept':       'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+
+  const result = await response.json();
+  const recipientsResult = result?.SMSMessageData?.Recipients ?? [];
+  const failed = recipientsResult.filter((r: any) => r.status !== 'Success');
+  if (failed.length > 0) console.warn('Some recipients failed:', failed);
+
+  return result;
+}
+
+// ============================================================
+// Orange CI — OAuth2 puis un appel par destinataire (max 5/s)
+// ============================================================
+async function getOrangeAccessToken(cfg: OrangeConfig): Promise<string> {
+  const basicAuth = btoa(`${cfg.clientId}:${cfg.clientSecret}`);
+  const response = await fetchWithRetry(ORANGE_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${basicAuth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: 'grant_type=client_credentials',
+  });
+  const data = await response.json();
+  if (!data.access_token) throw new Error("Impossible d'obtenir un token d'accès Orange");
+  return data.access_token;
+}
+
+async function sendViaOrange(
+  cfg: OrangeConfig,
+  formattedPhones: string[],
+  message: string
+): Promise<any> {
+  if (!cfg.clientId || !cfg.clientSecret) throw new Error('Configuration Orange manquante (clientId/clientSecret)');
+  if (!cfg.senderNumber) throw new Error('Configuration Orange manquante (senderNumber)');
+
+  const accessToken = await getOrangeAccessToken(cfg);
+  const senderAddress = `tel:+${cfg.senderNumber.replace(/\D/g, '')}`;
+  const url = `${ORANGE_SMS_BASE}/${encodeURIComponent(senderAddress)}/requests`;
+
+  const results: any[] = [];
+
+  for (let i = 0; i < formattedPhones.length; i++) {
+    const phone = formattedPhones[i];
+    try {
+      const body: Record<string, any> = {
+        outboundSMSMessageRequest: {
+          address: `tel:${phone}`,
+          senderAddress,
+          outboundSMSTextMessage: { message },
+        },
+      };
+      if (cfg.senderName) {
+        body.outboundSMSMessageRequest.senderName = cfg.senderName;
+      }
+
+      const response = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      results.push({ phone, status: 'Success', data: await response.json() });
+    } catch (error: any) {
+      console.warn(`Orange SMS failed for ${phone}:`, error.message);
+      results.push({ phone, status: 'Failed', error: error.message });
+    }
+
+    // Respecter la limite de 5 SMS/seconde
+    if (i < formattedPhones.length - 1) {
+      await new Promise(r => setTimeout(r, 1000 / ORANGE_MAX_TPS));
+    }
+  }
+
+  return { Recipients: results };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -112,8 +255,6 @@ serve(async (req) => {
   const cfg = await loadSMSConfig();
 
   try {
-    if (!cfg.apiKey) throw new Error("Configuration Africa's Talking manquante (apiKey)");
-
     const { recipients, message, soulName, soulNickname, scheduleTime }: SendSMSRequest =
       await req.json();
 
@@ -128,28 +269,9 @@ serve(async (req) => {
 
     if (finalMessage.length > 160) throw new Error('Le message ne doit pas dépasser 160 caractères');
 
-    const params = new URLSearchParams({
-      username: cfg.username,
-      to:       formattedPhones.join(','),
-      message:  finalMessage,
-    });
-    if (cfg.senderId) params.append('from', cfg.senderId);
-    if (scheduleTime) params.append('scheduledDelivery', new Date(scheduleTime).toISOString());
-
-    const response = await fetchWithRetry(AT_API_URL, {
-      method:  'POST',
-      headers: {
-        'apiKey':       cfg.apiKey,
-        'Accept':       'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
-    });
-
-    const result     = await response.json();
-    const recipients_result = result?.SMSMessageData?.Recipients ?? [];
-    const failed     = recipients_result.filter((r: any) => r.status !== 'Success');
-    if (failed.length > 0) console.warn('Some recipients failed:', failed);
+    const result = cfg.provider === 'orange'
+      ? await sendViaOrange(cfg.orange, formattedPhones, finalMessage)
+      : await sendViaAfricasTalking(cfg.africastalking, formattedPhones, finalMessage, scheduleTime);
 
     return new Response(
       JSON.stringify({ success: true, result }),
