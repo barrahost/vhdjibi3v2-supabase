@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { HandHeart, Loader2, MessageCircle } from 'lucide-react';
+import { HandHeart, Loader2, MessageCircle, Video } from 'lucide-react';
 import { PrayerRequestService, PRAYER_CATEGORIES, PrayerCategory } from '../services/prayerRequest.service';
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
@@ -10,6 +10,7 @@ type PageState = 'ready' | 'submitting' | 'done';
 
 const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/KcVuNvQVXFo9F64tc3J5lv?s=sw&p=i&ilr=4';
 const WHATSAPP_QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(WHATSAPP_GROUP_LINK)}`;
+const ZOOM_LINK = 'https://us06web.zoom.us/j/83073021522?pwd=BpVbGvIVbBY8bLmT7awfYHR6aj4vlr.1';
 
 export default function PrayerRequestForm() {
   const { loading: churchLoading } = useChurch();
@@ -85,6 +86,16 @@ export default function PrayerRequestForm() {
               </a>
             </div>
 
+            <a
+              href={ZOOM_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full h-12 bg-blue-600 text-white font-semibold rounded-xl"
+            >
+              <Video className="w-4 h-4" />
+              Rejoindre la rencontre Zoom
+            </a>
+
             <button
               onClick={handleReset}
               className="w-full h-11 border-2 border-gray-200 text-gray-600 font-medium rounded-xl hover:border-[#00665C]/50 hover:text-[#00665C] transition-colors"
@@ -149,15 +160,37 @@ export default function PrayerRequestForm() {
             />
           </div>
 
-          <a
-            href={WHATSAPP_GROUP_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 text-sm text-emerald-700 font-medium"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Rejoindre le groupe WhatsApp de la chaîne de prière
-          </a>
+          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-gray-700">Rejoins la chaîne de prière</h2>
+            <a
+              href={WHATSAPP_GROUP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-emerald-100 bg-emerald-50 hover:border-emerald-200 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                <MessageCircle className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-emerald-800">Groupe WhatsApp</p>
+                <p className="text-xs text-emerald-600">Rejoindre les échanges de prière</p>
+              </div>
+            </a>
+            <a
+              href={ZOOM_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-blue-100 bg-blue-50 hover:border-blue-200 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <Video className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-blue-800">Rencontre Zoom</p>
+                <p className="text-xs text-blue-600">Rejoindre le temps de prière en direct</p>
+              </div>
+            </a>
+          </div>
         </div>
 
         {/* Footer fixe */}
