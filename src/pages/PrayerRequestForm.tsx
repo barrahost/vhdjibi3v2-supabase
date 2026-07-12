@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { HandHeart, Loader2, MessageCircle, Video } from 'lucide-react';
+import { HandHeart, Loader2, MessageCircle, Video, Clock } from 'lucide-react';
 import { PrayerRequestService, PRAYER_CATEGORIES, PrayerCategory } from '../services/prayerRequest.service';
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
@@ -55,6 +55,10 @@ export default function PrayerRequestForm() {
             <HandHeart className="w-10 h-10 mx-auto mb-3" />
             <h1 className="text-xl font-bold">Sujet envoyé !</h1>
             <p className="text-sm text-white/80 mt-1.5">Merci, ton sujet sera porté dans la prière.</p>
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-xs font-medium">
+              <Clock className="w-3.5 h-3.5" />
+              Tous les mardis, de 00h à 6h du matin
+            </div>
           </div>
 
           <div className="flex-1 max-w-md mx-auto w-full px-4 py-6 space-y-4">
@@ -122,6 +126,10 @@ export default function PrayerRequestForm() {
               Chaîne de Prière
             </h1>
             <p className="text-sm text-white/70 mt-2">Dépose ton sujet, la communauté prie avec toi.</p>
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-xs font-medium">
+              <Clock className="w-3.5 h-3.5 text-amber-300" />
+              Tous les mardis, de 00h à 6h du matin
+            </div>
           </div>
         </div>
 
