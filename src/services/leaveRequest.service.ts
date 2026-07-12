@@ -74,8 +74,7 @@ export const LeaveRequestService = {
     userName: string,
     userRole: string,
     churchId: string,
-    periods: LeavePeriod[],
-    phone: string
+    periods: LeavePeriod[]
   ): Promise<void> {
     const { error } = await supabase.rpc('submit_leave_requests', {
       p_user_id: userId,
@@ -83,7 +82,6 @@ export const LeaveRequestService = {
       p_user_role: userRole,
       p_church_id: churchId,
       p_periods: periods,
-      p_phone: phone,
     });
     if (error) throw new Error(error.message);
   },
