@@ -256,13 +256,13 @@ export function useNavigationItems(): NavItem[] {
     }
   }
 
-  // Congés (admin / super_admin)
+  // Absences (congés + absences courtes) (admin / super_admin)
   if (hasPermission(PERMISSIONS.MANAGE_LEAVES)) {
     items.push({
       id: 'leaves',
-      label: 'Congés',
+      label: 'Absences',
       icon: <CalendarDays className="w-5 h-5" />,
-      href: '/conges',
+      href: '/absences',
     });
   }
 

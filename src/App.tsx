@@ -126,11 +126,13 @@ function AppContent() {
             <ShepherdConfirmation />
           </Suspense>
         } />
-        <Route path="/conge" element={
+        <Route path="/absence" element={
           <Suspense fallback={<PageLoader />}>
             <LeaveRequestForm />
           </Suspense>
         } />
+        <Route path="/conge" element={<Navigate to="/absence" replace />} />
+
         <Route path="/priere" element={
           <Suspense fallback={<PageLoader />}>
             <PrayerRequestForm />
@@ -347,14 +349,15 @@ function AppContent() {
             </PrivateRoute>
           } />
 
-          {/* Congés */}
-          <Route path="conges" element={
+          {/* Absences (congés + absences courtes) */}
+          <Route path="absences" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_LEAVES]}>
               <Suspense fallback={<PageLoader />}>
                 <LeaveManagement />
               </Suspense>
             </PrivateRoute>
           } />
+          <Route path="conges" element={<Navigate to="/absences" replace />} />
 
           {/* Chaîne de prière */}
           <Route path="prieres" element={

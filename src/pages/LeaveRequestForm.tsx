@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { CheckCircle2, AlertCircle, Loader2, Plus, X, CalendarDays, Search, Pencil } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Plus, X, CalendarDays, CalendarClock, Search, Pencil } from 'lucide-react';
 import { LeaveRequestService, LeaveUser, LeavePeriod } from '../services/leaveRequest.service';
+import { AbsenceRequestService, ABSENCE_REASONS, AbsenceReason } from '../services/absenceRequest.service';
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
 
 type PageState = 'loading' | 'ready' | 'submitting' | 'done' | 'error';
+type RequestType = 'conge' | 'absence';
 
 interface PeriodInput {
   id: string;
   startDate: string;
   endDate: string;
+  reason: AbsenceReason | '';
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -48,43 +51,60 @@ function daysBetween(start: string, end: string): number {
   return Math.floor((b.getTime() - a.getTime()) / 86400000) + 1;
 }
 
-function validatePeriods(periods: PeriodInput[]): string[] {
+function validatePeriods(type: RequestType, periods: PeriodInput[]): string[] {
   const errors: string[] = [];
   const today = todayStr();
-  const sorted = [...periods]
-    .filter(p => p.startDate && p.endDate)
-    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
-  sorted.forEach((p, i) => {
-    if (p.startDate < today) {
-      errors.push(`Période ${i + 1} : la date de début doit être aujourd'hui ou dans le futur`);
-    }
-    if (p.endDate <= p.startDate) {
-      errors.push(`Période ${i + 1} : la date de fin doit être après la date de début`);
-    } else {
-      const dur = daysBetween(p.startDate, p.endDate);
-      if (dur > 14) {
-        errors.push(`Période ${i + 1} : ${dur} jours — maximum 14`);
+  if (type === 'conge') {
+    const sorted = [...periods]
+      .filter(p => p.startDate && p.endDate)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+    sorted.forEach((p, i) => {
+      if (p.startDate < today) {
+        errors.push(`Période ${i + 1} : la date de début doit être aujourd'hui ou dans le futur`);
       }
-    }
-    if (i > 0) {
-      const prev = sorted[i - 1];
-      if (prev.endDate) {
-        const gap = Math.floor(
-          (new Date(p.startDate).getTime() - new Date(prev.endDate).getTime()) / 86400000
-        );
-        if (gap < 7) {
-          errors.push(`Entre les périodes ${i} et ${i + 1} : ${gap} jour(s) — minimum 7`);
+      if (p.endDate <= p.startDate) {
+        errors.push(`Période ${i + 1} : la date de fin doit être après la date de début`);
+      } else {
+        const dur = daysBetween(p.startDate, p.endDate);
+        if (dur > 14) {
+          errors.push(`Période ${i + 1} : ${dur} jours — maximum 14`);
         }
       }
-    }
-  });
+      if (i > 0) {
+        const prev = sorted[i - 1];
+        if (prev.endDate) {
+          const gap = Math.floor(
+            (new Date(p.startDate).getTime() - new Date(prev.endDate).getTime()) / 86400000
+          );
+          if (gap < 7) {
+            errors.push(`Entre les périodes ${i} et ${i + 1} : ${gap} jour(s) — minimum 7`);
+          }
+        }
+      }
+    });
+  } else {
+    periods
+      .filter(p => p.startDate && p.endDate)
+      .forEach((p, i) => {
+        if (p.startDate < today) {
+          errors.push(`Absence ${i + 1} : la date de début doit être aujourd'hui ou dans le futur`);
+        }
+        if (p.endDate < p.startDate) {
+          errors.push(`Absence ${i + 1} : la date de fin doit être égale ou postérieure à la date de début`);
+        }
+        if (!p.reason) {
+          errors.push(`Absence ${i + 1} : choisis un motif`);
+        }
+      });
+  }
 
   return errors;
 }
 
 function newPeriod(): PeriodInput {
-  return { id: Math.random().toString(36).slice(2), startDate: '', endDate: '' };
+  return { id: Math.random().toString(36).slice(2), startDate: '', endDate: '', reason: '' };
 }
 
 const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
@@ -104,6 +124,7 @@ export default function LeaveRequestForm() {
   const [pageState, setPageState] = useState<PageState>('loading');
   const [users, setUsers] = useState<LeaveUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<LeaveUser | null>(null);
+  const [requestType, setRequestType] = useState<RequestType>('conge');
   const [periods, setPeriods] = useState<PeriodInput[]>([newPeriod()]);
   const [errors, setErrors] = useState<string[]>([]);
   const [existingPending, setExistingPending] = useState<LeavePeriod[]>([]);
@@ -138,12 +159,14 @@ export default function LeaveRequestForm() {
     ? users.filter(u => normalize(u.fullName).includes(normalize(searchTerm)))
     : users;
 
-  const loadExistingFor = async (user: LeaveUser) => {
+  const loadExistingFor = async (user: LeaveUser, type: RequestType) => {
     setPeriods([newPeriod()]);
     setErrors([]);
     setExistingPending([]);
     try {
-      const existing = await LeaveRequestService.getUserExistingRequests(user.id, getChurchId());
+      const existing = type === 'conge'
+        ? await LeaveRequestService.getUserExistingRequests(user.id, getChurchId())
+        : await AbsenceRequestService.getUserExistingRequests(user.id, getChurchId());
       setExistingPending(existing);
     } catch {
       // silent — not critical
@@ -154,7 +177,7 @@ export default function LeaveRequestForm() {
     setSelectedUser(user);
     setSearchTerm(user.fullName);
     setDropdownOpen(false);
-    loadExistingFor(user);
+    loadExistingFor(user, requestType);
   };
 
   const confirmManualName = () => {
@@ -162,7 +185,7 @@ export default function LeaveRequestForm() {
     if (!name) return;
     const user: LeaveUser = { id: `${MANUAL_PREFIX}${slugify(name)}`, fullName: name, roles: [] };
     setSelectedUser(user);
-    loadExistingFor(user);
+    loadExistingFor(user, requestType);
   };
 
   const clearSelection = () => {
@@ -173,40 +196,64 @@ export default function LeaveRequestForm() {
     setExistingPending([]);
   };
 
+  const changeRequestType = (type: RequestType) => {
+    setRequestType(type);
+    setPeriods([newPeriod()]);
+    setErrors([]);
+    if (selectedUser) loadExistingFor(selectedUser, type);
+  };
+
   const updatePeriod = (id: string, field: 'startDate' | 'endDate', value: string) => {
     const next = periods.map(p => p.id === id ? { ...p, [field]: value } : p);
     setPeriods(next);
-    setErrors(validatePeriods(next));
+    setErrors(validatePeriods(requestType, next));
+  };
+
+  const updateReason = (id: string, reason: AbsenceReason) => {
+    const next = periods.map(p => p.id === id ? { ...p, reason } : p);
+    setPeriods(next);
+    setErrors(validatePeriods(requestType, next));
   };
 
   const addPeriod = () => {
     const next = [...periods, newPeriod()];
     setPeriods(next);
-    setErrors(validatePeriods(next));
+    setErrors(validatePeriods(requestType, next));
   };
 
   const removePeriod = (id: string) => {
     const next = periods.filter(p => p.id !== id);
     if (next.length === 0) next.push(newPeriod());
     setPeriods(next);
-    setErrors(validatePeriods(next));
+    setErrors(validatePeriods(requestType, next));
   };
 
   const handleSubmit = async () => {
-    const valid = periods.filter(p => p.startDate && p.endDate);
-    const errs = validatePeriods(valid);
+    const valid = periods.filter(p => p.startDate && p.endDate && (requestType === 'conge' || p.reason));
+    const errs = validatePeriods(requestType, periods);
     if (errs.length > 0) { setErrors(errs); return; }
     if (!selectedUser || valid.length === 0) return;
 
     setPageState('submitting');
     try {
-      await LeaveRequestService.submitRequests(
-        selectedUser.id,
-        selectedUser.fullName,
-        selectedUser.id.startsWith(MANUAL_PREFIX) ? 'Non listé' : getRoleLabel(selectedUser.roles),
-        getChurchId(),
-        valid.map(p => ({ start_date: p.startDate, end_date: p.endDate }))
-      );
+      const userRole = selectedUser.id.startsWith(MANUAL_PREFIX) ? 'Non listé' : getRoleLabel(selectedUser.roles);
+      if (requestType === 'conge') {
+        await LeaveRequestService.submitRequests(
+          selectedUser.id,
+          selectedUser.fullName,
+          userRole,
+          getChurchId(),
+          valid.map(p => ({ start_date: p.startDate, end_date: p.endDate }))
+        );
+      } else {
+        await AbsenceRequestService.submitRequests(
+          selectedUser.id,
+          selectedUser.fullName,
+          userRole,
+          getChurchId(),
+          valid.map(p => ({ start_date: p.startDate, end_date: p.endDate, reason: p.reason as AbsenceReason }))
+        );
+      }
       setSubmittedCount(valid.length);
       setPageState('done');
     } catch (e: any) {
@@ -215,7 +262,7 @@ export default function LeaveRequestForm() {
     }
   };
 
-  const completePeriods = periods.filter(p => p.startDate && p.endDate);
+  const completePeriods = periods.filter(p => p.startDate && p.endDate && (requestType === 'conge' || p.reason));
   const canSubmit = selectedUser && completePeriods.length > 0 && errors.length === 0;
 
   // ── États non-ready ─────────────────────────────────────────────────────
@@ -276,13 +323,17 @@ export default function LeaveRequestForm() {
         {/* Header */}
         <div className="bg-[#00665C] text-white px-4 pt-10 pb-6">
           <div className="max-w-lg mx-auto">
-            <p className="text-xs text-white/60 mb-1 uppercase tracking-wide">Vases d'Honneur</p>
+            <p className="text-xs text-white/60 mb-1 uppercase tracking-wide">
+              Vases d'Honneur — Assemblée Grâce Confondante (AGC)
+            </p>
             <h1 className="text-xl font-bold flex items-center gap-2">
-              <CalendarDays className="w-5 h-5" />
-              Demande de congé
+              {requestType === 'conge' ? <CalendarDays className="w-5 h-5" /> : <CalendarClock className="w-5 h-5" />}
+              {requestType === 'conge' ? 'Demande de congé' : "Demande d'absence"}
             </h1>
             <p className="text-sm text-white/80 mt-1.5 leading-snug">
-              Max 14 jours d'affilée · Au moins 1 semaine entre deux périodes.
+              {requestType === 'conge'
+                ? "Max 14 jours d'affilée · Au moins 1 semaine entre deux périodes."
+                : 'Voyage, repos, maladie, professionnel... une absence ponctuelle.'}
             </p>
           </div>
         </div>
@@ -290,9 +341,44 @@ export default function LeaveRequestForm() {
         {/* Contenu */}
         <div className="flex-1 max-w-lg mx-auto w-full px-4 py-6 space-y-6 pb-32">
 
-          {/* Étape 1 — Identification */}
+          {/* Étape 1 — Type de demande */}
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-700">1. Qui êtes-vous ?</h2>
+            <h2 className="text-sm font-semibold text-gray-700">1. Quel type de demande ?</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => changeRequestType('conge')}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-colors ${
+                  requestType === 'conge'
+                    ? 'border-[#00665C] bg-[#00665C]/5 text-[#00665C]'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <CalendarDays className="w-5 h-5" />
+                <span className="text-xs font-medium">Congé</span>
+                <span className="text-[11px] text-gray-400 leading-snug text-center">
+                  Prévu à l'avance, jusqu'à 14 jours
+                </span>
+              </button>
+              <button
+                onClick={() => changeRequestType('absence')}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-colors ${
+                  requestType === 'absence'
+                    ? 'border-[#00665C] bg-[#00665C]/5 text-[#00665C]'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <CalendarClock className="w-5 h-5" />
+                <span className="text-xs font-medium">Absence</span>
+                <span className="text-[11px] text-gray-400 leading-snug text-center">
+                  Imprévu ponctuel : voyage, maladie...
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Étape 2 — Identification */}
+          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-gray-700">2. Qui êtes-vous ?</h2>
 
             {selectedUser ? (
               <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
@@ -390,23 +476,25 @@ export default function LeaveRequestForm() {
             )}
           </div>
 
-          {/* Étape 2 — Périodes (visible si user sélectionné) */}
+          {/* Étape 3 — Périodes (visible si user sélectionné) */}
           {selectedUser && (
             <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-700">2. Tes périodes de congé</h2>
+              <h2 className="text-sm font-semibold text-gray-700">
+                3. {requestType === 'conge' ? 'Tes périodes de congé' : 'Tes absences'}
+              </h2>
 
               {periods.map((p, idx) => {
                 const dur = p.startDate && p.endDate ? daysBetween(p.startDate, p.endDate) : null;
-                const durOk = dur !== null && dur >= 1 && dur <= 14;
+                const durOk = dur !== null && dur >= 1 && (requestType === 'absence' || dur <= 14);
                 return (
                   <div key={p.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-500">
-                        Période {idx + 1}
+                        {requestType === 'conge' ? 'Période' : 'Absence'} {idx + 1}
                         {durOk && (
-                          <span className="ml-2 text-[#00665C]">{dur} jour{dur > 1 ? 's' : ''}</span>
+                          <span className="ml-2 text-[#00665C]">{dur} jour{dur! > 1 ? 's' : ''}</span>
                         )}
-                        {dur !== null && dur > 14 && (
+                        {requestType === 'conge' && dur !== null && dur > 14 && (
                           <span className="ml-2 text-red-500">{dur} jours — max 14</span>
                         )}
                       </span>
@@ -441,6 +529,27 @@ export default function LeaveRequestForm() {
                         />
                       </div>
                     </div>
+                    {requestType === 'absence' && (
+                      <div>
+                        <label className="text-xs text-gray-400 mb-1 block">Motif</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ABSENCE_REASONS.map(reason => (
+                            <button
+                              key={reason}
+                              type="button"
+                              onClick={() => updateReason(p.id, reason)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-colors ${
+                                p.reason === reason
+                                  ? 'border-[#00665C] bg-[#00665C]/5 text-[#00665C]'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                              }`}
+                            >
+                              {reason}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {idx < periods.length - 1 && (
                       <div className="border-t border-gray-50 pt-1" />
                     )}
@@ -466,7 +575,7 @@ export default function LeaveRequestForm() {
                 className="w-full flex items-center justify-center gap-2 h-10 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[#00665C]/50 hover:text-[#00665C] transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Ajouter une période
+                {requestType === 'conge' ? 'Ajouter une période' : 'Ajouter une absence'}
               </button>
             </div>
           )}
@@ -478,7 +587,7 @@ export default function LeaveRequestForm() {
             <div className="max-w-lg mx-auto space-y-1.5">
               {completePeriods.length > 0 && errors.length === 0 && (
                 <p className="text-xs text-center text-gray-400">
-                  {completePeriods.length} période{completePeriods.length > 1 ? 's' : ''} prête{completePeriods.length > 1 ? 's' : ''}
+                  {completePeriods.length} {requestType === 'conge' ? 'période' : 'absence'}{completePeriods.length > 1 ? 's' : ''} prête{completePeriods.length > 1 ? 's' : ''}
                 </p>
               )}
               <button

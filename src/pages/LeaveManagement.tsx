@@ -1,48 +1,83 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CalendarDays, List, Copy, Check, Loader2, RefreshCw } from 'lucide-react';
+import { CalendarDays, CalendarClock, List, Copy, Check, Loader2, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LeaveRequestService, LeaveRequest } from '../services/leaveRequest.service';
+import { AbsenceRequestService, AbsenceRequest } from '../services/absenceRequest.service';
 import { LeaveCalendar } from '../components/leaves/LeaveCalendar';
 import { LeaveRequestList } from '../components/leaves/LeaveRequestList';
+import { AbsenceCalendar } from '../components/leaves/AbsenceCalendar';
+import { AbsenceRequestList } from '../components/leaves/AbsenceRequestList';
 
+type RequestType = 'conge' | 'absence';
 type Tab = 'calendar' | 'list';
 
 export default function LeaveManagement() {
+  const [requestType, setRequestType] = useState<RequestType>('conge');
   const [tab, setTab] = useState<Tab>('list');
-  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [absenceRequests, setAbsenceRequests] = useState<AbsenceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const publicLink = `${window.location.origin}/conge`;
+  const publicLink = `${window.location.origin}/absence`;
 
   const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const data = await LeaveRequestService.getAllRequests();
-      setRequests(data);
-    } catch {
-      toast.error('Impossible de charger les demandes');
-    } finally {
-      setLoading(false);
+    const [leaves, absences] = await Promise.allSettled([
+      LeaveRequestService.getAllRequests(),
+      AbsenceRequestService.getAllRequests(),
+    ]);
+    if (leaves.status === 'fulfilled') {
+      setLeaveRequests(leaves.value);
+    } else {
+      toast.error('Impossible de charger les congés');
     }
+    if (absences.status === 'fulfilled') {
+      setAbsenceRequests(absences.value);
+    } else {
+      toast.error('Impossible de charger les absences');
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const handleApprove = async (id: string) => {
+  const handleApproveLeave = async (id: string) => {
     try {
       await LeaveRequestService.approveRequest(id);
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved', reviewedAt: new Date() } : r));
+      setLeaveRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved', reviewedAt: new Date() } : r));
       toast.success('Demande approuvée');
     } catch {
       toast.error('Erreur lors de l\'approbation');
     }
   };
 
-  const handleReject = async (id: string, reason?: string) => {
+  const handleRejectLeave = async (id: string, reason?: string) => {
     try {
       await LeaveRequestService.rejectRequest(id, reason);
-      setRequests(prev => prev.map(r =>
+      setLeaveRequests(prev => prev.map(r =>
+        r.id === id ? { ...r, status: 'rejected', rejectionReason: reason, reviewedAt: new Date() } : r
+      ));
+      toast.success('Demande refusée');
+    } catch {
+      toast.error('Erreur lors du refus');
+    }
+  };
+
+  const handleApproveAbsence = async (id: string) => {
+    try {
+      await AbsenceRequestService.approveRequest(id);
+      setAbsenceRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved', reviewedAt: new Date() } : r));
+      toast.success('Demande approuvée');
+    } catch {
+      toast.error('Erreur lors de l\'approbation');
+    }
+  };
+
+  const handleRejectAbsence = async (id: string, reason?: string) => {
+    try {
+      await AbsenceRequestService.rejectRequest(id, reason);
+      setAbsenceRequests(prev => prev.map(r =>
         r.id === id ? { ...r, status: 'rejected', rejectionReason: reason, reviewedAt: new Date() } : r
       ));
       toast.success('Demande refusée');
@@ -58,6 +93,7 @@ export default function LeaveManagement() {
     toast.success('Lien copié — partage-le via WhatsApp !');
   };
 
+  const requests = requestType === 'conge' ? leaveRequests : absenceRequests;
   const pendingCount = requests.filter(r => r.status === 'pending').length;
 
   return (
@@ -68,7 +104,7 @@ export default function LeaveManagement() {
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-[#00665C]" />
-            Congés
+            Absences
           </h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {requests.length} demande{requests.length !== 1 ? 's' : ''}
@@ -106,7 +142,29 @@ export default function LeaveManagement() {
         </div>
       </div>
 
-      {/* Onglets */}
+      {/* Type de demande */}
+      <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+        <button
+          onClick={() => setRequestType('conge')}
+          className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium transition-all ${
+            requestType === 'conge' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          Congés ({leaveRequests.length})
+        </button>
+        <button
+          onClick={() => setRequestType('absence')}
+          className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium transition-all ${
+            requestType === 'absence' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CalendarClock className="w-4 h-4" />
+          Absences courtes ({absenceRequests.length})
+        </button>
+      </div>
+
+      {/* Onglets Liste / Calendrier */}
       <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
         <button
           onClick={() => setTab('list')}
@@ -133,20 +191,37 @@ export default function LeaveManagement() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 text-[#00665C] animate-spin" />
         </div>
-      ) : (
+      ) : requestType === 'conge' ? (
         <>
           {tab === 'list' && (
             <LeaveRequestList
-              requests={requests}
-              onApprove={handleApprove}
-              onReject={handleReject}
+              requests={leaveRequests}
+              onApprove={handleApproveLeave}
+              onReject={handleRejectLeave}
             />
           )}
           {tab === 'calendar' && (
             <LeaveCalendar
-              requests={requests}
-              onApprove={handleApprove}
-              onReject={handleReject}
+              requests={leaveRequests}
+              onApprove={handleApproveLeave}
+              onReject={handleRejectLeave}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          {tab === 'list' && (
+            <AbsenceRequestList
+              requests={absenceRequests}
+              onApprove={handleApproveAbsence}
+              onReject={handleRejectAbsence}
+            />
+          )}
+          {tab === 'calendar' && (
+            <AbsenceCalendar
+              requests={absenceRequests}
+              onApprove={handleApproveAbsence}
+              onReject={handleRejectAbsence}
             />
           )}
         </>
