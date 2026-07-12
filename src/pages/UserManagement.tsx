@@ -5,13 +5,18 @@ import UserForm from '../components/users/UserForm';
 import BulkRoleAssignmentModal from '../components/users/BulkRoleAssignmentModal';
 import PromoteShepherdModal from '../components/users/PromoteShepherdModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Plus, Users, UserX } from 'lucide-react';
+import { Plus, Users, UserX, FileSpreadsheet } from 'lucide-react';
 import ImportUsersFromExcel from '../components/users/ImportUsersFromExcel';
 import DownloadUserTemplateButton from '../components/users/DownloadUserTemplateButton';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { exportShepherdsWithSouls } from '../utils/export/shepherdsWithSouls';
+import { usePermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/roles';
 
 export default function UserManagement() {
+  const { hasPermission } = usePermissions();
+  const [exportingShepherds, setExportingShepherds] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -54,6 +59,19 @@ export default function UserManagement() {
     }
   };
 
+  const handleExportShepherdsWithSouls = async () => {
+    setExportingShepherds(true);
+    try {
+      await exportShepherdsWithSouls();
+      toast.success('Export généré');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExportingShepherds(false);
+    }
+  };
+
   const handlePromoteShepherd = (userId: string, userName: string) => {
     setPromotingUser({ userId, userName });
     setShowPromoteModal(true);
@@ -90,6 +108,16 @@ export default function UserManagement() {
                 Assigner un rôle ({selectedUserIds.length})
               </button>
             </>
+          )}
+          {hasPermission(PERMISSIONS.EXPORT_DATA) && (
+            <button
+              onClick={handleExportShepherdsWithSouls}
+              disabled={exportingShepherds}
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10 disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-2" />
+              {exportingShepherds ? 'Export...' : 'Exporter bergers & âmes'}
+            </button>
           )}
           <DownloadUserTemplateButton />
           <ImportUsersFromExcel />

@@ -4,24 +4,26 @@ import { getChurchId } from '../../lib/churchId';
 
 export async function getShepherdNames(souls: Soul[]): Promise<Record<string, string>> {
   const shepherdNames: Record<string, string> = {};
-  const shepherdIds = new Set(souls.map(soul => soul.shepherdId).filter(Boolean));
-  
-  for (const shepherdId of shepherdIds) {
-    if (!shepherdId) continue;
+  const shepherdIds = Array.from(new Set(souls.map(soul => soul.shepherdId).filter(Boolean))) as string[];
 
-    try {
-      // Chercher dans la collection users
-      const userDoc = await supabase.from('users').select('*').eq('church_id', getChurchId()).eq('id', shepherdId).single();
-      if (userDoc.exists()) {
-        shepherdNames[shepherdId] = userDoc.data().fullName;
-      } else {
-        shepherdNames[shepherdId] = 'Berger non trouvé';
-      }
-    } catch (error) {
-      console.error(`Error loading shepherd name for ID ${shepherdId}:`, error);
-      shepherdNames[shepherdId] = 'Erreur de chargement';
-    }
+  if (shepherdIds.length === 0) return shepherdNames;
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, full_name')
+    .eq('church_id', getChurchId())
+    .in('id', shepherdIds);
+
+  if (error) {
+    console.error('Error loading shepherd names:', error);
+    shepherdIds.forEach(id => { shepherdNames[id] = 'Erreur de chargement'; });
+    return shepherdNames;
   }
-  
+
+  const rows = (data ?? []) as { id: string; full_name: string | null }[];
+  const foundIds = new Set(rows.map(r => r.id));
+  rows.forEach(r => { shepherdNames[r.id] = r.full_name || 'Berger non trouvé'; });
+  shepherdIds.filter(id => !foundIds.has(id)).forEach(id => { shepherdNames[id] = 'Berger non trouvé'; });
+
   return shepherdNames;
 }
