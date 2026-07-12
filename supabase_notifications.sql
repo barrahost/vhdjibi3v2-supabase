@@ -41,11 +41,12 @@ CREATE INDEX IF NOT EXISTS notification_reads_user_idx ON notification_reads (us
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_reads ENABLE ROW LEVEL SECURITY;
 
--- Même pattern souple que leave_requests / shepherd_confirmation_tokens :
--- pas de sessions Supabase Auth dans cette app, l'accès est déjà filtré côté client par church_id.
-CREATE POLICY "Auth select"        ON notifications FOR SELECT USING (church_id = current_setting('app.church_id', true));
-CREATE POLICY "Auth insert"        ON notifications FOR INSERT WITH CHECK (church_id = current_setting('app.church_id', true));
-CREATE POLICY "Auth delete"        ON notifications FOR DELETE USING (church_id = current_setting('app.church_id', true));
+-- Cette app n'utilise pas de session Supabase Auth : la sécurité réelle est
+-- appliquée côté app (permissions React), pas côté RLS — même pattern que
+-- toutes les autres tables (souls, users, birthdays, interactions...).
+CREATE POLICY "allow_select_notifications" ON notifications FOR SELECT USING (true);
+CREATE POLICY "allow_insert_notifications" ON notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "allow_delete_notifications" ON notifications FOR DELETE USING (true);
 
 CREATE POLICY "Auth select reads" ON notification_reads FOR SELECT USING (true);
 CREATE POLICY "Auth insert reads" ON notification_reads FOR INSERT WITH CHECK (true);

@@ -18,12 +18,11 @@ CREATE TABLE IF NOT EXISTS prayer_requests (
 
 ALTER TABLE prayer_requests ENABLE ROW LEVEL SECURITY;
 
--- Auth (admin) : lecture et suppression scopées à l'église
-CREATE POLICY "Auth select" ON prayer_requests FOR SELECT
-  USING (church_id = current_setting('app.church_id', true));
-
-CREATE POLICY "Auth delete" ON prayer_requests FOR DELETE
-  USING (church_id = current_setting('app.church_id', true));
+-- Cette app n'utilise pas de session Supabase Auth : la sécurité réelle est
+-- appliquée côté app (permissions React), pas côté RLS — même pattern que
+-- toutes les autres tables (souls, users, birthdays, interactions...).
+CREATE POLICY "allow_select_prayer_requests" ON prayer_requests FOR SELECT USING (true);
+CREATE POLICY "allow_delete_prayer_requests" ON prayer_requests FOR DELETE USING (true);
 
 -- ============================================================
 -- RPC : soumission publique et anonyme (bypass RLS)

@@ -21,18 +21,13 @@ CREATE TABLE IF NOT EXISTS leave_requests (
 
 ALTER TABLE leave_requests ENABLE ROW LEVEL SECURITY;
 
--- Auth users (admins) can manage all requests for their church
-CREATE POLICY "Auth select" ON leave_requests FOR SELECT
-  USING (church_id = current_setting('app.church_id', true));
-
-CREATE POLICY "Auth insert" ON leave_requests FOR INSERT
-  WITH CHECK (church_id = current_setting('app.church_id', true));
-
-CREATE POLICY "Auth update" ON leave_requests FOR UPDATE
-  USING (church_id = current_setting('app.church_id', true));
-
-CREATE POLICY "Auth delete" ON leave_requests FOR DELETE
-  USING (church_id = current_setting('app.church_id', true));
+-- Cette app n'utilise pas de session Supabase Auth : la sécurité réelle est
+-- appliquée côté app (permissions React), pas côté RLS — même pattern que
+-- toutes les autres tables (souls, users, birthdays, interactions...).
+CREATE POLICY "allow_select_leave_requests" ON leave_requests FOR SELECT USING (true);
+CREATE POLICY "allow_insert_leave_requests" ON leave_requests FOR INSERT WITH CHECK (true);
+CREATE POLICY "allow_update_leave_requests" ON leave_requests FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "allow_delete_leave_requests" ON leave_requests FOR DELETE USING (true);
 
 -- ============================================================
 -- RPC : liste des utilisateurs actifs pour le formulaire public
