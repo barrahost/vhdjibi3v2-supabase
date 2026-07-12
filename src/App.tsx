@@ -53,6 +53,8 @@ const ChurchesManagement = lazy(() => import('./pages/ChurchesManagement'));
 const ShepherdConfirmation = lazy(() => import('./pages/ShepherdConfirmation'));
 const LeaveRequestForm = lazy(() => import('./pages/LeaveRequestForm'));
 const LeaveManagement = lazy(() => import('./pages/LeaveManagement'));
+const PrayerRequestForm = lazy(() => import('./pages/PrayerRequestForm'));
+const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
 
 // Loading component
 function PageLoader() {
@@ -127,6 +129,11 @@ function AppContent() {
         <Route path="/conge" element={
           <Suspense fallback={<PageLoader />}>
             <LeaveRequestForm />
+          </Suspense>
+        } />
+        <Route path="/priere" element={
+          <Suspense fallback={<PageLoader />}>
+            <PrayerRequestForm />
           </Suspense>
         } />
         <Route path="/" element={
@@ -345,6 +352,15 @@ function AppContent() {
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_LEAVES]}>
               <Suspense fallback={<PageLoader />}>
                 <LeaveManagement />
+              </Suspense>
+            </PrivateRoute>
+          } />
+
+          {/* Chaîne de prière */}
+          <Route path="prieres" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_PRAYER_REQUESTS]}>
+              <Suspense fallback={<PageLoader />}>
+                <PrayerRequestsManagement />
               </Suspense>
             </PrivateRoute>
           } />

@@ -23,6 +23,8 @@ export type Permission =
   | 'VIEW_REPLAY_TEACHINGS'
   | 'MANAGE_BIRTHDAYS'
   | 'MANAGE_EVANGELIZED_SOULS'
+  | 'MANAGE_LEAVES'
+  | 'MANAGE_PRAYER_REQUESTS'
   | '*';
 
 export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader' | 'family_leader' | 'evangelist';

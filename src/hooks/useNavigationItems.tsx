@@ -25,6 +25,7 @@ import {
   Megaphone,
   Building2,
   CalendarDays,
+  HandHeart,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChurch } from '../contexts/ChurchContext';
@@ -262,6 +263,16 @@ export function useNavigationItems(): NavItem[] {
       label: 'Congés',
       icon: <CalendarDays className="w-5 h-5" />,
       href: '/conges',
+    });
+  }
+
+  // Chaîne de prière (admin / super_admin)
+  if (hasPermission(PERMISSIONS.MANAGE_PRAYER_REQUESTS)) {
+    items.push({
+      id: 'prayer-requests',
+      label: 'Chaîne de prière',
+      icon: <HandHeart className="w-5 h-5" />,
+      href: '/prieres',
     });
   }
 
