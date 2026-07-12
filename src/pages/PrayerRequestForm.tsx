@@ -123,7 +123,7 @@ export default function PrayerRequestForm() {
               href={ZOOM_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full min-h-[48px] bg-blue-600 text-white font-semibold rounded-xl transition-transform active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 prf-animate"
+              className="flex items-center justify-center gap-2 w-full min-h-[48px] bg-amber-500 text-white font-semibold rounded-xl transition-transform active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 prf-animate"
               style={{ animationDelay: '140ms' }}
             >
               <Video className="w-4 h-4" aria-hidden="true" />
@@ -154,9 +154,11 @@ export default function PrayerRequestForm() {
       <div className="min-h-screen bg-gray-50 flex flex-col">
 
         {/* Bandeau */}
-        <div className="bg-gradient-to-br from-[#0B1D3A] to-[#132A52] text-white px-4 pt-10 pb-8">
+        <div className="bg-[#00665C] text-white px-4 pt-10 pb-8">
           <div className="max-w-md mx-auto text-center">
-            <p className="text-xs text-amber-300 mb-1 uppercase tracking-widest font-semibold">Vases d'Honneur</p>
+            <p className="text-xs text-amber-300 mb-1 uppercase tracking-widest font-semibold">
+              Vases d'Honneur — Assemblée Grâce Confondante (AGC)
+            </p>
             <h1 className="text-2xl font-extrabold flex items-center justify-center gap-2">
               <HandHeart className="w-6 h-6 text-amber-300" aria-hidden="true" />
               Chaîne de Prière
@@ -239,14 +241,14 @@ export default function PrayerRequestForm() {
               href={ZOOM_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-4 py-3 min-h-[64px] rounded-xl border-2 border-blue-100 bg-blue-50 hover:border-blue-200 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+              className="flex items-center gap-3 px-4 py-3 min-h-[64px] rounded-xl border-2 border-amber-100 bg-amber-50 hover:border-amber-200 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
             >
-              <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
                 <Video className="w-4 h-4 text-white" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-blue-800">Rencontre Zoom</p>
-                <p className="text-xs text-blue-600">Rejoindre le temps de prière en direct</p>
+                <p className="text-sm font-semibold text-amber-800">Rencontre Zoom</p>
+                <p className="text-xs text-amber-700">Rejoindre le temps de prière en direct</p>
               </div>
             </a>
           </div>
