@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Trash2, HandHeart, X } from 'lucide-react';
+import { Search, Trash2, HandHeart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
@@ -8,6 +8,7 @@ import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
+import { DateRangePicker, DateRange } from '../components/ui/DateRangePicker';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -33,8 +34,7 @@ export default function PrayerRequestsManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: '', endDate: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
   const load = useCallback(async () => {
@@ -75,11 +75,8 @@ export default function PrayerRequestsManagement() {
   const filtered = requests
     .filter(r => categoryFilter === 'all' || r.category === categoryFilter)
     .filter(r => r.subject.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(r => !dateFrom || toDateStr(r.submittedAt) >= dateFrom)
-    .filter(r => !dateTo || toDateStr(r.submittedAt) <= dateTo);
-
-  const hasDateFilter = dateFrom !== '' || dateTo !== '';
-  const clearDateFilter = () => { setDateFrom(''); setDateTo(''); };
+    .filter(r => !dateRange.startDate || toDateStr(r.submittedAt) >= dateRange.startDate)
+    .filter(r => !dateRange.endDate || toDateStr(r.submittedAt) <= dateRange.endDate);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -185,34 +182,8 @@ export default function PrayerRequestsManagement() {
       </div>
 
       {/* Filtre par date */}
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs text-gray-500">
-          Du
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            className="ml-1.5 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          />
-        </label>
-        <label className="text-xs text-gray-500">
-          au
-          <input
-            type="date"
-            value={dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            className="ml-1.5 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          />
-        </label>
-        {hasDateFilter && (
-          <button
-            onClick={clearDateFilter}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500"
-          >
-            <X className="w-3.5 h-3.5" />
-            Réinitialiser
-          </button>
-        )}
+      <div className="bg-white rounded-lg shadow-sm border p-4">
+        <DateRangePicker value={dateRange} onChange={setDateRange} label="Date de soumission" />
       </div>
 
       {/* Recherche */}
