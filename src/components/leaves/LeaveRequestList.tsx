@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Check, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, XCircle, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { LeaveRequest } from '../../services/leaveRequest.service';
 
 interface Props {
   requests: LeaveRequest[];
   onApprove: (id: string) => void;
   onReject: (id: string, reason?: string) => void;
+  onDelete: (id: string) => void;
 }
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected';
@@ -31,10 +32,11 @@ function daysBetween(start: string, end: string): number {
   return Math.floor((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1;
 }
 
-export function LeaveRequestList({ requests, onApprove, onReject }: Props) {
+export function LeaveRequestList({ requests, onApprove, onReject, onDelete }: Props) {
   const [filter, setFilter] = useState<Filter>('all');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
 
@@ -101,35 +103,44 @@ export function LeaveRequestList({ requests, onApprove, onReject }: Props) {
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${STATUS_CHIPS[r.status]}`}>
                     {STATUS_LABELS[r.status]}
                   </span>
-                  {r.status === 'pending' && (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => onApprove(r.id)}
-                        title="Approuver"
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (rejectingId === r.id) {
-                            setRejectingId(null);
-                            setRejectReason('');
-                          } else {
-                            setRejectingId(r.id);
-                            setRejectReason('');
+                  <div className="flex items-center gap-1.5">
+                    {r.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => onApprove(r.id)}
+                          title="Approuver"
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (rejectingId === r.id) {
+                              setRejectingId(null);
+                              setRejectReason('');
+                            } else {
+                              setRejectingId(r.id);
+                              setRejectReason('');
+                            }
+                          }}
+                          title="Refuser"
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                        >
+                          {rejectingId === r.id
+                            ? <ChevronUp className="w-4 h-4" />
+                            : <XCircle className="w-4 h-4" />
                           }
-                        }}
-                        title="Refuser"
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                      >
-                        {rejectingId === r.id
-                          ? <ChevronUp className="w-4 h-4" />
-                          : <XCircle className="w-4 h-4" />
-                        }
-                      </button>
-                    </div>
-                  )}
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setDeletingId(deletingId === r.id ? null : r.id)}
+                      title="Supprimer"
+                      className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -153,6 +164,27 @@ export function LeaveRequestList({ requests, onApprove, onReject }: Props) {
                     <button
                       onClick={() => { setRejectingId(null); setRejectReason(''); }}
                       className="px-4 h-9 border border-gray-200 text-gray-500 text-sm rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Zone de suppression inline */}
+              {deletingId === r.id && (
+                <div className="mt-3 flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-xl">
+                  <p className="text-xs text-gray-500">Supprimer définitivement cette demande ?</p>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => { onDelete(r.id); setDeletingId(null); }}
+                      className="px-3 h-8 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Supprimer
+                    </button>
+                    <button
+                      onClick={() => setDeletingId(null)}
+                      className="px-3 h-8 border border-gray-200 text-gray-500 text-xs rounded-lg hover:bg-white transition-colors"
                     >
                       Annuler
                     </button>

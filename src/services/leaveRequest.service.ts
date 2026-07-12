@@ -119,4 +119,13 @@ export const LeaveRequestService = {
       .eq('church_id', getChurchId());
     if (error) throw error;
   },
+
+  async deleteRequest(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('leave_requests')
+      .delete()
+      .eq('id', id)
+      .eq('church_id', getChurchId());
+    if (error) throw error;
+  },
 };

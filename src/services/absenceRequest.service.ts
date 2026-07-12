@@ -127,4 +127,13 @@ export const AbsenceRequestService = {
       .eq('church_id', getChurchId());
     if (error) throw error;
   },
+
+  async deleteRequest(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('absence_requests')
+      .delete()
+      .eq('id', id)
+      .eq('church_id', getChurchId());
+    if (error) throw error;
+  },
 };

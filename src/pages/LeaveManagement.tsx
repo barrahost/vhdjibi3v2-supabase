@@ -86,6 +86,26 @@ export default function LeaveManagement() {
     }
   };
 
+  const handleDeleteLeave = async (id: string) => {
+    try {
+      await LeaveRequestService.deleteRequest(id);
+      setLeaveRequests(prev => prev.filter(r => r.id !== id));
+      toast.success('Demande supprimée');
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleDeleteAbsence = async (id: string) => {
+    try {
+      await AbsenceRequestService.deleteRequest(id);
+      setAbsenceRequests(prev => prev.filter(r => r.id !== id));
+      toast.success('Demande supprimée');
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   const copyLink = async () => {
     await navigator.clipboard.writeText(publicLink);
     setCopied(true);
@@ -198,6 +218,7 @@ export default function LeaveManagement() {
               requests={leaveRequests}
               onApprove={handleApproveLeave}
               onReject={handleRejectLeave}
+              onDelete={handleDeleteLeave}
             />
           )}
           {tab === 'calendar' && (
@@ -215,6 +236,7 @@ export default function LeaveManagement() {
               requests={absenceRequests}
               onApprove={handleApproveAbsence}
               onReject={handleRejectAbsence}
+              onDelete={handleDeleteAbsence}
             />
           )}
           {tab === 'calendar' && (
