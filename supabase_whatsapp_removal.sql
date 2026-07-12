@@ -131,6 +131,8 @@ BEGIN
 END;
 $$;
 
--- 6. Nettoie les réglages de dispatch (si tu les avais configurés)
-ALTER DATABASE postgres RESET app.whatsapp_webhook_url;
-ALTER DATABASE postgres RESET app.whatsapp_webhook_secret;
+-- Note : les réglages ALTER DATABASE (webhook url/secret) n'ont probablement
+-- jamais été configurés (l'intégration n'a jamais été activée) et le rôle
+-- utilisé par l'éditeur SQL Supabase n'a pas le droit de les modifier de
+-- toute façon (ALTER DATABASE nécessite un rôle superuser). Rien à nettoyer
+-- ici — dispatch_whatsapp_event() est de toute façon supprimée à l'étape 2.
