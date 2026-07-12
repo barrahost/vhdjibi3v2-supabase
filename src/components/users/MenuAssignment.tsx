@@ -87,6 +87,12 @@ export function MenuAssignment({ selectedMenus, onChange }: MenuAssignmentProps)
       label: 'Anniversaires',
       permission: PERMISSIONS.MANAGE_BIRTHDAYS,
       description: 'Permet de consulter et gérer les anniversaires (ajout, suppression)'
+    },
+    {
+      id: 'MANAGE_PRAYER_REQUESTS',
+      label: 'Chaîne de prière',
+      permission: PERMISSIONS.MANAGE_PRAYER_REQUESTS,
+      description: 'Permet de consulter et gérer les sujets soumis sur la chaîne de prière'
     }
   ];
 
