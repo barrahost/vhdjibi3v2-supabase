@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Trash2, HandHeart } from 'lucide-react';
+import { Search, Trash2, HandHeart, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
@@ -9,6 +9,9 @@ import { CustomPagination } from '../components/ui/CustomPagination';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
 import { DateRangePicker, DateRange } from '../components/ui/DateRangePicker';
+import { exportPrayerRequests } from '../utils/export/prayerRequests';
+import { usePermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/roles';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -29,6 +32,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function PrayerRequestsManagement() {
+  const { hasPermission } = usePermissions();
   const { confirm, confirmModalProps } = useConfirmModal();
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +84,15 @@ export default function PrayerRequestsManagement() {
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      toast.error('Aucun sujet à exporter');
+      return;
+    }
+    exportPrayerRequests(filtered);
+    toast.success('Export généré');
+  };
 
   const columns = [
     {
@@ -154,8 +167,19 @@ export default function PrayerRequestsManagement() {
       <ConfirmModal {...confirmModalProps} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Chaîne de prière</h1>
-        <p className="text-sm text-gray-400">{requests.length} sujet{requests.length !== 1 ? 's' : ''}</p>
+        <div>
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Chaîne de prière</h1>
+          <p className="text-sm text-gray-400">{requests.length} sujet{requests.length !== 1 ? 's' : ''}</p>
+        </div>
+        {hasPermission(PERMISSIONS.EXPORT_DATA) && (
+          <button
+            onClick={handleExport}
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10 self-start"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+            Exporter ({filtered.length})
+          </button>
+        )}
       </div>
 
       {/* Filtres catégorie */}
