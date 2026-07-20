@@ -3,11 +3,12 @@ import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import {
   HandHeart, Loader2, MessageCircle, Video, Clock,
-  Sparkles, Home, Briefcase, Coins, HeartPulse, MoreHorizontal, Check,
+  Sparkles, Home, Briefcase, Coins, HeartPulse, MoreHorizontal, Check, UserCircle2,
 } from 'lucide-react';
 import { PrayerRequestService, PRAYER_CATEGORIES, PrayerCategory } from '../services/prayerRequest.service';
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
+import { validatePhoneNumber } from '../utils/phoneValidation';
 
 type PageState = 'ready' | 'submitting' | 'done';
 
@@ -30,14 +31,24 @@ export default function PrayerRequestForm() {
   const [pageState, setPageState] = useState<PageState>('ready');
   const [category, setCategory] = useState<PrayerCategory | ''>('');
   const [subject, setSubject] = useState('');
+  const [wantsContact, setWantsContact] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
 
-  const canSubmit = category !== '' && subject.trim().length > 0;
+  const phoneCheck = wantsContact ? validatePhoneNumber(phone) : null;
+  const canSubmit = category !== '' && subject.trim().length > 0
+    && (!wantsContact || (fullName.trim().length > 0 && !!phoneCheck?.isValid));
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setPageState('submitting');
     try {
-      await PrayerRequestService.submitPrayerRequest(getChurchId(), category as PrayerCategory, subject.trim());
+      await PrayerRequestService.submitPrayerRequest(
+        getChurchId(),
+        category as PrayerCategory,
+        subject.trim(),
+        wantsContact ? { fullName: fullName.trim(), phone: phoneCheck!.formattedNumber! } : undefined
+      );
       setPageState('done');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de l\'envoi. Réessaie.');
@@ -48,6 +59,9 @@ export default function PrayerRequestForm() {
   const handleReset = () => {
     setCategory('');
     setSubject('');
+    setWantsContact(false);
+    setFullName('');
+    setPhone('');
     setPageState('ready');
   };
 
@@ -219,6 +233,49 @@ export default function PrayerRequestForm() {
               placeholder="Écris ton sujet de prière ici..."
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C] resize-none"
             />
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3 prf-animate" style={{ animationDelay: '90ms' }}>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={wantsContact}
+                onChange={e => setWantsContact(e.target.checked)}
+                className="mt-0.5 w-5 h-5 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]/40"
+              />
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                  <UserCircle2 className="w-4 h-4 text-[#00665C]" aria-hidden="true" />
+                  Je souhaite être identifié(e)
+                </span>
+                <span className="block text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  Par défaut ta demande reste anonyme. Coche cette case si tu veux être recontacté(e) —
+                  pour un suivi, échanger avec le pasteur, avoir plus d'informations ou connaître la suite.
+                </span>
+              </span>
+            </label>
+
+            {wantsContact && (
+              <div className="space-y-2.5 pt-1">
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="Ton nom et prénoms"
+                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="Ton numéro de téléphone"
+                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+                {phone.trim().length > 0 && phoneCheck && !phoneCheck.isValid && (
+                  <p className="text-xs text-red-500">{phoneCheck.error}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3 prf-animate" style={{ animationDelay: '120ms' }}>
