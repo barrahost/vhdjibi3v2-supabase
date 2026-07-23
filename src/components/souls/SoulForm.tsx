@@ -13,11 +13,13 @@ import ShepherdSelect from './ShepherdSelect';
 import {
   CheckCircle2, Plus, List, AlertTriangle,
   Heart, UserCheck, HelpCircle, Check, ChevronRight, ChevronLeft,
-  Camera, User,
+  Camera, User, Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface LastAddedSoul {
@@ -35,7 +37,7 @@ const MARITAL_STATUSES = [
   { value: 'marie', label: 'Marié(e)' },
   { value: 'concubinage', label: 'Union libre' },
   { value: 'fiance', label: 'Fiancé(e)' },
-  { value: 'seul', label: 'Seul(e)' },
+  { value: 'seul', label: 'Célibataire' },
 ];
 const DECISIONS = [
   { value: 'give_life', icon: Heart, label: 'Donner ma vie à Jésus-Christ' },
@@ -114,6 +116,7 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate();
   const { activeRole, userRole } = useAuth();
   const { families, loading: loadingFamilies } = useServiceFamilies(true);
+  const { confirm, confirmModalProps } = useConfirmModal();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -122,6 +125,7 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [lastAddedSoul, setLastAddedSoul] = useState<LastAddedSoul | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -184,18 +188,43 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
     setSelectedTemplate('');
     setStep(1);
     setStepError(null);
+    setIsSubmitting(false);
   };
 
   // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setStepError(null);
 
     if (!selectedTemplate) { setStepError('Veuillez sélectionner un modèle de message de bienvenue.'); return; }
     if (!formData.general.fullName.trim()) { setStepError('Le nom est obligatoire.'); return; }
     if (!formData.general.gender) { setStepError('Le genre est obligatoire.'); return; }
     if (!formData.general.location.trim()) { setStepError("Le lieu d'habitation est obligatoire."); return; }
+    if (canEditAdnFields && !formData.general.serviceFamilyId) { setStepError('La famille de service est obligatoire.'); return; }
 
+    // Deuxième couche de protection contre les doublons : vérifie si une âme
+    // active avec le même numéro existe déjà avant d'insérer (en plus du
+    // garde-fou anti double-clic sur le bouton).
+    if (formData.general.phone) {
+      const { data: existingSouls } = await supabase
+        .from('souls')
+        .select('full_name')
+        .eq('church_id', getChurchId())
+        .eq('phone', formData.general.phone)
+        .eq('status', 'active');
+
+      if (existingSouls && existingSouls.length > 0) {
+        const names = existingSouls.map((s: any) => s.full_name).join(', ');
+        const proceed = await confirm(
+          `Une âme avec ce numéro de téléphone existe déjà : ${names}. Veux-tu quand même enregistrer cette nouvelle fiche ?`,
+          { title: 'Doublon possible', confirmLabel: 'Enregistrer quand même', variant: 'warning' }
+        );
+        if (!proceed) return;
+      }
+    }
+
+    setIsSubmitting(true);
     try {
       const effectiveOriginSource = formData.general.originSource || 'culte';
       const soulId = `soul_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -273,6 +302,7 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
       toast.success('Âme ajoutée avec succès');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erreur lors de l'ajout de l'âme");
+      setIsSubmitting(false);
     }
   };
 
@@ -342,6 +372,8 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
 
   // ─── Wizard ───────────────────────────────────────────────────────────────
   return (
+    <>
+    <ConfirmModal {...confirmModalProps} />
     <form
       onSubmit={step === 3 ? handleSubmit : e => e.preventDefault()}
       className="flex flex-col flex-1 min-h-0"
@@ -586,7 +618,9 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
             {/* Famille de service */}
             {canEditAdnFields && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Famille de service</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Famille de service <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={formData.general.serviceFamilyId || ''}
                   onChange={e => updateGeneral({ serviceFamilyId: e.target.value || undefined })}
@@ -707,13 +741,15 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
         ) : (
           <button
             type="submit"
-            className="flex-1 flex items-center justify-center gap-1.5 h-10 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 rounded-xl transition-colors"
+            disabled={isSubmitting}
+            className="flex-1 flex items-center justify-center gap-1.5 h-10 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 disabled:opacity-60 disabled:cursor-not-allowed rounded-xl transition-colors"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            Enregistrer
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         )}
       </div>
     </form>
+    </>
   );
 }

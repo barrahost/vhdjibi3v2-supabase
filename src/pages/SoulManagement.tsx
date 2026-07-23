@@ -464,7 +464,7 @@ export default function SoulManagement() {
       if (error) throw error;
 
       const soulsData: Soul[] = (data || [])
-        .filter((row: any) => !row.is_servant)
+        .filter((row: any) => !row.is_servant && !row.is_undecided)
         .map((row: any) => ({
           ...row,
           id: row.id,

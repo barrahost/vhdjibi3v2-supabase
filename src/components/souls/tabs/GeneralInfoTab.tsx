@@ -44,7 +44,7 @@ const MARITAL_STATUSES: { value: string; label: string }[] = [
   { value: 'marie', label: 'Marié(e)' },
   { value: 'concubinage', label: 'Concubinage' },
   { value: 'fiance', label: 'Fiancé(e)' },
-  { value: 'seul', label: 'Seul(e)' },
+  { value: 'seul', label: 'Célibataire' },
 ];
 
 export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }: GeneralInfoTabProps) {

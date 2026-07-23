@@ -30,7 +30,7 @@ const MARITAL_STATUSES = [
   { value: 'marie', label: 'Marié(e)' },
   { value: 'concubinage', label: 'Concubinage' },
   { value: 'fiance', label: 'Fiancé(e)' },
-  { value: 'seul', label: 'Seul(e)' },
+  { value: 'seul', label: 'Célibataire' },
 ];
 const DECISIONS = [
   { value: 'give_life', icon: Heart, label: 'Je veux donner ma vie à Jésus-Christ' },
@@ -286,7 +286,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
   // ─── Rendu ─────────────────────────────────────────────────────────────────
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Modifier une âme">
-      <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100vh-180px)] max-h-[680px]">
+      <form onSubmit={step === 4 ? handleSubmit : e => e.preventDefault()} className="flex flex-col h-[calc(100vh-180px)] max-h-[680px]">
         {/* Indicateur */}
         <div className="px-6 pt-4 pb-3 border-b flex-shrink-0">
           <StepIndicator step={step} />
