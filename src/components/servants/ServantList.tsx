@@ -385,6 +385,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         isOpen={showOrphanModal}
         onClose={() => setShowOrphanModal(false)}
         orphans={orphanServants}
+        departments={departments}
       />
 
       {convertingServant && (

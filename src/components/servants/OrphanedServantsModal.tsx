@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
 import { Servant } from '../../types/servant.types';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { Department } from '../../types/department.types';
+import { AlertTriangle, Trash2, X, Check } from 'lucide-react';
 import { Button } from '../ui/button';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
-import { getChurchId } from '../../lib/churchId';
+import { ServantService } from '../../services/servant.service';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 
@@ -13,12 +14,17 @@ interface OrphanedServantsModalProps {
   isOpen: boolean;
   onClose: () => void;
   orphans: Servant[];
+  departments: Department[];
 }
 
-export default function OrphanedServantsModal({ isOpen, onClose, orphans }: OrphanedServantsModalProps) {
+export default function OrphanedServantsModal({ isOpen, onClose, orphans, departments }: OrphanedServantsModalProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [assigning, setAssigning] = useState<string | null>(null);
+  const [selectedDept, setSelectedDept] = useState<Record<string, string>>({});
+
+  const activeDepartments = departments.filter(d => d.status === 'active');
 
   if (!isOpen) return null;
 
@@ -53,6 +59,24 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
     }
   };
 
+  const handleAssign = async (servantId: string) => {
+    const deptId = selectedDept[servantId];
+    if (!deptId) {
+      toast.error('Choisis un département');
+      return;
+    }
+    try {
+      setAssigning(servantId);
+      await ServantService.updateServant(servantId, { departmentIds: [deptId] });
+      toast.success('Serviteur réaffecté');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la réaffectation');
+    } finally {
+      setAssigning(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
@@ -68,7 +92,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
 
         <div className="p-4 overflow-y-auto flex-1">
           <p className="text-sm text-gray-600 mb-4">
-            Ces serviteurs sont rattachés à un département qui n'existe plus. Vous pouvez les supprimer ou les réaffecter via la modification individuelle.
+            Ces serviteurs sont rattachés à un département qui n'existe plus. Réaffecte-les à un département existant, ou supprime-les.
           </p>
 
           {orphans.length === 0 ? (
@@ -77,7 +101,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
             <ul className="divide-y">
               {orphans.map(o => (
                 <li key={o.id} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{o.fullName}</p>
                     <p className="text-xs text-gray-500">{o.phone}</p>
                     {o.createdAt && (
@@ -86,14 +110,35 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans }: Orph
                       </p>
                     )}
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteOne(o.id)}
-                    disabled={deleting === o.id || deletingAll}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <select
+                      value={selectedDept[o.id] || ''}
+                      onChange={e => setSelectedDept(prev => ({ ...prev, [o.id]: e.target.value }))}
+                      className="text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:ring-[#00665C] focus:border-[#00665C]"
+                    >
+                      <option value="">Choisir un département</option>
+                      {activeDepartments.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAssign(o.id)}
+                      disabled={assigning === o.id || !selectedDept[o.id]}
+                      title="Assigner à ce département"
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteOne(o.id)}
+                      disabled={deleting === o.id || deletingAll}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
