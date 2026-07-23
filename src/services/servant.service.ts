@@ -1,4 +1,4 @@
-import { Servant, ServantFormData, ServantSourceType } from '../types/servant.types';
+import { Servant, ServantFormData } from '../types/servant.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -382,27 +382,29 @@ export class ServantService {
   }
 
   /**
-   * Find existing servants for a department restricted to a list of source ids.
+   * Trouve les serviteurs déjà existants parmi une liste de téléphones.
+   * Le dédoublonnage se fait par téléphone (comme dans createServant), pas
+   * par source_id : un serviteur saisi manuellement ou importé via Excel
+   * n'a pas de source_id, et un dédoublonnage par source_id le manquerait,
+   * créant un doublon à chaque nouvel import.
    */
-  private static async getExistingSourceIds(
-    _departmentId: string,
-    sourceType: ServantSourceType,
-    sourceIds: string[]
-  ): Promise<Set<string>> {
-    const existing = new Set<string>();
-    if (sourceIds.length === 0) return existing;
+  private static async getExistingByPhone(phones: string[]): Promise<Map<string, { id: string; departmentIds: string[] }>> {
+    const map = new Map<string, { id: string; departmentIds: string[] }>();
+    const cleanPhones = [...new Set(phones.filter(Boolean))];
+    if (cleanPhones.length === 0) return map;
 
-    for (let i = 0; i < sourceIds.length; i += 100) {
-      const chunk = sourceIds.slice(i, i + 100);
+    for (let i = 0; i < cleanPhones.length; i += 100) {
+      const chunk = cleanPhones.slice(i, i + 100);
       const { data } = await supabase
         .from('servants')
-        .select('source_id')
+        .select('id, phone, department_ids')
         .eq('church_id', getChurchId())
-        .eq('source_type', sourceType)
-        .in('source_id', chunk);
-      (data ?? []).forEach((d: any) => { if (d.source_id) existing.add(d.source_id); });
+        .in('phone', chunk);
+      (data ?? []).forEach((d: any) => {
+        if (d.phone) map.set(d.phone, { id: d.id, departmentIds: d.department_ids || [] });
+      });
     }
-    return existing;
+    return map;
   }
 
   /**
@@ -411,8 +413,6 @@ export class ServantService {
   static async importFromSouls(soulIds: string[], departmentId: string): Promise<ImportResult> {
     const result: ImportResult = { imported: 0, skipped: [] };
     if (soulIds.length === 0 || !departmentId) return result;
-
-    const existing = await this.getExistingSourceIds(departmentId, 'soul', soulIds);
 
     for (let i = 0; i < soulIds.length; i += 100) {
       const chunk = soulIds.slice(i, i + 100);
@@ -423,11 +423,27 @@ export class ServantService {
         .in('id', chunk);
       if (error) throw error;
 
+      const existingByPhone = await this.getExistingByPhone((souls ?? []).map((s: any) => s.phone));
+
       for (const soul of souls ?? []) {
         const name = soul.full_name || 'Inconnu';
+        const existing = soul.phone ? existingByPhone.get(soul.phone) : undefined;
 
-        if (existing.has(soul.id)) {
-          result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+        if (existing) {
+          if (existing.departmentIds.includes(departmentId)) {
+            result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+            continue;
+          }
+          try {
+            const merged = [...new Set([...existing.departmentIds, departmentId])];
+            const { error: updErr } = await supabase.from('servants')
+              .update({ department_ids: merged, updated_at: new Date().toISOString() })
+              .eq('id', existing.id);
+            if (updErr) throw updErr;
+            result.skipped.push({ name, reason: 'Déjà serviteur — département ajouté à sa fiche existante' });
+          } catch (e: any) {
+            result.skipped.push({ name, reason: e?.message || 'Erreur lors de la mise à jour' });
+          }
           continue;
         }
 
@@ -471,8 +487,6 @@ export class ServantService {
     const result: ImportResult = { imported: 0, skipped: [] };
     if (userDocIds.length === 0 || !departmentId) return result;
 
-    const existing = await this.getExistingSourceIds(departmentId, 'user', userDocIds);
-
     for (let i = 0; i < userDocIds.length; i += 100) {
       const chunk = userDocIds.slice(i, i + 100);
       const { data: users, error } = await supabase
@@ -482,11 +496,27 @@ export class ServantService {
         .in('id', chunk);
       if (error) throw error;
 
+      const existingByPhone = await this.getExistingByPhone((users ?? []).map((u: any) => u.phone));
+
       for (const user of users ?? []) {
         const name = user.full_name || 'Inconnu';
+        const existing = user.phone ? existingByPhone.get(user.phone) : undefined;
 
-        if (existing.has(user.id)) {
-          result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+        if (existing) {
+          if (existing.departmentIds.includes(departmentId)) {
+            result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+            continue;
+          }
+          try {
+            const merged = [...new Set([...existing.departmentIds, departmentId])];
+            const { error: updErr } = await supabase.from('servants')
+              .update({ department_ids: merged, updated_at: new Date().toISOString() })
+              .eq('id', existing.id);
+            if (updErr) throw updErr;
+            result.skipped.push({ name, reason: 'Déjà serviteur — département ajouté à sa fiche existante' });
+          } catch (e: any) {
+            result.skipped.push({ name, reason: e?.message || 'Erreur lors de la mise à jour' });
+          }
           continue;
         }
 
