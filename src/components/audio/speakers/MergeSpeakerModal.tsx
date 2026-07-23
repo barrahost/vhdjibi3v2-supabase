@@ -78,7 +78,7 @@ export function MergeSpeakerModal({ sources, targetOptions, isOpen, onClose }: M
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Fusionner des orateurs">
-      <div className="p-6 space-y-5">
+      <div className="p-6 space-y-5 overflow-y-auto flex-1">
         {/* Variantes concernées */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1.5">

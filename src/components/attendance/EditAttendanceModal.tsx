@@ -75,7 +75,7 @@ export default function EditAttendanceModal({ attendance, isOpen, onClose }: Edi
       onClose={onClose}
       title="Modifier une présence"
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <Input
           label="Date du culte"
           id="date"

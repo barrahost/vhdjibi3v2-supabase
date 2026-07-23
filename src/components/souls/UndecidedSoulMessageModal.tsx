@@ -157,7 +157,7 @@ export default function UndecidedSoulMessageModal({
       onClose={onClose}
       title={`Envoyer un message à ${soul.fullName}`}
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Modèles de message

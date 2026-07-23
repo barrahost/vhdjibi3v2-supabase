@@ -273,7 +273,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Importer des serviteurs">
-      <div className="space-y-4 p-6">
+      <div className="space-y-4 p-6 overflow-y-auto flex-1">
         {!fixedDepartmentId && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

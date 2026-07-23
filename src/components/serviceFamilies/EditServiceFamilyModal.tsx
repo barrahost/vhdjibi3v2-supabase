@@ -102,7 +102,7 @@ export default function EditServiceFamilyModal({ family, isOpen, onClose, onSucc
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Modifier une famille">
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nom de la famille

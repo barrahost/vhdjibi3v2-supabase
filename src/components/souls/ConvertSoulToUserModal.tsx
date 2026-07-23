@@ -75,7 +75,7 @@ export default function ConvertSoulToUserModal({ isOpen, onClose, soul, onSucces
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Créer un compte utilisateur">
-      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
         {/* Infos de l'âme (lecture seule) */}
         <div className="bg-gray-50 rounded-lg p-4 space-y-1">
           <p className="text-sm font-medium text-gray-900">{soul.fullName}</p>

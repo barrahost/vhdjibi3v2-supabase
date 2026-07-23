@@ -67,7 +67,7 @@ export default function SelfPasswordResetModal({ isOpen, onClose, uid }: SelfPas
       onClose={onClose}
       title="Changer mon mot de passe"
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">

@@ -79,7 +79,7 @@ export default function ConvertServantToUserModal({ isOpen, onClose, servant, on
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Créer un compte utilisateur">
-      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
         <div className="bg-gray-50 rounded-lg p-4 space-y-1">
           <p className="text-sm font-medium text-gray-900">{servant.fullName}</p>
           {servant.phone && <p className="text-sm text-gray-500">📞 {servant.phone}</p>}

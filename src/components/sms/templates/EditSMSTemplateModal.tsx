@@ -150,7 +150,7 @@ export default function EditSMSTemplateModal({ templateId, isOpen, onClose }: Ed
       onClose={handleClose}
       title="Modifier un modèle SMS"
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Titre

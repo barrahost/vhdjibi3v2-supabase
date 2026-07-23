@@ -40,7 +40,7 @@ export default function BulkDeleteServantModal({
       onClose={onClose}
       title="Confirmer la suppression"
     >
-      <div className="p-6">
+      <div className="p-6 overflow-y-auto flex-1">
         <div className="flex items-start gap-2 mb-4 text-sm text-gray-600">
           <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
           <p>

@@ -371,7 +371,7 @@ export function UserProfileModal() {
       onClose={closeProfileModal}
       title="Profil Utilisateur"
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
         <div className="p-6 space-y-8">
           {/* En-tête du profil */}
           <div className="flex items-center space-x-4">

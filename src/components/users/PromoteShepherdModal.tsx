@@ -80,7 +80,7 @@ export default function PromoteShepherdModal({
       onClose={onClose}
       title="Promouvoir Responsable de Département"
     >
-      <div className="p-6">
+      <div className="p-6 overflow-y-auto flex-1">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* User Info */}
           <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">

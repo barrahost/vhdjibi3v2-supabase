@@ -426,7 +426,7 @@ export default function ImportEvangelizedSoulsFromExcel({ onImported }: Props) {
       </button>
 
       <Modal isOpen={open} onClose={handleClose} title="Import Excel — Aperçu">
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {parsing ? (
             <div className="flex items-center justify-center gap-2 text-gray-600 py-8">
               <Loader2 className="w-5 h-5 animate-spin" /> Lecture du fichier...

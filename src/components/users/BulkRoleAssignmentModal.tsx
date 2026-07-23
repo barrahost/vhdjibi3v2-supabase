@@ -95,7 +95,7 @@ export default function BulkRoleAssignmentModal({
       onClose={onClose}
       title="Assignation de rôle en masse"
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">

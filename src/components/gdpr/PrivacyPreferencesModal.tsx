@@ -46,7 +46,7 @@ export function PrivacyPreferencesModal({ isOpen, onClose, onSave }: PrivacyPref
       onClose={onClose}
       title="Préférences de confidentialité"
     >
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 overflow-y-auto flex-1">
         <div className="bg-white rounded-lg border">
           <div className="p-4 border-b">
             <div className="flex items-center justify-between">

@@ -97,7 +97,7 @@ export default function EditDepartmentModal({ department, isOpen, onClose, onSuc
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Modifier un département">
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nom du département

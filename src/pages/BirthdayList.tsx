@@ -522,7 +522,7 @@ export default function BirthdayList() {
         onClose={() => setShowAddModal(false)}
         title="Ajouter un anniversaire"
       >
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           <BirthdayForm
             onSuccess={() => {
               setShowAddModal(false);
