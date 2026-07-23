@@ -241,7 +241,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
               gender: 'male',
               phone: row.phone,
               email: row.email || '',
-              departmentId: '',
+              departmentIds: [],
               isHead: false,
               isShepherd: true,
               shepherdId: docRef.id,

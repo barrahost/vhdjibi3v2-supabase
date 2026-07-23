@@ -8,7 +8,6 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Checkbox } from '../../ui/checkbox';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -36,7 +35,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
     gender: soul.gender,
     phone: soul.phone,
     email: '',
-    departmentId: '',
+    departmentIds: [],
     isHead: false,
     isShepherd: false,
     status: 'active'
@@ -70,8 +69,8 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
       return;
     }
 
-    if (!formData.departmentId) {
-      toast.error('Veuillez sélectionner un département');
+    if (formData.departmentIds.length === 0) {
+      toast.error('Veuillez sélectionner au moins un département');
       return;
     }
 
@@ -90,6 +89,15 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const toggleDepartment = (deptId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      departmentIds: prev.departmentIds.includes(deptId)
+        ? prev.departmentIds.filter(id => id !== deptId)
+        : [...prev.departmentIds, deptId],
     }));
   };
 
@@ -172,23 +180,25 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
               />
             </div>
 
-            <div>
-              <Label htmlFor="department">Département *</Label>
-              <Select 
-                value={formData.departmentId} 
-                onValueChange={(value) => handleInputChange('departmentId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un département" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
+            <div className="md:col-span-2">
+              <Label>Département(s) *</Label>
+              <div className="mt-1.5 space-y-2 border rounded-md p-3">
+                {departments.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aucun département actif</p>
+                )}
+                {departments.map((dept) => (
+                  <div key={dept.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`dept-${dept.id}`}
+                      checked={formData.departmentIds.includes(dept.id)}
+                      onCheckedChange={() => toggleDepartment(dept.id)}
+                    />
+                    <Label htmlFor={`dept-${dept.id}`} className="font-normal cursor-pointer">
                       {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

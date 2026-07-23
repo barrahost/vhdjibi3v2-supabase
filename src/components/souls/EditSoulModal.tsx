@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Soul } from '../../types/database.types';
 import { Modal } from '../ui/Modal';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
@@ -126,7 +126,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
 
   // Réinitialiser l'étape à chaque ouverture
   useEffect(() => {
-    if (isOpen) setStep(1);
+    if (isOpen) { setStep(1); setNavLocked(false); }
   }, [isOpen]);
 
   // Charger berger courant
@@ -190,16 +190,25 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
   }, [soul, isOpen]);
 
   // ─── Navigation ────────────────────────────────────────────────────────────
-  const goNext = () => setStep(prev => (prev < 4 ? (prev + 1) as 1 | 2 | 3 | 4 : prev));
-  const goBack = () => setStep(prev => (prev > 1 ? (prev - 1) as 1 | 2 | 3 | 4 : prev));
+  const navLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Empêche un double-tap mobile (Suivant → Enregistrer au même endroit) de
   // déclencher l'enregistrement immédiatement après un changement d'étape.
-  useEffect(() => {
+  // Posé dans le même geste que le changement d'étape (pas via un effet
+  // séparé) pour qu'il n'y ait aucune fenêtre où le bouton est encore actif.
+  const lockNav = () => {
     setNavLocked(true);
-    const t = setTimeout(() => setNavLocked(false), 400);
-    return () => clearTimeout(t);
-  }, [step]);
+    if (navLockTimer.current) clearTimeout(navLockTimer.current);
+    navLockTimer.current = setTimeout(() => setNavLocked(false), 500);
+  };
+
+  useEffect(() => () => { if (navLockTimer.current) clearTimeout(navLockTimer.current); }, []);
+
+  const goNext = () => {
+    lockNav();
+    setStep(prev => (prev < 4 ? (prev + 1) as 1 | 2 | 3 | 4 : prev));
+  };
+  const goBack = () => setStep(prev => (prev > 1 ? (prev - 1) as 1 | 2 | 3 | 4 : prev));
 
   // ─── Submit (logique 100% identique à l'original) ─────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {

@@ -146,7 +146,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
             gender: 'male',
             phone: phoneValidation.formattedNumber || '',
             email: trimmedEmail || '',
-            departmentId: '',
+            departmentIds: [],
             isHead: false,
             isShepherd: true,
             shepherdId: docRef.id

@@ -36,7 +36,7 @@ export class SoulPromotionService {
         gender: servantData.gender || soulDataCurrent.gender,
         phone: servantData.phone || soulDataCurrent.phone,
         email: servantData.email,
-        department_id: servantData.departmentId,
+        department_ids: servantData.departmentIds || [],
         is_head: servantData.isHead || false,
         is_shepherd: servantData.isShepherd || false,
         shepherd_id: servantData.shepherdId || null,
