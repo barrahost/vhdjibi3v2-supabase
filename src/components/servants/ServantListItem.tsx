@@ -79,10 +79,10 @@ export default function ServantListItem({ servant, departmentName, departmentNam
   );
 
   const actions = (
-    <div className="flex justify-end gap-2">
+    <div className="flex justify-end gap-1.5">
       <button
         onClick={onEdit}
-        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+        className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
         title="Modifier"
       >
         <Pencil className="w-4 h-4" />
@@ -90,7 +90,7 @@ export default function ServantListItem({ servant, departmentName, departmentNam
       {onConvert && (
         <button
           onClick={() => onConvert(servant)}
-          className="p-1.5 text-[#00665C] hover:bg-[#00665C]/10 rounded"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-[#00665C]/10 text-[#00665C] hover:bg-[#00665C]/20 transition-colors"
           title="Créer un compte utilisateur"
         >
           <UserPlus className="w-4 h-4" />
@@ -98,7 +98,7 @@ export default function ServantListItem({ servant, departmentName, departmentNam
       )}
       <button
         onClick={handleDelete}
-        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+        className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
         title="Supprimer"
       >
         <Trash2 className="w-4 h-4" />
