@@ -248,6 +248,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
           email: r.email,
           phone: r.phone,
           role: r.role,
+          businessProfiles: r.business_profiles || [],
           status: r.status,
           createdAt: r.created_at ? new Date(r.created_at) : new Date(),
           fromAdminsCollection: false,

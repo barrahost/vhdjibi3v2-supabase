@@ -169,12 +169,11 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         }
       }
 
-      // Determine primary role from business profiles for backward compatibility
-      const primaryRole = formData.businessProfiles.find(p => p.type === 'admin')?.type || 
-                          formData.businessProfiles.find(p => p.type === 'adn')?.type ||
-                          formData.businessProfiles.find(p => p.type === 'department_leader')?.type ||
-                          formData.businessProfiles.find(p => p.type === 'shepherd')?.type ||
-                          'shepherd';
+      // Le rôle principal (colonne `role`, pour compatibilité) doit refléter le
+      // profil marqué "Principal" dans l'interface, pas un ordre de priorité fixe.
+      const primaryRole = formData.businessProfiles.find(p => p.isPrimary)?.type
+                          || formData.businessProfiles[0]?.type
+                          || 'shepherd';
 
       // Préparer les données pour la mise à jour (snake_case pour Supabase)
       const updateData: any = {

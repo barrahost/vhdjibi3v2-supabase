@@ -86,6 +86,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [navLocked, setNavLocked] = useState(false);
   const [currentShepherdId, setCurrentShepherdId] = useState<string | undefined>(undefined);
   const [userExplicitlyRemovedPhoto, setUserExplicitlyRemovedPhoto] = useState(false);
 
@@ -192,9 +193,18 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
   const goNext = () => setStep(prev => (prev < 4 ? (prev + 1) as 1 | 2 | 3 | 4 : prev));
   const goBack = () => setStep(prev => (prev > 1 ? (prev - 1) as 1 | 2 | 3 | 4 : prev));
 
+  // Empêche un double-tap mobile (Suivant → Enregistrer au même endroit) de
+  // déclencher l'enregistrement immédiatement après un changement d'étape.
+  useEffect(() => {
+    setNavLocked(true);
+    const t = setTimeout(() => setNavLocked(false), 400);
+    return () => clearTimeout(t);
+  }, [step]);
+
   // ─── Submit (logique 100% identique à l'original) ─────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting || navLocked) return;
     let success = false;
     try {
       setIsSubmitting(true);
@@ -625,7 +635,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
             ) : (
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || navLocked}
                 className="flex-1 flex items-center justify-center gap-1.5 h-11 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 rounded-xl transition-colors disabled:opacity-50"
               >
                 {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
