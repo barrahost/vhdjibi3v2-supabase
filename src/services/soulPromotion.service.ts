@@ -59,11 +59,35 @@ export class SoulPromotionService {
 
       const servantId = newServant.id;
 
+      // Historique des départements : une âme ne "rejoint" un département
+      // qu'au moment de sa promotion en serviteur — on l'enregistre donc
+      // automatiquement ici plutôt que via une saisie manuelle séparée.
+      const currentProfile = soulDataCurrent.spiritual_profile || {};
+      const currentDepartments: { name: string; startDate: string }[] = currentProfile.departments || [];
+      let updatedProfile = currentProfile;
+
+      const deptIds = servantData.departmentIds || [];
+      if (deptIds.length > 0) {
+        const { data: deptRows } = await supabase
+          .from('departments')
+          .select('name')
+          .in('id', deptIds);
+        const existingNames = new Set(currentDepartments.map(d => d.name));
+        const toAdd = (deptRows ?? [])
+          .map((d: any) => d.name)
+          .filter((name: string) => name && !existingNames.has(name))
+          .map((name: string) => ({ name, startDate: now }));
+        if (toAdd.length > 0) {
+          updatedProfile = { ...currentProfile, departments: [...currentDepartments, ...toAdd] };
+        }
+      }
+
       // Update soul
       await supabase.from('souls').update({
         is_servant: true,
         servant_id: servantId,
         promotion_to_servant_date: now,
+        spiritual_profile: updatedProfile,
         updated_at: now,
       }).eq('id', soulId);
 
