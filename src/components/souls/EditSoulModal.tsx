@@ -120,6 +120,9 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
   // Rôle
   const isAdnOnly = (activeRole === 'adn' || userRole === 'adn') && activeRole !== 'admin' && activeRole !== 'super_admin';
   const canEditAdnFields = activeRole === 'admin' || activeRole === 'super_admin' || userRole === 'admin' || userRole === 'super_admin' || isAdnOnly;
+  // Seuls les responsables de famille assignent un berger à une âme (+ admin/super_admin en secours)
+  const canAssignShepherd = activeRole === 'admin' || activeRole === 'super_admin' || userRole === 'admin' || userRole === 'super_admin'
+    || activeRole === 'family_leader' || userRole === 'family_leader';
 
   const updateGeneral = (patch: Partial<typeof formData.general>) =>
     setFormData(prev => ({ ...prev, general: { ...prev.general, ...patch } }));
@@ -534,8 +537,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
                 </div>
               </div>
 
-              {/* Berger */}
-              {!isAdnOnly && userRole !== 'shepherd' && formData.general.decision !== 'undecided' && (
+              {/* Berger — réservé aux responsables de famille (+ admin/super_admin) */}
+              {canAssignShepherd && formData.general.decision !== 'undecided' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Berger(e) assigné(e)</label>
                   <ShepherdSelect

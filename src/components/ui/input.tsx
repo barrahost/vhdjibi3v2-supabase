@@ -11,6 +11,7 @@ export function Input({ label, hint, id, className = '', ...props }: InputProps)
       {label && (
         <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1.5">
           {label}
+          {props.required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
       <input

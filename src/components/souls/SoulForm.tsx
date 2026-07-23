@@ -9,7 +9,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../ui/input';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { LocationField } from './form/LocationField';
-import ShepherdSelect from './ShepherdSelect';
 import {
   CheckCircle2, Plus, List, AlertTriangle,
   Heart, UserCheck, HelpCircle, Check, ChevronRight, ChevronLeft,
@@ -201,6 +200,7 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
     if (!formData.general.fullName.trim()) { setStepError('Le nom est obligatoire.'); return; }
     if (!formData.general.gender) { setStepError('Le genre est obligatoire.'); return; }
     if (!formData.general.location.trim()) { setStepError("Le lieu d'habitation est obligatoire."); return; }
+    if (!formData.general.prayerRequest.trim()) { setStepError('Les observations / besoin de prière sont obligatoires.'); return; }
     if (canEditAdnFields && !formData.general.serviceFamilyId) { setStepError('La famille de service est obligatoire.'); return; }
 
     // Deuxième couche de protection contre les doublons : vérifie si une âme
@@ -474,6 +474,7 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
             <LocationField
               location={formData.general.location}
               coordinates={formData.general.coordinates}
+              required
               onLocationChange={location => updateGeneral({ location })}
               onCoordinatesChange={coordinates => updateGeneral({ coordinates })}
             />
@@ -603,18 +604,6 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
               </div>
             </div>
 
-            {/* Berger */}
-            {!isAdnOnly && formData.general.decision !== 'undecided' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Berger(e) assigné(e)</label>
-                <ShepherdSelect
-                  value={formData.general.shepherdId}
-                  onChange={id => updateGeneral({ shepherdId: id === '' ? undefined : id })}
-                  disabled={formData.general.isUndecided}
-                />
-              </div>
-            )}
-
             {/* Famille de service */}
             {canEditAdnFields && (
               <div>
@@ -661,12 +650,15 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
 
             {/* Besoin de prière */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Observations / besoin de prière</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observations / besoin de prière <span className="text-red-500">*</span>
+              </label>
               <textarea
+                required
                 rows={2}
                 value={formData.general.prayerRequest}
                 onChange={e => updateGeneral({ prayerRequest: e.target.value })}
-                placeholder="Notes, sujets de prière... (optionnel)"
+                placeholder="Notes, sujets de prière..."
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 transition-colors resize-none"
               />
             </div>

@@ -10,7 +10,7 @@ export function GenderRadioGroup({ value, onChange, disabled = false }: GenderRa
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Genre
+        Genre <span className="text-red-500">*</span>
       </label>
       <div className="flex space-x-4">
         <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${

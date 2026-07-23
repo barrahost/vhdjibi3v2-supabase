@@ -14,16 +14,18 @@ interface LocationFieldProps {
   location: string;
   coordinates: Coordinates | null;
   useGeolocation?: boolean;
+  required?: boolean;
   onLocationChange: (location: string) => void;
   onCoordinatesChange: (coordinates: Coordinates | null) => void;
 }
 
-export function LocationField({ 
-  location, 
-  coordinates, 
+export function LocationField({
+  location,
+  coordinates,
   useGeolocation = false,
-  onLocationChange, 
-  onCoordinatesChange 
+  required = false,
+  onLocationChange,
+  onCoordinatesChange
 }: LocationFieldProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const [loading, setLoading] = useState(false);
@@ -220,6 +222,7 @@ export function LocationField({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Lieu d'habitation
+          {required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
         <input
           type="text"
