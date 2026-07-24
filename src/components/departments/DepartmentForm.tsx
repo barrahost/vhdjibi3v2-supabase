@@ -33,16 +33,18 @@ export default function DepartmentForm() {
       const { data: orderData } = await supabase.from('departments').select('order').eq('church_id', getChurchId()).order('order', { ascending: false }).limit(1);
       const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
-      const { error: _insertErr } = await supabase.from('departments').insert({
+      const { error: insertErr } = await supabase.from('departments').insert({
+        id: crypto.randomUUID(),
         church_id: getChurchId(),
-        ...formData,
         name: formData.name.trim(),
-        leader: formData.leader.trim(), // Ajout du leader
+        description: formData.description.trim(),
+        leader: formData.leader.trim(),
         order: lastOrder + 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         status: 'active'
       });
+      if (insertErr) throw insertErr;
 
       setFormData({ name: '', description: '', leader: '' });
       toast.success('Département ajouté avec succès');
