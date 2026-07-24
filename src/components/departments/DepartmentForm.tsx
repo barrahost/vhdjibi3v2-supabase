@@ -3,14 +3,26 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 
-export default function DepartmentForm() {
+interface DepartmentFormProps {
+  onSuccess?: () => void;
+}
+
+export default function DepartmentForm({ onSuccess }: DepartmentFormProps) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    leader: '' // Ajout du champ leader
+    leaderId: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { users: leaderCandidates, loading: loadingLeaders } = useUsersByProfile([
+    'department_leader',
+    'adn',
+    'shepherd',
+    'family_leader',
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,12 +45,15 @@ export default function DepartmentForm() {
       const { data: orderData } = await supabase.from('departments').select('order').eq('church_id', getChurchId()).order('order', { ascending: false }).limit(1);
       const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
+      const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
+
       const { error: insertErr } = await supabase.from('departments').insert({
         id: crypto.randomUUID(),
         church_id: getChurchId(),
         name: formData.name.trim(),
         description: formData.description.trim(),
-        leader: formData.leader.trim(),
+        leader: leaderUser?.fullName || '',
+        leader_id: formData.leaderId || null,
         order: lastOrder + 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -46,8 +61,9 @@ export default function DepartmentForm() {
       });
       if (insertErr) throw insertErr;
 
-      setFormData({ name: '', description: '', leader: '' });
+      setFormData({ name: '', description: '', leaderId: '' });
       toast.success('Département ajouté avec succès');
+      onSuccess?.();
     } catch (error: any) {
       console.error('Error adding department:', error);
       toast.error(error.message || 'Erreur lors de l\'ajout');
@@ -77,14 +93,19 @@ export default function DepartmentForm() {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Responsable du département
         </label>
-        <input
-          type="text"
-          placeholder="Nom du responsable"
-          value={formData.leader}
-          onChange={(e) => setFormData(prev => ({ ...prev, leader: e.target.value }))}
+        <select
+          value={formData.leaderId}
+          onChange={(e) => setFormData(prev => ({ ...prev, leaderId: e.target.value }))}
+          disabled={isSubmitting || loadingLeaders}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-          disabled={isSubmitting}
-        />
+        >
+          <option value="">-- Sélectionner un responsable --</option>
+          {leaderCandidates.map(u => (
+            <option key={u.id} value={u.id}>
+              {u.fullName}{u.nickname ? ` (${u.nickname})` : ''}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

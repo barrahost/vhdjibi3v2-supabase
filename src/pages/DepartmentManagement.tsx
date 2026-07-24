@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 
 export default function DepartmentManagement() {
   const [showForm, setShowForm] = useState(false);
+  const [reloadSignal, setReloadSignal] = useState(0);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -22,11 +23,11 @@ export default function DepartmentManagement() {
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-lg font-semibold text-[#00665C] mb-4">Ajouter un département</h2>
-          <DepartmentForm />
+          <DepartmentForm onSuccess={() => { setReloadSignal(s => s + 1); setShowForm(false); }} />
         </div>
       )}
 
-      <DepartmentList />
+      <DepartmentList reloadSignal={reloadSignal} />
     </div>
   );
 }

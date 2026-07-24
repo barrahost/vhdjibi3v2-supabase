@@ -8,7 +8,11 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 
-export default function DepartmentList() {
+interface DepartmentListProps {
+  reloadSignal?: number;
+}
+
+export default function DepartmentList({ reloadSignal = 0 }: DepartmentListProps) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +41,7 @@ export default function DepartmentList() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => loadDepts())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [reloadKey]);
+  }, [reloadKey, reloadSignal]);
 
   const handleMove = async (departmentId: string, direction: 'up' | 'down') => {
     try {
