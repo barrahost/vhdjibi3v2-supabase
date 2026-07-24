@@ -20,6 +20,7 @@ const initial = {
   fullName: '',
   phone: '',
   location: '',
+  evangelizationDate: new Date().toISOString().split('T')[0],
   attendedCommunity: '',
   gaveLifeToJesus: '' as '' | GaveLifeToJesus,
   willJoinVH: '' as '' | WillJoinVH,
@@ -102,6 +103,7 @@ export default function EvangelizationForm() {
         p_gender: data.gender,
         p_phone: data.phone.trim(),
         p_location: data.location.trim(),
+        p_evangelization_date: data.evangelizationDate,
         p_attended_community: data.attendedCommunity.trim(),
         p_gave_life_to_jesus: data.gaveLifeToJesus,
         p_will_join_vh: data.willJoinVH,
@@ -180,6 +182,16 @@ export default function EvangelizationForm() {
           {/* Étape 1 — Identité & contact */}
           {step === 1 && (
             <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date d'évangélisation</label>
+                <input
+                  type="date"
+                  value={data.evangelizationDate}
+                  onChange={e => setData(d => ({ ...d, evangelizationDate: e.target.value }))}
+                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+              </div>
+
               <GenderRadioGroup
                 value={data.gender as 'male' | 'female' | ''}
                 onChange={g => setData(d => ({ ...d, gender: g }))}
