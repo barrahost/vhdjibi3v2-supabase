@@ -131,6 +131,9 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasModule('users')) {
       children.push({ id: 'users', label: 'Utilisateurs', href: '/users', icon: <UserCog className="w-5 h-5" /> });
     }
+    if (hasPermission(PERMISSIONS.MANAGE_FAMILIES)) {
+      children.push({ id: 'shepherd-families', label: 'Bergers & Familles', href: '/bergers', icon: <Users className="w-5 h-5" /> });
+    }
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) && hasModule('servants')) {
       children.push({ id: 'servants-admin', label: 'Serviteurs', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
     }

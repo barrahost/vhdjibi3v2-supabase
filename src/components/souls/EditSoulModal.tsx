@@ -545,6 +545,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
                     value={formData.general.shepherdId}
                     onChange={id => updateGeneral({ shepherdId: id === '' ? undefined : id })}
                     disabled={formData.general.isUndecided}
+                    serviceFamilyId={formData.general.serviceFamilyId}
                   />
                 </div>
               )}

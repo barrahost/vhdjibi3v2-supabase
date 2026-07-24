@@ -35,6 +35,7 @@ const Reminders = lazy(() => import('./pages/Reminders'));
 const Settings = lazy(() => import('./pages/Settings'));
 const DepartmentManagement = lazy(() => import('./pages/DepartmentManagement'));
 const ServiceFamilyManagement = lazy(() => import('./pages/ServiceFamilyManagement'));
+const ShepherdFamilyManagement = lazy(() => import('./pages/ShepherdFamilyManagement'));
 const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
 const ShepherdReminders = lazy(() => import('./pages/ShepherdReminders'));
 const SMSManagement = lazy(() => import('./pages/SMSManagement'));
@@ -273,6 +274,13 @@ function AppContent() {
           <Route path="familles" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_DEPARTMENTS]}>
               <ServiceFamilyManagement />
+            </PrivateRoute>
+          } />
+
+          {/* Répartition des bergers dans les familles */}
+          <Route path="bergers" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_FAMILIES]}>
+              <ShepherdFamilyManagement />
             </PrivateRoute>
           } />
 

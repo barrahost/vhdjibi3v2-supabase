@@ -248,6 +248,7 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
             <ShepherdSelect
               value={data.shepherdId}
               onChange={(id) => setData({ ...data, shepherdId: id })}
+              serviceFamilyId={data.serviceFamilyId}
             />
           </div>
 
