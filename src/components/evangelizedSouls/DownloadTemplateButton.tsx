@@ -16,7 +16,7 @@ export default function DownloadTemplateButton() {
       "A donné sa vie à Jésus  (Oui / Non / Pas encore)",
       'Culte envisagé  (Culte du Mercredi Soir - 19h / 1er Culte du Dimanche - 7h / 2e Culte du Dimanche - 10h / Pas encore décidé)',
       'Sujets de prière',
-      "Étudiant ayant conduit l'entretien",
+      "Personne ayant conduit l'entretien",
       'Évangéliste (Nom ou prénom — optionnel)',
     ];
 

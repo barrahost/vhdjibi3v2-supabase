@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import * as XLSX from 'xlsx';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, Info, CheckCircle2, Download, Phone, UserCheck, UserX, Shuffle, AlertTriangle, MoreVertical, X as XIcon } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, RotateCcw, Megaphone, Info, CheckCircle2, Download, Phone, UserCheck, UserX, Shuffle, AlertTriangle, MoreVertical, X as XIcon, Copy, Check } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
@@ -20,7 +20,8 @@ import InteractionModal from '../components/interactions/InteractionModal';
 import LastContactBadge from '../components/interactions/LastContactBadge';
 import AssignToEvangelistModal from '../components/evangelizedSouls/AssignToEvangelistModal';
 import DistributeEvangelizedSoulsModal from '../components/evangelizedSouls/DistributeEvangelizedSoulsModal';
-import { EvangelizedSoul, plannedServiceLabel, gaveLifeLabel } from '../types/evangelized.types';
+import { EvangelizedSoul, plannedServiceLabel, gaveLifeLabel, willJoinVHLabel } from '../types/evangelized.types';
+import { useServiceFamilies } from '../hooks/useServiceFamilies';
 import { formatGender } from '../utils/formatting/genderFormat';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -54,6 +55,8 @@ export default function EvangelizedSoulManagement() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const publicLink = `${window.location.origin}/evangelisation`;
 
   const activeProfileType = (activeRole || userRole) as string;
   const activeBusinessProfiles = ((user as any)?.businessProfiles || []).filter(
@@ -68,6 +71,15 @@ export default function EvangelizedSoulManagement() {
   const canCreateEvangelized = isAdmin || isADN || isEvangelist;
   const canAssignEvangelist = isAdmin || isADN;
   const userId = user ? (user as any).id || (user as any).uid : null;
+  const { families } = useServiceFamilies(false);
+  const familyNames: Record<string, string> = Object.fromEntries(families.map(f => [f.id, f.name]));
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(publicLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2500);
+    toast.success('Lien copié — partage-le avec les étudiants !');
+  };
 
   const handleBulkDelete = async () => {
     if (selectedSoulIds.length === 0) return;
@@ -133,6 +145,14 @@ export default function EvangelizedSoulManagement() {
         shepherdId: v.shepherdId || v.shepherd_id,
         status: v.status || 'active',
         photoURL: v.photoURL || v.photo_url,
+        attendedCommunity: v.attendedCommunity || v.attended_community,
+        gaveLifeToJesus: v.gaveLifeToJesus || v.gave_life_to_jesus,
+        willJoinVH: v.willJoinVH || v.will_join_vh,
+        plannedService: v.plannedService || v.planned_service,
+        prayerTopics: v.prayerTopics || v.prayer_topics,
+        interviewerName: v.interviewerName || v.interviewer_name,
+        serviceFamilyId: v.serviceFamilyId || v.service_family_id,
+        evangelizationLocation: v.evangelizationLocation || v.evangelization_location,
         evangelizationDate: v.evangelizationDate
           ? new Date(v.evangelizationDate)
           : v.evangelization_date
@@ -257,9 +277,11 @@ export default function EvangelizedSoulManagement() {
       "Lieu d'evangelisation": s.evangelizationLocation || '',
       'Communaute frequentee': s.attendedCommunity || '',
       'A donne sa vie a Jesus': gaveLifeLabel(s.gaveLifeToJesus),
+      'Rejoindra une eglise VH': willJoinVHLabel(s.willJoinVH),
+      'Famille orientee': s.serviceFamilyId ? (familyNames[s.serviceFamilyId] || s.serviceFamilyId) : '',
       'Culte envisage': plannedServiceLabel(s.plannedService),
       'Sujets de priere': s.prayerTopics || '',
-      "Etudiant entretien": s.interviewerName || '',
+      "Personne ayant conduit l'entretien": s.interviewerName || '',
       'Commentaires': s.notes || '',
       'Evangeliste': s.evangelistId ? (evangelistNames[s.evangelistId] || s.evangelistId) : 'Non attribue',
       'Statut': s.status === 'imported' ? 'Recue' : s.status === 'active' ? 'Actif' : 'Inactif',
@@ -499,6 +521,13 @@ export default function EvangelizedSoulManagement() {
               <Shuffle className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" /> Répartir ({unassignedCount} non attribuées)
             </button>
           )}
+          {canCreateEvangelized && (
+            <button onClick={copyLink}
+              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md">
+              {linkCopied ? <Check className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" />}
+              {linkCopied ? 'Copié !' : 'Copier le lien'}
+            </button>
+          )}
           <button onClick={handleExport}
             className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md">
             <FileSpreadsheet className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" /> Export Excel
@@ -546,6 +575,12 @@ export default function EvangelizedSoulManagement() {
                       <button onClick={() => { setShowDistributeModal(true); setShowMobileActions(false); }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm text-amber-700 hover:bg-amber-50">
                         <Shuffle className="w-4 h-4" /> Répartir ({unassignedCount} non attribuées)
+                      </button>
+                    )}
+                    {canCreateEvangelized && (
+                      <button onClick={() => { copyLink(); setShowMobileActions(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                        <Copy className="w-4 h-4 text-[#00665C]" /> Copier le lien public
                       </button>
                     )}
                     <button onClick={() => { handleExport(); setShowMobileActions(false); }}

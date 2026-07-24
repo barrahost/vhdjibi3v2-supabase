@@ -54,6 +54,7 @@ const ShepherdConfirmation = lazy(() => import('./pages/ShepherdConfirmation'));
 const LeaveRequestForm = lazy(() => import('./pages/LeaveRequestForm'));
 const LeaveManagement = lazy(() => import('./pages/LeaveManagement'));
 const PrayerRequestForm = lazy(() => import('./pages/PrayerRequestForm'));
+const EvangelizationForm = lazy(() => import('./pages/EvangelizationForm'));
 const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
 
 // Loading component
@@ -136,6 +137,11 @@ function AppContent() {
         <Route path="/priere" element={
           <Suspense fallback={<PageLoader />}>
             <PrayerRequestForm />
+          </Suspense>
+        } />
+        <Route path="/evangelisation" element={
+          <Suspense fallback={<PageLoader />}>
+            <EvangelizationForm />
           </Suspense>
         } />
         <Route path="/" element={

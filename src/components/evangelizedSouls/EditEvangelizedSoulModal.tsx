@@ -5,12 +5,15 @@ import {
   EvangelizedSoul,
   PLANNED_SERVICE_OPTIONS,
   GAVE_LIFE_OPTIONS,
+  WILL_JOIN_VH_OPTIONS,
   type GaveLifeToJesus,
   type PlannedService,
+  type WillJoinVH,
 } from '../../types/evangelized.types';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/roleHelpers';
 import EvangelistSelect from './EvangelistSelect';
+import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -25,6 +28,7 @@ interface Props {
 export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpdated }: Props) {
   const { user, userRole, activeRole } = useAuth();
   const isAdmin = isAdminUser({ role: (activeRole || userRole) as string, businessProfiles: (user as any)?.businessProfiles });
+  const { families } = useServiceFamilies(true);
   const [data, setData] = useState({
     fullName: '',
     nickname: '',
@@ -38,12 +42,16 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
     evangelistId: '' as string,
     attendedCommunity: '',
     gaveLifeToJesus: '' as '' | GaveLifeToJesus,
-    
+    willJoinVH: '' as '' | WillJoinVH,
     plannedService: '' as '' | PlannedService,
     prayerTopics: '',
     interviewerName: '',
+    serviceFamilyId: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  // Une famille ne peut être orientée que si l'âme accepte de venir au
+  // culte ET de rejoindre l'église en tant que membre.
+  const canAssignFamily = data.willJoinVH === 'yes' && data.plannedService !== '' && data.plannedService !== 'undecided';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,10 +71,11 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
       evangelistId: soul.evangelistId || '',
       attendedCommunity: soul.attendedCommunity || '',
       gaveLifeToJesus: (soul.gaveLifeToJesus as GaveLifeToJesus) || '',
-      
+      willJoinVH: (soul.willJoinVH as WillJoinVH) || '',
       plannedService: (soul.plannedService as PlannedService) || '',
       prayerTopics: soul.prayerTopics || '',
       interviewerName: soul.interviewerName || '',
+      serviceFamilyId: soul.serviceFamilyId || '',
     });
   }, [soul, isOpen]);
 
@@ -86,9 +95,11 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
         notes: data.notes.trim() || null,
         attended_community: data.attendedCommunity.trim() || null,
         gave_life_to_jesus: data.gaveLifeToJesus || null,
+        will_join_vh: data.willJoinVH || null,
         planned_service: data.plannedService || null,
         prayer_topics: data.prayerTopics.trim() || null,
         interviewer_name: data.interviewerName.trim() || null,
+        service_family_id: canAssignFamily ? (data.serviceFamilyId || null) : null,
         status: data.status,
         ...(isAdmin ? { evangelist_id: data.evangelistId || soul.evangelistId } : {}),
         updated_at: new Date().toISOString(),
@@ -188,6 +199,24 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
           </div>
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">L'âme rejoindra une église VH ?</label>
+          <div className="flex flex-wrap gap-4">
+            {WILL_JOIN_VH_OPTIONS.map((opt) => (
+              <label key={opt.value} className="inline-flex items-center gap-2 text-sm">
+                <input type="radio" name="edit_willJoinVH" value={opt.value}
+                  checked={data.willJoinVH === opt.value}
+                  onChange={() => setData({ ...data, willJoinVH: opt.value })}
+                  className="text-[#00665C] focus:ring-[#00665C]" />
+                {opt.label}
+              </label>
+            ))}
+            {data.willJoinVH && (
+              <button type="button" onClick={() => setData({ ...data, willJoinVH: '' })}
+                className="text-xs text-gray-500 underline">Effacer</button>
+            )}
+          </div>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">À quel culte pensez-vous venir ?</label>
           <select value={data.plannedService}
             onChange={(e) => setData({ ...data, plannedService: e.target.value as PlannedService | '' })}
@@ -199,8 +228,20 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
           </select>
         </div>
 
+        {canAssignFamily && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Famille orientée</label>
+            <select value={data.serviceFamilyId}
+              onChange={(e) => setData({ ...data, serviceFamilyId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]">
+              <option value="">-- Sélectionner --</option>
+              {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
+        )}
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Étudiant ayant conduit l'entretien</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Personne ayant conduit l'entretien</label>
           <input type="text" value={data.interviewerName}
             onChange={(e) => setData({ ...data, interviewerName: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
@@ -210,13 +251,6 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
           <label className="block text-sm font-medium text-gray-700 mb-1">Sujets de prière</label>
           <textarea rows={3} value={data.prayerTopics}
             onChange={(e) => setData({ ...data, prayerTopics: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Commentaires</label>
-          <textarea rows={3} value={data.notes}
-            onChange={(e) => setData({ ...data, notes: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
         </div>
 
