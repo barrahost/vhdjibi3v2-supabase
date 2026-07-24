@@ -248,7 +248,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">L'âme rejoindra une église VH ?</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">L'âme rejoindra l'église AGC ?</label>
         <div className="flex flex-wrap gap-4">
           {WILL_JOIN_VH_OPTIONS.map((opt) => (
             <label key={opt.value} className="inline-flex items-center gap-2 text-sm">

@@ -277,7 +277,7 @@ export default function EvangelizedSoulManagement() {
       "Lieu d'evangelisation": s.evangelizationLocation || '',
       'Communaute frequentee': s.attendedCommunity || '',
       'A donne sa vie a Jesus': gaveLifeLabel(s.gaveLifeToJesus),
-      'Rejoindra une eglise VH': willJoinVHLabel(s.willJoinVH),
+      "Rejoindra l'eglise AGC": willJoinVHLabel(s.willJoinVH),
       'Famille orientee': s.serviceFamilyId ? (familyNames[s.serviceFamilyId] || s.serviceFamilyId) : '',
       'Culte envisage': plannedServiceLabel(s.plannedService),
       'Sujets de priere': s.prayerTopics || '',
@@ -357,6 +357,13 @@ export default function EvangelizedSoulManagement() {
         if (!v || v === 'undecided') return <span className="text-gray-400">-</span>;
         const short: Record<string, string> = { wednesday_evening: 'Mer. 19h', sunday_first: 'Dim. 7h', sunday_second: 'Dim. 10h' };
         return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">{short[v] || plannedServiceLabel(v as any)}</span>;
+      },
+    },
+    {
+      key: 'serviceFamilyId', title: 'Famille orientee',
+      render: (v: string | null) => {
+        if (!v) return <span className="text-gray-400">-</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{familyNames[v] || v}</span>;
       },
     },
     ...(canAssignEvangelist ? [{
