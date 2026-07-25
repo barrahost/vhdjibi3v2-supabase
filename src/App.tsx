@@ -36,6 +36,9 @@ const Settings = lazy(() => import('./pages/Settings'));
 const DepartmentManagement = lazy(() => import('./pages/DepartmentManagement'));
 const ServiceFamilyManagement = lazy(() => import('./pages/ServiceFamilyManagement'));
 const ShepherdFamilyManagement = lazy(() => import('./pages/ShepherdFamilyManagement'));
+const CulteReportForm = lazy(() => import('./pages/CulteReportForm'));
+const CulteReportsHistory = lazy(() => import('./pages/CulteReportsHistory'));
+const CulteNeedsManagement = lazy(() => import('./pages/CulteNeedsManagement'));
 const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
 const ShepherdReminders = lazy(() => import('./pages/ShepherdReminders'));
 const SMSManagement = lazy(() => import('./pages/SMSManagement'));
@@ -379,6 +382,23 @@ function AppContent() {
               <Suspense fallback={<PageLoader />}>
                 <PrayerRequestsManagement />
               </Suspense>
+            </PrivateRoute>
+          } />
+
+          {/* Rapports de culte */}
+          <Route path="rapport-culte" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteReportForm />
+            </PrivateRoute>
+          } />
+          <Route path="historique-rapports" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteReportsHistory />
+            </PrivateRoute>
+          } />
+          <Route path="besoins-rapports" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteNeedsManagement />
             </PrivateRoute>
           } />
 

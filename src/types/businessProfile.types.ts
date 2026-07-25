@@ -48,7 +48,8 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
   department_leader: [
     'MANAGE_SERVANTS',
     'MANAGE_DEPARTMENT_SERVANTS',
-    'MANAGE_PROFILE'
+    'MANAGE_PROFILE',
+    'MANAGE_CULTE_REPORTS'
   ],
   adn: [
     'MANAGE_SOULS',

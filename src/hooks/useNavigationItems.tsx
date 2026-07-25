@@ -26,6 +26,8 @@ import {
   Building2,
   CalendarDays,
   HandHeart,
+  History,
+  HandHelping,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChurch } from '../contexts/ChurchContext';
@@ -105,6 +107,9 @@ export function useNavigationItems(): NavItem[] {
     }
     if (hasPermission(PERMISSIONS.MANAGE_SMS)) {
       children.push({ id: 'sms', label: 'SMS', href: '/sms', icon: <MessageSquare className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
+      children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
     }
 
     if (children.length > 0) {
@@ -276,6 +281,19 @@ export function useNavigationItems(): NavItem[] {
       label: 'Chaîne de prière',
       icon: <HandHeart className="w-5 h-5" />,
       href: '/prieres',
+    });
+  }
+
+  // Rapports de culte (admin / super_admin) : historique + besoins signalés
+  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && activeRole !== ROLES.DEPARTMENT_LEADER) {
+    items.push({
+      id: 'culte-reports',
+      label: 'Rapports de culte',
+      icon: <History className="w-5 h-5" />,
+      children: [
+        { id: 'culte-reports-history', label: 'Historique', href: '/historique-rapports', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> },
+      ],
     });
   }
 
