@@ -10,6 +10,7 @@ import { AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { getProfileDepartmentIds } from '../../types/businessProfile.types';
 
 export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const [formData, setFormData] = useState({
@@ -26,11 +27,13 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const { departments, loading: loadingDepartments } = useDepartments();
   const { user, activeRole } = useAuth();
 
-  // Quand on agit en responsable de département, on verrouille le formulaire sur SON département.
-  const lockedDepartmentId = activeRole === 'department_leader'
-    ? ((user?.businessProfiles?.find((p: any) => p.type === 'department_leader' && p.departmentId)?.departmentId) ?? '')
-    : '';
-  const isDeptLocked = !!lockedDepartmentId;
+  // Quand on agit en responsable de département, on restreint le formulaire à SES département(s).
+  const lockedDepartmentIds = activeRole === 'department_leader'
+    ? getProfileDepartmentIds(user?.businessProfiles?.find((p: any) => p.type === 'department_leader'))
+    : [];
+  const lockedDepartmentId = lockedDepartmentIds.length === 1 ? lockedDepartmentIds[0] : '';
+  const isDeptLocked = lockedDepartmentIds.length === 1;
+  const isDeptRestricted = lockedDepartmentIds.length > 1;
 
   useEffect(() => {
     if (lockedDepartmentId) {
@@ -40,6 +43,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
           : { ...prev, departmentIds: [lockedDepartmentId] }
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedDepartmentId]);
 
   // Avertissement si le téléphone correspond à un serviteur existant (sera fusionné)
@@ -221,7 +225,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
           </p>
         ) : (
           <div className="border border-gray-300 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-100">
-            {departments.map(dept => (
+            {(isDeptRestricted ? departments.filter(d => lockedDepartmentIds.includes(d.id)) : departments).map(dept => (
               <label key={dept.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"

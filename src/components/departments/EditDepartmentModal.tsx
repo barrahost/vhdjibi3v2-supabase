@@ -4,6 +4,7 @@ import { useUsersByProfile } from '../../hooks/useUsersByProfile';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { getProfileDepartmentIds } from '../../types/businessProfile.types';
 
 interface Department {
   id: string;
@@ -20,13 +21,19 @@ interface EditDepartmentModalProps {
   onSuccess?: () => void;
 }
 
+/** Adds departmentId to the user's department_leader profile without dropping any department they already lead. */
 async function syncLeaderBusinessProfile(userId: string, departmentId: string) {
   const { data: userRow } = await supabase.from('users').select('business_profiles').eq('id', userId).single();
   const profiles: any[] = userRow?.business_profiles || [];
   const hasLeaderProfile = profiles.some((p) => p.type === 'department_leader');
   const updatedProfiles = hasLeaderProfile
-    ? profiles.map((p) => (p.type === 'department_leader' ? { ...p, departmentId } : p))
-    : [...profiles, { type: 'department_leader', isActive: true, isPrimary: profiles.length === 0, departmentId }];
+    ? profiles.map((p) => {
+        if (p.type !== 'department_leader') return p;
+        const ids = new Set(getProfileDepartmentIds(p));
+        ids.add(departmentId);
+        return { ...p, departmentId: undefined, departmentIds: Array.from(ids) };
+      })
+    : [...profiles, { type: 'department_leader', isActive: true, isPrimary: profiles.length === 0, departmentIds: [departmentId] }];
   await supabase.from('users').update({ business_profiles: updatedProfiles }).eq('id', userId);
 }
 

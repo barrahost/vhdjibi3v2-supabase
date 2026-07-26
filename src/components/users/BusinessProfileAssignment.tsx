@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS } from '../../types/businessProfile.types';
+import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS, getProfileDepartmentIds } from '../../types/businessProfile.types';
 import { Star } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -22,10 +22,15 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
       .then(({ data }: { data: { id: string; name: string }[] | null }) => setDepartments(data || []));
   }, []);
 
-  const setDepartmentId = (departmentId: string) => {
-    const updated = selectedProfiles.map((p) =>
-      p.type === 'department_leader' ? { ...p, departmentId: departmentId || undefined } : p
-    );
+  const toggleDepartment = (departmentId: string) => {
+    const updated = selectedProfiles.map((p) => {
+      if (p.type !== 'department_leader') return p;
+      const current = getProfileDepartmentIds(p);
+      const next = current.includes(departmentId)
+        ? current.filter((id) => id !== departmentId)
+        : [...current, departmentId];
+      return { ...p, departmentId: undefined, departmentIds: next };
+    });
     onChange(updated);
   };
   const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'admin'];
@@ -133,19 +138,28 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
         {isProfileSelected('department_leader') && (
           <div className="ml-7 pl-3 border-l-2 border-gray-100">
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Département dirigé
+              Département(s) dirigé(s)
             </label>
-            <select
-              value={selectedProfiles.find((p) => p.type === 'department_leader')?.departmentId || ''}
-              onChange={(e) => setDepartmentId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-            >
-              <option value="">-- Sélectionner un département --</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-            {!selectedProfiles.find((p) => p.type === 'department_leader')?.departmentId && (
+            <p className="text-xs text-gray-500 mb-2">
+              Un responsable peut diriger plusieurs départements — cochez-en autant que nécessaire.
+            </p>
+            <div className="max-h-40 overflow-y-auto space-y-1.5 border border-gray-200 rounded-md p-2">
+              {departments.map((d) => {
+                const currentIds = getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader'));
+                return (
+                  <label key={d.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={currentIds.includes(d.id)}
+                      onChange={() => toggleDepartment(d.id)}
+                      className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
+                    />
+                    {d.name}
+                  </label>
+                );
+              })}
+            </div>
+            {getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader')).length === 0 && (
               <p className="mt-1 text-xs text-amber-600">
                 Sans département, cet utilisateur n'aura pas accès aux fonctions liées (ex : rapport de culte).
               </p>

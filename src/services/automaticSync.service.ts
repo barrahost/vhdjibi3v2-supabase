@@ -1,4 +1,4 @@
-import { BusinessProfile } from '../types/businessProfile.types';
+import { BusinessProfile, getProfileDepartmentIds } from '../types/businessProfile.types';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
@@ -48,8 +48,9 @@ export class AutomaticSyncService {
         return;
       }
 
+      const priorDeptIds = getProfileDepartmentIds(existingProfiles.find((p: any) => p.type === 'department_leader'));
       const businessProfiles: BusinessProfile[] = [
-        { type: 'department_leader', departmentId: servantData.departmentId, isActive: false },
+        { type: 'department_leader', departmentIds: Array.from(new Set([...priorDeptIds, servantData.departmentId])), isActive: false },
         { type: 'shepherd', isActive: true },
       ];
 
@@ -96,8 +97,9 @@ export class AutomaticSyncService {
       const now = new Date().toISOString();
 
       if (isNowHead) {
+        const priorDeptIds = getProfileDepartmentIds(existingProfiles.find((p: any) => p.type === 'department_leader'));
         const businessProfiles: BusinessProfile[] = [
-          { type: 'department_leader', departmentId: newData.departmentId, isActive: false },
+          { type: 'department_leader', departmentIds: Array.from(new Set([...priorDeptIds, newData.departmentId])), isActive: false },
           { type: 'shepherd', isActive: true },
         ];
         await supabase

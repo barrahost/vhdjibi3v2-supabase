@@ -14,6 +14,7 @@ import { DepartmentActivityModal } from '../departments/DepartmentActivityModal'
 import { DepartmentActivityService } from '../../services/departmentActivity.service';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { getProfileDepartmentIds } from '../../types/businessProfile.types';
 
 interface Department {
   id: string;
@@ -34,7 +35,9 @@ export default function DepartmentLeaderDashboard() {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [servants, setServants] = useState<Servant[]>([]);
-  const [department, setDepartment] = useState<Department | null>(null);
+  const [ledDepartments, setLedDepartments] = useState<Department[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+  const department = ledDepartments.find((d) => d.id === selectedDeptId) || null;
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalServants: 0,
@@ -57,10 +60,9 @@ export default function DepartmentLeaderDashboard() {
 
     const loadDepartment = async () => {
       try {
-        const deptLeaderProfile = user.businessProfiles.find(
-          (p: any) => p.type === 'department_leader' && p.departmentId
-        );
-        if (!deptLeaderProfile?.departmentId) {
+        const deptLeaderProfile = user.businessProfiles.find((p: any) => p.type === 'department_leader');
+        const departmentIds = getProfileDepartmentIds(deptLeaderProfile);
+        if (departmentIds.length === 0) {
           setLoading(false);
           return;
         }
@@ -68,11 +70,10 @@ export default function DepartmentLeaderDashboard() {
           .from('departments')
           .select('id, name, description')
           .eq('church_id', getChurchId())
-          .eq('id', deptLeaderProfile.departmentId)
-          .limit(1);
+          .in('id', departmentIds);
         if (deptRows && deptRows.length > 0) {
-          const d = deptRows[0];
-          setDepartment({ id: d.id, name: d.name, description: d.description });
+          setLedDepartments(deptRows.map((d: { id: string; name: string; description?: string }) => ({ id: d.id, name: d.name, description: d.description })));
+          setSelectedDeptId(deptRows[0].id);
         }
       } catch (error) {
         console.error('Erreur lors du chargement du département:', error);
@@ -196,6 +197,22 @@ export default function DepartmentLeaderDashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {ledDepartments.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {ledDepartments.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setSelectedDeptId(d.id)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                selectedDeptId === d.id ? 'bg-[#00665C] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {d.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* En-tête */}
       <div className="bg-gradient-to-r from-[#00665C]/10 to-[#00665C]/5 p-4 sm:p-6 rounded-xl border border-[#00665C]/10">
         <h1 className="text-lg sm:text-2xl font-bold text-gray-900 mb-1">

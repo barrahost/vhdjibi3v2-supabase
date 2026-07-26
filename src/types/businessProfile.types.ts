@@ -8,10 +8,20 @@ export type BusinessProfileType =
 
 export interface BusinessProfile {
   type: BusinessProfileType;
-  departmentId?: string; // For department leaders
+  /** @deprecated use departmentIds — kept for old records, still read as a fallback single-department value. */
+  departmentId?: string;
+  departmentIds?: string[]; // For department leaders — a leader can head several departments
   serviceFamilyId?: string; // For family leaders
   isActive?: boolean;
   isPrimary?: boolean; // Default profile used at login
+}
+
+/** Returns every department id a department_leader profile is responsible for, merging the legacy singular field with the new array. */
+export function getProfileDepartmentIds(profile: Pick<BusinessProfile, 'departmentId' | 'departmentIds'> | undefined | null): string[] {
+  if (!profile) return [];
+  const ids = new Set<string>(profile.departmentIds || []);
+  if (profile.departmentId) ids.add(profile.departmentId);
+  return Array.from(ids);
 }
 
 export interface UserBusinessProfiles {

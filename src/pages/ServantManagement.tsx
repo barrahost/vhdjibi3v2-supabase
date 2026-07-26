@@ -11,6 +11,7 @@ import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { ServantService } from '../services/servant.service';
 import { Servant } from '../types/servant.types';
+import { getProfileDepartmentIds } from '../types/businessProfile.types';
 import toast from 'react-hot-toast';
 
 export default function ServantManagement() {
@@ -29,11 +30,10 @@ export default function ServantManagement() {
 
   // Profil actuellement actif (sélectionné via le sélecteur de profils)
   const activeProfile = (user as any)?.businessProfiles?.find((p: any) => p.isActive);
-  const isActingAsDepartmentLeader =
-    activeProfile?.type === 'department_leader' && !!activeProfile?.departmentId;
-  const leaderDepartmentId: string | undefined = isActingAsDepartmentLeader
-    ? (activeProfile.departmentId as string)
-    : undefined;
+  const leaderDepartmentIds = activeProfile?.type === 'department_leader' ? getProfileDepartmentIds(activeProfile) : [];
+  const isActingAsDepartmentLeader = leaderDepartmentIds.length > 0;
+  // L'import en masse cible un seul département à la fois — on prend le premier si le responsable en dirige plusieurs.
+  const leaderDepartmentId: string | undefined = isActingAsDepartmentLeader ? leaderDepartmentIds[0] : undefined;
   const canShowImportButton =
     (isAdmin && !isActingAsDepartmentLeader) ||
     (canManageDepartmentServants && !!leaderDepartmentId) ||

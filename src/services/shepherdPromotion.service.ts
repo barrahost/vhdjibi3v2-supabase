@@ -1,6 +1,6 @@
 import { toast } from 'react-hot-toast';
 import { ServantService } from './servant.service';
-import { BusinessProfile } from '../types/businessProfile.types';
+import { BusinessProfile, getProfileDepartmentIds } from '../types/businessProfile.types';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 
@@ -43,13 +43,14 @@ export class ShepherdPromotionService {
       let updatedProfiles: any[];
 
       if (hasDepartmentLeaderProfile) {
-        updatedProfiles = existingProfiles.map((profile: any) =>
-          profile.type === 'department_leader'
-            ? { ...profile, departmentId, isActive: true }
-            : profile
-        );
+        updatedProfiles = existingProfiles.map((profile: any) => {
+          if (profile.type !== 'department_leader') return profile;
+          const ids = new Set(getProfileDepartmentIds(profile));
+          ids.add(departmentId);
+          return { ...profile, departmentId: undefined, departmentIds: Array.from(ids), isActive: true };
+        });
       } else {
-        updatedProfiles = [...existingProfiles, { type: 'department_leader', departmentId, isActive: true }];
+        updatedProfiles = [...existingProfiles, { type: 'department_leader', departmentIds: [departmentId], isActive: true }];
       }
 
       console.log('📝 [ShepherdPromotion] Profils mis à jour:', updatedProfiles);

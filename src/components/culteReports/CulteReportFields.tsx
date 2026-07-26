@@ -10,6 +10,11 @@ interface CulteReportFieldsProps {
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
+/** Selects the field's current content on focus so typing immediately replaces the default "0" instead of appending to it. */
+function selectOnFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.select();
+}
+
 export function CulteReportFields({ reportType, values: v, onChange }: CulteReportFieldsProps) {
   const set = <K extends keyof CulteReportFormValues>(key: K) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -31,29 +36,29 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Présence</legend>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div><label className={labelCls}>Hommes</label><input type="number" min="0" value={v.adultMen} onChange={set('adultMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Femmes</label><input type="number" min="0" value={v.adultWomen} onChange={set('adultWomen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Garçons</label><input type="number" min="0" value={v.childBoys} onChange={set('childBoys')} className={inputCls} /></div>
-            <div><label className={labelCls}>Filles</label><input type="number" min="0" value={v.childGirls} onChange={set('childGirls')} className={inputCls} /></div>
-            <div><label className={labelCls}>Serviteurs H.</label><input type="number" min="0" value={v.servedMen} onChange={set('servedMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Serviteurs F.</label><input type="number" min="0" value={v.servedWomen} onChange={set('servedWomen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Bloom</label><input type="number" min="0" value={v.blooms} onChange={set('blooms')} className={inputCls} /></div>
+            <div><label className={labelCls}>Hommes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.adultMen} onChange={set('adultMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.adultWomen} onChange={set('adultWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Garçons</label><input type="number" min="0" onFocus={selectOnFocus} value={v.childBoys} onChange={set('childBoys')} className={inputCls} /></div>
+            <div><label className={labelCls}>Filles</label><input type="number" min="0" onFocus={selectOnFocus} value={v.childGirls} onChange={set('childGirls')} className={inputCls} /></div>
+            <div><label className={labelCls}>Serviteurs H.</label><input type="number" min="0" onFocus={selectOnFocus} value={v.servedMen} onChange={set('servedMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Serviteurs F.</label><input type="number" min="0" onFocus={selectOnFocus} value={v.servedWomen} onChange={set('servedWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Bloom</label><input type="number" min="0" onFocus={selectOnFocus} value={v.blooms} onChange={set('blooms')} className={inputCls} /></div>
           </div>
         </fieldset>
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Conversions</legend>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelCls}>Hommes</label><input type="number" min="0" value={v.conversionMen} onChange={set('conversionMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Femmes</label><input type="number" min="0" value={v.conversionWomen} onChange={set('conversionWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Hommes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.conversionMen} onChange={set('conversionMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.conversionWomen} onChange={set('conversionWomen')} className={inputCls} /></div>
           </div>
         </fieldset>
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Nouveaux membres</legend>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div><label className={labelCls}>Hommes</label><input type="number" min="0" value={v.newMemberMen} onChange={set('newMemberMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Femmes</label><input type="number" min="0" value={v.newMemberWomen} onChange={set('newMemberWomen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Bloom</label><input type="number" min="0" value={v.newMemberBlooms} onChange={set('newMemberBlooms')} className={inputCls} /></div>
-            <div><label className={labelCls}>Enfants</label><input type="number" min="0" value={v.newMemberChildren} onChange={set('newMemberChildren')} className={inputCls} /></div>
+            <div><label className={labelCls}>Hommes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.newMemberMen} onChange={set('newMemberMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.newMemberWomen} onChange={set('newMemberWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Bloom</label><input type="number" min="0" onFocus={selectOnFocus} value={v.newMemberBlooms} onChange={set('newMemberBlooms')} className={inputCls} /></div>
+            <div><label className={labelCls}>Enfants</label><input type="number" min="0" onFocus={selectOnFocus} value={v.newMemberChildren} onChange={set('newMemberChildren')} className={inputCls} /></div>
           </div>
         </fieldset>
       </>
@@ -66,18 +71,18 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Nouveaux visiteurs</legend>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelCls}>Hommes</label><input type="number" min="0" value={v.newVisitorMen} onChange={set('newVisitorMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Femmes</label><input type="number" min="0" value={v.newVisitorWomen} onChange={set('newVisitorWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Hommes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.newVisitorMen} onChange={set('newVisitorMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.newVisitorWomen} onChange={set('newVisitorWomen')} className={inputCls} /></div>
           </div>
         </fieldset>
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Décisions</legend>
-          <div><label className={labelCls}>Indécis</label><input type="number" min="0" value={v.undecided} onChange={set('undecided')} className={inputCls} /></div>
+          <div><label className={labelCls}>Indécis</label><input type="number" min="0" onFocus={selectOnFocus} value={v.undecided} onChange={set('undecided')} className={inputCls} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelCls}>Veut rejoindre — Hommes</label><input type="number" min="0" value={v.wantsToJoinMen} onChange={set('wantsToJoinMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Veut rejoindre — Femmes</label><input type="number" min="0" value={v.wantsToJoinWomen} onChange={set('wantsToJoinWomen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Donne sa vie — Hommes</label><input type="number" min="0" value={v.wantsLifeMen} onChange={set('wantsLifeMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Donne sa vie — Femmes</label><input type="number" min="0" value={v.wantsLifeWomen} onChange={set('wantsLifeWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Veut rejoindre — Hommes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.wantsToJoinMen} onChange={set('wantsToJoinMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Veut rejoindre — Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.wantsToJoinWomen} onChange={set('wantsToJoinWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Donne sa vie — Hommes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.wantsLifeMen} onChange={set('wantsLifeMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>Donne sa vie — Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.wantsLifeWomen} onChange={set('wantsLifeWomen')} className={inputCls} /></div>
           </div>
         </fieldset>
       </>
@@ -88,9 +93,9 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
     return (
       <fieldset className="border rounded-md p-4 space-y-3">
         <legend className="text-sm font-semibold text-gray-700 px-1">Offrandes</legend>
-        <div><label className={labelCls}>Dîmes</label><input type="number" min="0" value={v.tithes} onChange={set('tithes')} className={inputCls} /></div>
-        <div><label className={labelCls}>Offrandes régulières</label><input type="number" min="0" value={v.regularOfferings} onChange={set('regularOfferings')} className={inputCls} /></div>
-        <div><label className={labelCls}>Offrandes spéciales</label><input type="number" min="0" value={v.specialOfferings} onChange={set('specialOfferings')} className={inputCls} /></div>
+        <div><label className={labelCls}>Dîmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.tithes} onChange={set('tithes')} className={inputCls} /></div>
+        <div><label className={labelCls}>Offrandes régulières</label><input type="number" min="0" onFocus={selectOnFocus} value={v.regularOfferings} onChange={set('regularOfferings')} className={inputCls} /></div>
+        <div><label className={labelCls}>Offrandes spéciales</label><input type="number" min="0" onFocus={selectOnFocus} value={v.specialOfferings} onChange={set('specialOfferings')} className={inputCls} /></div>
       </fieldset>
     );
   }
@@ -100,10 +105,10 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
       <fieldset className="border rounded-md p-4 space-y-3">
         <legend className="text-sm font-semibold text-gray-700 px-1">Sainte Cène</legend>
         <div className="grid grid-cols-2 gap-3">
-          <div><label className={labelCls}>Pains préparés</label><input type="number" min="0" value={v.painsPreparees} onChange={set('painsPreparees')} className={inputCls} /></div>
-          <div><label className={labelCls}>Vins préparés</label><input type="number" min="0" value={v.vinsPreparees} onChange={set('vinsPreparees')} className={inputCls} /></div>
-          <div><label className={labelCls}>Pains distribués</label><input type="number" min="0" value={v.painsDistribuees} onChange={set('painsDistribuees')} className={inputCls} /></div>
-          <div><label className={labelCls}>Vins distribués</label><input type="number" min="0" value={v.vinsDistribuees} onChange={set('vinsDistribuees')} className={inputCls} /></div>
+          <div><label className={labelCls}>Pains préparés</label><input type="number" min="0" onFocus={selectOnFocus} value={v.painsPreparees} onChange={set('painsPreparees')} className={inputCls} /></div>
+          <div><label className={labelCls}>Vins préparés</label><input type="number" min="0" onFocus={selectOnFocus} value={v.vinsPreparees} onChange={set('vinsPreparees')} className={inputCls} /></div>
+          <div><label className={labelCls}>Pains distribués</label><input type="number" min="0" onFocus={selectOnFocus} value={v.painsDistribuees} onChange={set('painsDistribuees')} className={inputCls} /></div>
+          <div><label className={labelCls}>Vins distribués</label><input type="number" min="0" onFocus={selectOnFocus} value={v.vinsDistribuees} onChange={set('vinsDistribuees')} className={inputCls} /></div>
         </div>
       </fieldset>
     );
@@ -166,8 +171,8 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
         <legend className="text-sm font-semibold text-gray-700 px-1">Classe</legend>
         <div><label className={labelCls}>Nom de la classe</label><input type="text" value={v.className} onChange={set('className')} className={inputCls} /></div>
         <div className="grid grid-cols-2 gap-3">
-          <div><label className={labelCls}>Étudiants inscrits</label><input type="number" min="0" value={v.actualStudents} onChange={set('actualStudents')} className={inputCls} /></div>
-          <div><label className={labelCls}>Étudiants présents</label><input type="number" min="0" value={v.presentStudents} onChange={set('presentStudents')} className={inputCls} /></div>
+          <div><label className={labelCls}>Étudiants inscrits</label><input type="number" min="0" onFocus={selectOnFocus} value={v.actualStudents} onChange={set('actualStudents')} className={inputCls} /></div>
+          <div><label className={labelCls}>Étudiants présents</label><input type="number" min="0" onFocus={selectOnFocus} value={v.presentStudents} onChange={set('presentStudents')} className={inputCls} /></div>
         </div>
         <div><label className={labelCls}>Modérateur</label><input type="text" value={v.moderator} onChange={set('moderator')} className={inputCls} /></div>
         <div><label className={labelCls}>Cours du jour</label><input type="text" value={v.courseOfTheDay} onChange={set('courseOfTheDay')} className={inputCls} /></div>

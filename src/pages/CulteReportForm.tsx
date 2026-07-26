@@ -4,11 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { CulteReportType, DEPARTMENT_NAME_BY_REPORT_TYPE } from '../types/culteReport.types';
+import { getProfileDepartmentIds } from '../types/businessProfile.types';
 import CulteReportSubmitForm from '../components/culteReports/CulteReportSubmitForm';
 
 interface DeptInfo {
   id: string;
   name: string;
+  reportType: CulteReportType;
 }
 
 const DEPARTMENT_TO_REPORT_TYPE: Record<string, CulteReportType> = Object.fromEntries(
@@ -21,13 +23,9 @@ function normalizeDeptName(name: string): string {
 
 export default function CulteReportForm() {
   const { user } = useAuth();
-  const [department, setDepartment] = useState<DeptInfo | null>(null);
+  const [ledDepartments, setLedDepartments] = useState<DeptInfo[]>([]);
   const [loadingDept, setLoadingDept] = useState(true);
-
-  const reportType = useMemo<CulteReportType | null>(() => {
-    if (!department) return null;
-    return DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(department.name)] || null;
-  }, [department]);
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.businessProfiles) {
@@ -35,10 +33,9 @@ export default function CulteReportForm() {
       return;
     }
     const load = async () => {
-      const profile = (user.businessProfiles as any[]).find(
-        (p) => p.type === 'department_leader' && p.departmentId
-      );
-      if (!profile?.departmentId) {
+      const profile = (user.businessProfiles as any[]).find((p) => p.type === 'department_leader');
+      const departmentIds = getProfileDepartmentIds(profile);
+      if (departmentIds.length === 0) {
         setLoadingDept(false);
         return;
       }
@@ -46,19 +43,32 @@ export default function CulteReportForm() {
         .from('departments')
         .select('id, name')
         .eq('church_id', getChurchId())
-        .eq('id', profile.departmentId)
-        .limit(1);
-      if (data && data.length > 0) setDepartment({ id: data[0].id, name: data[0].name });
+        .in('id', departmentIds);
+
+      const withReportType = (data || [])
+        .map((d: { id: string; name: string }) => {
+          const reportType = DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(d.name)];
+          return reportType ? { id: d.id, name: d.name, reportType } : null;
+        })
+        .filter((d: DeptInfo | null): d is DeptInfo => d !== null);
+
+      setLedDepartments(withReportType);
+      if (withReportType.length === 1) setSelectedDeptId(withReportType[0].id);
       setLoadingDept(false);
     };
     load();
   }, [user]);
 
+  const selectedDept = useMemo(
+    () => ledDepartments.find((d) => d.id === selectedDeptId) || null,
+    [ledDepartments, selectedDeptId]
+  );
+
   if (loadingDept) {
     return <div className="flex items-center justify-center min-h-[400px] text-gray-500">Chargement...</div>;
   }
 
-  if (!department || !reportType) {
+  if (ledDepartments.length === 0) {
     return (
       <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-800 text-sm">
         Aucun département de responsable n'est associé à votre compte, ou ce département n'a pas
@@ -71,10 +81,39 @@ export default function CulteReportForm() {
     <div className="space-y-4 sm:space-y-6 max-w-3xl">
       <div className="flex items-center gap-2">
         <FileText className="w-6 h-6 text-[#00665C]" />
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Rapport de culte — {department.name}</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+          Rapport de culte{selectedDept ? ` — ${selectedDept.name}` : ''}
+        </h1>
       </div>
 
-      <CulteReportSubmitForm reportType={reportType} departmentId={department.id} departmentName={department.name} />
+      {ledDepartments.length > 1 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Pour quel département soumettez-vous ce rapport ?
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {ledDepartments.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setSelectedDeptId(d.id)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  selectedDeptId === d.id ? 'bg-[#00665C] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {d.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selectedDept && (
+        <CulteReportSubmitForm
+          reportType={selectedDept.reportType}
+          departmentId={selectedDept.id}
+          departmentName={selectedDept.name}
+        />
+      )}
     </div>
   );
 }

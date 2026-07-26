@@ -14,6 +14,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { getProfileDepartmentIds } from '../../types/businessProfile.types';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -38,6 +39,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   const [editingServant, setEditingServant] = useState<Servant | null>(null);
   const [convertingServant, setConvertingServant] = useState<Servant | null>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
+  const [leaderDepartmentIds, setLeaderDepartmentIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     field: SortField;
     direction: SortDirection;
@@ -47,16 +49,13 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   });
   const { departments } = useDepartments();
 
-  // Auto-filter by department if user is a department leader in that mode
+  // Auto-filter by department(s) if user is a department leader in that mode
   useEffect(() => {
     if (activeRole === 'department_leader' && user?.businessProfiles) {
-      const deptLeaderProfile = user.businessProfiles.find(
-        (p: any) => p.type === 'department_leader' && p.departmentId
-      );
-      
-      if (deptLeaderProfile?.departmentId) {
-        setSelectedDepartmentId(deptLeaderProfile.departmentId);
-      }
+      const deptLeaderProfile = user.businessProfiles.find((p: any) => p.type === 'department_leader');
+      const ids = getProfileDepartmentIds(deptLeaderProfile);
+      setLeaderDepartmentIds(ids);
+      setSelectedDepartmentId(ids.length === 1 ? ids[0] : '');
     }
   }, [activeRole, user?.businessProfiles]);
 
@@ -103,7 +102,12 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   useEffect(() => {
     const loadServants = async () => {
       let q = supabase.from('servants').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
-      if (selectedDepartmentId) q = (q as any).contains('department_ids', [selectedDepartmentId]);
+      if (selectedDepartmentId) {
+        q = (q as any).contains('department_ids', [selectedDepartmentId]);
+      } else if (activeRole === 'department_leader' && leaderDepartmentIds.length > 1) {
+        // No single department picked — leader sees servants across every department they head.
+        q = (q as any).overlaps('department_ids', leaderDepartmentIds);
+      }
       if (statusFilter !== 'all') q = q.eq('status', statusFilter);
       const { data, error } = await q;
       if (error) {
@@ -131,11 +135,11 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
       setLoading(false);
     };
     loadServants();
-    const channel = supabase.channel('servants_list_' + statusFilter + '_' + selectedDepartmentId)
+    const channel = supabase.channel('servants_list_' + statusFilter + '_' + selectedDepartmentId + '_' + leaderDepartmentIds.join(','))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'servants' }, () => loadServants())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [selectedDepartmentId, statusFilter]);
+  }, [selectedDepartmentId, statusFilter, leaderDepartmentIds]);
 
   // Réinitialiser la page quand la recherche change
   useEffect(() => {
@@ -237,10 +241,15 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
             value={selectedDepartmentId}
             onChange={(e) => setSelectedDepartmentId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
-            disabled={activeRole === 'department_leader'}
+            disabled={activeRole === 'department_leader' && leaderDepartmentIds.length <= 1}
           >
-            <option value="">Tous les départements</option>
-            {departments.map(department => (
+            <option value="">
+              {activeRole === 'department_leader' && leaderDepartmentIds.length > 1 ? 'Tous mes départements' : 'Tous les départements'}
+            </option>
+            {(activeRole === 'department_leader'
+              ? departments.filter((d) => leaderDepartmentIds.includes(d.id))
+              : departments
+            ).map(department => (
               <option key={department.id} value={department.id}>
                 {department.name}
               </option>
@@ -248,7 +257,9 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
           </select>
           {activeRole === 'department_leader' && (
             <p className="text-xs text-muted-foreground mt-1">
-              Filtré automatiquement par votre département
+              {leaderDepartmentIds.length > 1
+                ? 'Filtré par vos départements — choisissez-en un pour affiner'
+                : 'Filtré automatiquement par votre département'}
             </p>
           )}
         </div>

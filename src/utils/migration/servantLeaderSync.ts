@@ -42,7 +42,7 @@ export class ServantLeaderSync {
           if (hasProper) { console.log(`User ${user.full_name} already has proper profiles, skipping`); continue; }
 
           const businessProfiles: BusinessProfile[] = [
-            { type: 'department_leader', departmentId: servant.department_id, isActive: false },
+            { type: 'department_leader', departmentIds: [servant.department_id], isActive: false },
             { type: 'shepherd', isActive: true },
           ];
 
