@@ -77,6 +77,7 @@ interface DeptViewConfig {
   summaryMetrics: SummaryMetricConfig[];
   columns: ColumnConfig[];
   breakdowns: ChartBreakdown[];
+  searchFields: (r: CulteReport) => string[];
 }
 
 const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], { border: string; icon: string; value: string }> = {
@@ -88,6 +89,10 @@ const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], { border: string; icon
 
 function lastReportDate(reports: CulteReport[]): string {
   return reports.length > 0 ? reports[0].serviceDate : '-';
+}
+
+function defaultSearchFields(r: CulteReport): string[] {
+  return [r.serviceDate, r.notes || '', r.submittedByName];
 }
 
 function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport) => void, onDelete: (r: CulteReport) => void): ColumnConfig {
@@ -158,10 +163,22 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
           {
             key: 'gender', label: 'H / F',
             series: [
-              { key: 'men', label: 'Hommes', color: '#3b82f6', type: 'bar', stackId: 'hf', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
-              { key: 'women', label: 'Femmes', color: '#ec4899', type: 'bar', stackId: 'hf', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
+              { key: 'men', label: 'Hommes', color: '#3b82f6', type: 'bar', stackId: 'hf', extractValue: (r) => {
+                const a = (r.data as WorshipReportData).attendance;
+                return (a?.adults?.men || 0) + (a?.children?.boys || 0);
+              } },
+              { key: 'women', label: 'Femmes', color: '#ec4899', type: 'bar', stackId: 'hf', extractValue: (r) => {
+                const a = (r.data as WorshipReportData).attendance;
+                return (a?.adults?.women || 0) + (a?.children?.girls || 0);
+              } },
             ],
           },
+        ],
+        searchFields: (r) => [
+          r.serviceDate,
+          (r.data as WorshipReportData).messageTheme || '',
+          (r.data as WorshipReportData).speakerName || '',
+          r.submittedByName,
         ],
       };
     case 'finance':
@@ -188,6 +205,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
             ],
           },
         ],
+        searchFields: defaultSearchFields,
       };
     case 'adn':
       return {
@@ -213,6 +231,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
             ],
           },
         ],
+        searchFields: defaultSearchFields,
       };
     case 'sainte_cene':
       return {
@@ -238,6 +257,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
             ],
           },
         ],
+        searchFields: defaultSearchFields,
       };
     case 'academie':
       return {
@@ -260,6 +280,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
             series: [{ key: 'present', label: 'Étudiants présents', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 }],
           },
         ],
+        searchFields: defaultSearchFields,
       };
     case 'sono':
       return {
@@ -278,9 +299,10 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
             series: [{ key: 'count', label: 'Rapports soumis', color: '#00665C', type: 'bar', extractValue: () => 1 }],
           },
         ],
+        searchFields: defaultSearchFields,
       };
     default:
-      return { icon: BarChart3, subtitle: '', statCards: [], summaryMetrics: [], breakdowns: [] };
+      return { icon: BarChart3, subtitle: '', statCards: [], summaryMetrics: [], breakdowns: [], searchFields: defaultSearchFields };
   }
 }
 
@@ -350,6 +372,7 @@ export default function CulteReportDepartmentView() {
 
   const { confirm, confirmModalProps } = useConfirmModal();
   const [reports, setReports] = useState<CulteReport[]>([]);
+  const [allReports, setAllReports] = useState<CulteReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -408,8 +431,19 @@ export default function CulteReportDepartmentView() {
     }
   }, [type, departmentName, chartRange]);
 
+  const loadAllReports = useCallback(async () => {
+    if (!departmentName) return;
+    try {
+      const data = await CulteReportService.getHistory({ reportType: type });
+      setAllReports(data);
+    } catch (error) {
+      console.error('Error loading all department reports:', error);
+    }
+  }, [type, departmentName]);
+
   useEffect(() => { loadReports(); }, [loadReports]);
   useEffect(() => { loadChartReports(); }, [loadChartReports]);
+  useEffect(() => { loadAllReports(); }, [loadAllReports]);
 
   if (!departmentName) {
     return <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">Type de rapport inconnu.</div>;
@@ -422,6 +456,7 @@ export default function CulteReportDepartmentView() {
         toast.success('Rapport supprimé');
         loadReports();
         loadChartReports();
+        loadAllReports();
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');
       }
@@ -431,7 +466,9 @@ export default function CulteReportDepartmentView() {
   const config = getConfig(type);
   const columns = getColumns(type, setViewingReport, setEditingReport, handleDelete);
 
-  const filtered = reports.filter((r) => r.submittedByName.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filtered = reports.filter((r) =>
+    !searchTerm || config.searchFields(r).some((f) => f.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -465,7 +502,7 @@ export default function CulteReportDepartmentView() {
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{sc.label}</h3>
                 <sc.icon className={`h-4 w-4 ${colors.icon} opacity-70`} />
               </div>
-              <p className={`text-2xl font-bold ${colors.value}`}>{sc.compute(reports)}</p>
+              <p className={`text-2xl font-bold ${colors.value}`}>{sc.compute(allReports.length > 0 ? allReports : reports)}</p>
             </div>
           );
         })}
@@ -513,7 +550,7 @@ export default function CulteReportDepartmentView() {
           departmentId={departmentId}
           departmentName={departmentName}
           onCancel={() => setShowForm(false)}
-          onSuccess={() => { setShowForm(false); loadReports(); loadChartReports(); }}
+          onSuccess={() => { setShowForm(false); loadReports(); loadChartReports(); loadAllReports(); }}
         />
       )}
 
@@ -583,7 +620,7 @@ export default function CulteReportDepartmentView() {
           report={(editingReport || viewingReport)!}
           isOpen={true}
           onClose={() => { setEditingReport(null); setViewingReport(null); }}
-          onSuccess={() => { setEditingReport(null); setViewingReport(null); loadReports(); loadChartReports(); }}
+          onSuccess={() => { setEditingReport(null); setViewingReport(null); loadReports(); loadChartReports(); loadAllReports(); }}
         />
       )}
       <ConfirmModal {...confirmModalProps} />
