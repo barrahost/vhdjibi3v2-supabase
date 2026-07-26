@@ -222,31 +222,55 @@ export const CulteReportService = {
     if (error) throw error;
   },
 
-  async getDashboardStats(startDate: string, endDate: string, meetingTypeName?: string): Promise<DashboardStats> {
+  // Instantané des 5 derniers rapports de culte + 10 derniers rapports financiers,
+  // reproduisant exactement calculateStats() de l'ancienne app : ni les StatCards ni
+  // les tendances ne dépendent d'une plage de dates — seuls le graphique et l'export le font.
+  async getDashboardSnapshotStats(): Promise<DashboardStats> {
     const [worshipReports, financeReports] = await Promise.all([
-      this.getHistory({ reportType: 'worship', startDate, endDate, meetingTypeName }),
-      this.getHistory({ reportType: 'finance', startDate, endDate, meetingTypeName }),
+      this.getHistory({ reportType: 'worship' }).then((r) => r.slice(0, 5)),
+      this.getHistory({ reportType: 'finance' }).then((r) => r.slice(0, 10)),
     ]);
 
-    const totalParticipants = worshipReports.reduce(
-      (sum, r) => sum + ((r.data as WorshipReportData).totalParticipants || 0),
-      0
-    );
-    const totalNewMembers = worshipReports.reduce(
-      (sum, r) => sum + ((r.data as WorshipReportData).totalNewMembers || 0),
-      0
-    );
-    const totalFinances = financeReports.reduce(
-      (sum, r) => sum + ((r.data as FinanceReportData).totalFinances || 0),
-      0
-    );
-    const averageAttendance = worshipReports.length > 0 ? Math.round(totalParticipants / worshipReports.length) : 0;
+    const totalParticipants = worshipReports.length
+      ? Math.round(worshipReports.reduce((sum, r) => sum + ((r.data as WorshipReportData).totalParticipants || 0), 0) / worshipReports.length)
+      : 0;
+    const totalNewMembers = worshipReports.length
+      ? Math.round(worshipReports.reduce((sum, r) => sum + ((r.data as WorshipReportData).totalNewMembers || 0), 0) / worshipReports.length)
+      : 0;
+    const totalFinances = financeReports.reduce((sum, r) => sum + ((r.data as FinanceReportData).totalFinances || 0), 0);
+    const averageAttendance = totalParticipants;
+
+    const calcTrend = (current: number, previous: number): { value: number; isPositive: boolean } => {
+      if (previous === 0) return { value: 0, isPositive: true };
+      const pct = ((current - previous) / previous) * 100;
+      return { value: Math.abs(Math.round(pct)), isPositive: pct >= 0 };
+    };
+
+    const [latestWorship, prevWorship] = worshipReports.length >= 2
+      ? [worshipReports[0], worshipReports[1]]
+      : worshipReports.length === 1 ? [worshipReports[0], worshipReports[0]] : [null, null];
+    const [latestFinance, prevFinance] = financeReports.length >= 2
+      ? [financeReports[0], financeReports[1]]
+      : financeReports.length === 1 ? [financeReports[0], financeReports[0]] : [null, null];
+
+    const trends = {
+      attendance: latestWorship && prevWorship
+        ? calcTrend((latestWorship.data as WorshipReportData).totalParticipants || 0, (prevWorship.data as WorshipReportData).totalParticipants || 0)
+        : { value: 0, isPositive: true },
+      newMembers: latestWorship && prevWorship
+        ? calcTrend((latestWorship.data as WorshipReportData).totalNewMembers || 0, (prevWorship.data as WorshipReportData).totalNewMembers || 0)
+        : { value: 0, isPositive: true },
+      finances: latestFinance && prevFinance
+        ? calcTrend((latestFinance.data as FinanceReportData).totalFinances || 0, (prevFinance.data as FinanceReportData).totalFinances || 0)
+        : { value: 0, isPositive: true },
+    };
 
     return {
       totalParticipants,
       totalNewMembers,
       totalFinances,
       averageAttendance,
+      trends,
       worshipReports,
     };
   },
@@ -370,12 +394,6 @@ export const CulteReportService = {
     return { avgAttendance, totalVisitors, totalFinances };
   },
 
-  async getPreviousPeriodStats(startDate: string, endDate: string, meetingTypeName?: string): Promise<DashboardStats> {
-    const durationMs = new Date(endDate).getTime() - new Date(startDate).getTime();
-    const prevEnd = new Date(new Date(startDate).getTime() - 24 * 60 * 60 * 1000);
-    const prevStart = new Date(prevEnd.getTime() - durationMs);
-    return this.getDashboardStats(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0], meetingTypeName);
-  },
 };
 
 export interface DashboardStats {
@@ -383,6 +401,11 @@ export interface DashboardStats {
   totalNewMembers: number;
   totalFinances: number;
   averageAttendance: number;
+  trends: {
+    attendance: { value: number; isPositive: boolean };
+    newMembers: { value: number; isPositive: boolean };
+    finances: { value: number; isPositive: boolean };
+  };
   worshipReports: CulteReport[];
 }
 

@@ -108,20 +108,15 @@ const DEPT_ICONS: Record<CulteReportType, React.ElementType> = {
   sainte_cene: Wheat,
 };
 
-function trendPct(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - previous) / previous) * 100);
-}
-
 interface StatMiniCardProps {
   title: string;
   value: number | string;
   icon: React.ElementType;
-  trendPct?: number;
+  trend?: { value: number; isPositive: boolean };
   borderColor: string;
 }
 
-function StatMiniCard({ title, value, icon: Icon, trendPct: trend, borderColor }: StatMiniCardProps) {
+function StatMiniCard({ title, value, icon: Icon, trend, borderColor }: StatMiniCardProps) {
   return (
     <div
       className="bg-white p-3 sm:p-4 md:p-5 lg:p-6 rounded-lg shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md"
@@ -132,8 +127,8 @@ function StatMiniCard({ title, value, icon: Icon, trendPct: trend, borderColor }
           <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 truncate">{title}</p>
           <p className="text-base md:text-lg lg:text-2xl font-bold text-gray-900 break-words">{value}</p>
           {trend !== undefined && (
-            <p className={`text-[10px] sm:text-xs md:text-sm flex items-center ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+            <p className={`text-[10px] sm:text-xs md:text-sm flex items-center ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+              {trend.isPositive ? '↑' : '↓'} {trend.value}%
             </p>
           )}
         </div>
@@ -152,8 +147,7 @@ export default function CulteReportsDashboard() {
   const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [previousStats, setPreviousStats] = useState<DashboardStats | null>(null);
-  const [recentReports, setRecentReports] = useState<CulteReport[]>([]);
+  const [chartReports, setChartReports] = useState<CulteReport[]>([]);
   const [loadingGeneral, setLoadingGeneral] = useState(true);
 
   const [consolidated, setConsolidated] = useState<ConsolidatedDepartment[]>([]);
@@ -166,14 +160,17 @@ export default function CulteReportsDashboard() {
   const loadGeneral = useCallback(async () => {
     setLoadingGeneral(true);
     try {
-      const [dashboardStats, previous, recent] = await Promise.all([
-        CulteReportService.getDashboardStats(generalRange.startDate, generalRange.endDate, meetingTypeFilter || undefined),
-        CulteReportService.getPreviousPeriodStats(generalRange.startDate, generalRange.endDate, meetingTypeFilter || undefined),
-        CulteReportService.getHistory({ startDate: generalRange.startDate, endDate: generalRange.endDate, meetingTypeName: meetingTypeFilter || undefined }),
+      const [dashboardStats, chartData] = await Promise.all([
+        CulteReportService.getDashboardSnapshotStats(),
+        CulteReportService.getHistory({
+          reportType: 'worship',
+          startDate: generalRange.startDate,
+          endDate: generalRange.endDate,
+          meetingTypeName: meetingTypeFilter || undefined,
+        }),
       ]);
       setStats(dashboardStats);
-      setPreviousStats(previous);
-      setRecentReports(recent.slice(0, 5));
+      setChartReports(chartData);
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
       toast.error('Erreur lors du chargement des statistiques');
@@ -222,7 +219,9 @@ export default function CulteReportsDashboard() {
     low: needs.filter((n) => n.priority === 'low').length,
   };
 
-  const worshipRecent = recentReports.filter((r) => r.reportType === 'worship').slice(0, 5);
+  const worshipRecent = (stats?.worshipReports || []).filter(
+    (r) => !meetingTypeFilter || r.meetingTypeName === meetingTypeFilter
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -253,16 +252,16 @@ export default function CulteReportsDashboard() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatMiniCard
                   title="Participation moyenne"
-                  value={stats.averageAttendance}
+                  value={stats.totalParticipants}
                   icon={Users}
-                  trendPct={previousStats ? trendPct(stats.averageAttendance, previousStats.averageAttendance) : 0}
+                  trend={stats.trends.attendance}
                   borderColor="#3B82F6"
                 />
                 <StatMiniCard
                   title="Nouveaux membres"
                   value={stats.totalNewMembers}
                   icon={UserPlus}
-                  trendPct={previousStats ? trendPct(stats.totalNewMembers, previousStats.totalNewMembers) : 0}
+                  trend={stats.trends.newMembers}
                   borderColor="#10B981"
                 />
                 <StatMiniCard
@@ -275,7 +274,7 @@ export default function CulteReportsDashboard() {
                   title="Total entrées"
                   value={`${stats.totalFinances.toLocaleString('fr-FR')} FCFA`}
                   icon={Coins}
-                  trendPct={previousStats ? trendPct(stats.totalFinances, previousStats.totalFinances) : 0}
+                  trend={stats.trends.finances}
                   borderColor="#8B5CF6"
                 />
               </div>
@@ -320,7 +319,7 @@ export default function CulteReportsDashboard() {
                 </button>
               </div>
 
-              <CulteBreakdownChart reports={stats.worshipReports} breakdowns={BREAKDOWNS} legendPosition="top" />
+              <CulteBreakdownChart reports={chartReports} breakdowns={BREAKDOWNS} legendPosition="top" />
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
