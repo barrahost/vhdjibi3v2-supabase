@@ -14,7 +14,7 @@ export const DEPARTMENT_NAME_BY_REPORT_TYPE: Record<CulteReportType, string> = {
   adn: 'AMIS DES NOUVEAUX',
   finance: 'EMMERAUDE',
   sainte_cene: 'SAINTE CENE',
-  sono: 'SONORISATION',
+  sono: 'COM & SONO',
   academie: "ACADEMIE D'HONNEUR",
 };
 
