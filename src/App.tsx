@@ -37,7 +37,6 @@ const DepartmentManagement = lazy(() => import('./pages/DepartmentManagement'));
 const ServiceFamilyManagement = lazy(() => import('./pages/ServiceFamilyManagement'));
 const ShepherdFamilyManagement = lazy(() => import('./pages/ShepherdFamilyManagement'));
 const CulteReportForm = lazy(() => import('./pages/CulteReportForm'));
-const CulteReportsHistory = lazy(() => import('./pages/CulteReportsHistory'));
 const CulteNeedsManagement = lazy(() => import('./pages/CulteNeedsManagement'));
 const CulteReportsDashboard = lazy(() => import('./pages/CulteReportsDashboard'));
 const CulteReportDepartmentView = lazy(() => import('./pages/CulteReportDepartmentView'));
@@ -398,11 +397,6 @@ function AppContent() {
           <Route path="rapport-culte" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <CulteReportForm />
-            </PrivateRoute>
-          } />
-          <Route path="historique-rapports" element={
-            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
-              <CulteReportsHistory />
             </PrivateRoute>
           } />
           <Route path="besoins-rapports" element={

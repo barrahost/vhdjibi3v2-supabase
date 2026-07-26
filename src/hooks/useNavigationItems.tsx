@@ -304,7 +304,6 @@ export function useNavigationItems(): NavItem[] {
         { id: 'culte-reports-academie', label: 'Académie', href: '/rapports/academie', icon: <BookOpen className="w-5 h-5" /> },
         { id: 'culte-reports-sainte-cene', label: 'Sainte Cène', href: '/rapports/sainte_cene', icon: <Wheat className="w-5 h-5" /> },
         { id: 'culte-reports-sono', label: 'Communication & Sono', href: '/rapports/sono', icon: <Radio className="w-5 h-5" /> },
-        { id: 'culte-reports-history', label: 'Historique (tous types)', href: '/historique-rapports', icon: <History className="w-5 h-5" /> },
         { id: 'culte-reports-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> },
       ],
     });
