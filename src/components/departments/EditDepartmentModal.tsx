@@ -20,6 +20,16 @@ interface EditDepartmentModalProps {
   onSuccess?: () => void;
 }
 
+async function syncLeaderBusinessProfile(userId: string, departmentId: string) {
+  const { data: userRow } = await supabase.from('users').select('business_profiles').eq('id', userId).single();
+  const profiles: any[] = userRow?.business_profiles || [];
+  const hasLeaderProfile = profiles.some((p) => p.type === 'department_leader');
+  const updatedProfiles = hasLeaderProfile
+    ? profiles.map((p) => (p.type === 'department_leader' ? { ...p, departmentId } : p))
+    : [...profiles, { type: 'department_leader', isActive: true, isPrimary: profiles.length === 0, departmentId }];
+  await supabase.from('users').update({ business_profiles: updatedProfiles }).eq('id', userId);
+}
+
 export default function EditDepartmentModal({ department, isOpen, onClose, onSuccess }: EditDepartmentModalProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -84,6 +94,10 @@ export default function EditDepartmentModal({ department, isOpen, onClose, onSuc
         .eq('id', department.id);
 
       if (updateErr) throw updateErr;
+
+      if (formData.leaderId) {
+        await syncLeaderBusinessProfile(formData.leaderId, department.id);
+      }
 
       toast.success('Département modifié avec succès');
       if (onSuccess) onSuccess(); else onClose();

@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS } from '../../types/businessProfile.types';
 import { Star } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { getChurchId } from '../../lib/churchId';
 
 interface BusinessProfileAssignmentProps {
   selectedProfiles: BusinessProfile[];
@@ -8,6 +11,23 @@ interface BusinessProfileAssignmentProps {
 }
 
 export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMultiple = true }: BusinessProfileAssignmentProps) {
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('departments')
+      .select('id, name')
+      .eq('church_id', getChurchId())
+      .order('name')
+      .then(({ data }: { data: { id: string; name: string }[] | null }) => setDepartments(data || []));
+  }, []);
+
+  const setDepartmentId = (departmentId: string) => {
+    const updated = selectedProfiles.map((p) =>
+      p.type === 'department_leader' ? { ...p, departmentId: departmentId || undefined } : p
+    );
+    onChange(updated);
+  };
   const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'admin'];
 
   const isProfileSelected = (profileType: BusinessProfileType): boolean => {
@@ -109,6 +129,29 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
             </div>
           );
         })}
+
+        {isProfileSelected('department_leader') && (
+          <div className="ml-7 pl-3 border-l-2 border-gray-100">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Département dirigé
+            </label>
+            <select
+              value={selectedProfiles.find((p) => p.type === 'department_leader')?.departmentId || ''}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+            >
+              <option value="">-- Sélectionner un département --</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            {!selectedProfiles.find((p) => p.type === 'department_leader')?.departmentId && (
+              <p className="mt-1 text-xs text-amber-600">
+                Sans département, cet utilisateur n'aura pas accès aux fonctions liées (ex : rapport de culte).
+              </p>
+            )}
+          </div>
+        )}
 
         {selectedProfiles.length === 0 && (
           <p className="text-sm text-gray-500 italic py-2">

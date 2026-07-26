@@ -12,7 +12,7 @@ export const CULTE_REPORT_TYPE_LABELS: Record<CulteReportType, string> = {
 export const DEPARTMENT_NAME_BY_REPORT_TYPE: Record<CulteReportType, string> = {
   worship: 'GESTION DES CULTES',
   adn: 'AMIS DES NOUVEAUX',
-  finance: 'FINANCE',
+  finance: 'EMMERAUDE',
   sainte_cene: 'SAINTE CENE',
   sono: 'SONORISATION',
   academie: "ACADEMIE D'HONNEUR",

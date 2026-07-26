@@ -9,6 +9,16 @@ interface DepartmentFormProps {
   onSuccess?: () => void;
 }
 
+async function syncLeaderBusinessProfile(userId: string, departmentId: string) {
+  const { data: userRow } = await supabase.from('users').select('business_profiles').eq('id', userId).single();
+  const profiles: any[] = userRow?.business_profiles || [];
+  const hasLeaderProfile = profiles.some((p) => p.type === 'department_leader');
+  const updatedProfiles = hasLeaderProfile
+    ? profiles.map((p) => (p.type === 'department_leader' ? { ...p, departmentId } : p))
+    : [...profiles, { type: 'department_leader', isActive: true, isPrimary: profiles.length === 0, departmentId }];
+  await supabase.from('users').update({ business_profiles: updatedProfiles }).eq('id', userId);
+}
+
 export default function DepartmentForm({ onSuccess }: DepartmentFormProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -46,9 +56,10 @@ export default function DepartmentForm({ onSuccess }: DepartmentFormProps) {
       const lastOrder = orderData && orderData.length > 0 ? (orderData[0].order ?? 0) : 0;
 
       const leaderUser = leaderCandidates.find(u => u.id === formData.leaderId);
+      const newDepartmentId = crypto.randomUUID();
 
       const { error: insertErr } = await supabase.from('departments').insert({
-        id: crypto.randomUUID(),
+        id: newDepartmentId,
         church_id: getChurchId(),
         name: formData.name.trim(),
         description: formData.description.trim(),
@@ -60,6 +71,10 @@ export default function DepartmentForm({ onSuccess }: DepartmentFormProps) {
         status: 'active'
       });
       if (insertErr) throw insertErr;
+
+      if (formData.leaderId) {
+        await syncLeaderBusinessProfile(formData.leaderId, newDepartmentId);
+      }
 
       setFormData({ name: '', description: '', leaderId: '' });
       toast.success('Département ajouté avec succès');
