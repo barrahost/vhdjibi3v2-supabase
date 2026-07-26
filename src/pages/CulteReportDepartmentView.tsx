@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Eye, Pencil, Trash2, Search, Plus, X, BarChart3, TrendingUp, UserPlus, CalendarDays,
-  Coins, GraduationCap, Wine, Radio, Sparkles, Download, Users,
+  Coins, GraduationCap, Wine, Radio, Sparkles, Download, Users, BookOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -383,11 +383,25 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         icon: GraduationCap,
         subtitle: "Gérez les rapports de l'Académie d'Honneur",
         statCards: [],
-        summaryMetrics: [],
+        summaryMetrics: [
+          { label: 'Total présents', compute: (r) => r.reduce((s, x) => s + ((x.data as AcademieReportData).presentStudents || 0), 0) },
+          { label: 'Total inscrits', compute: (r) => r.reduce((s, x) => s + ((x.data as AcademieReportData).actualStudents || 0), 0) },
+          { label: 'Taux moyen', compute: (r) => {
+            if (r.length === 0) return 0;
+            const rates = r.map((x) => {
+              const d = x.data as AcademieReportData;
+              return d.actualStudents > 0 ? Math.round((d.presentStudents / d.actualStudents) * 100) : 0;
+            });
+            return Math.round(rates.reduce((s, v) => s + v, 0) / rates.length);
+          } },
+        ],
         breakdowns: [
           {
             key: 'presence', label: 'Présence',
-            series: [{ key: 'present', label: 'Étudiants présents', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 }],
+            series: [
+              { key: 'inscrits', label: 'Inscrits', color: '#3B82F6', type: 'line', extractValue: (r) => (r.data as AcademieReportData).actualStudents || 0 },
+              { key: 'presents', label: 'Présents', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 },
+            ],
           },
           {
             key: 'taux', label: 'Taux (%)',
@@ -400,8 +414,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         searchFields: defaultSearchFields,
         searchPlaceholder: 'Rechercher par date, classe ou modérateur…',
         statsSource: 'all',
-        evolutionTitle: "Évolution — Académie d'Honneur",
-        evolutionIcon: GraduationCap,
+        evolutionTitle: 'Évolution de la présence',
+        evolutionIcon: BookOpen,
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
@@ -497,8 +511,12 @@ function getColumns(
       return [
         ...base,
         { key: 'className', title: 'Classe', render: (r) => (r.data as AcademieReportData).className || '-' },
-        { key: 'present', title: 'Présents', render: (r) => (r.data as AcademieReportData).presentStudents || 0 },
-        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        { key: 'moderator', title: 'Modérateur', render: (r) => (r.data as AcademieReportData).moderator || '-' },
+        { key: 'course', title: 'Cours du jour', render: (r) => (r.data as AcademieReportData).courseOfTheDay || '-' },
+        { key: 'present', title: 'Présents', render: (r) => {
+          const d = r.data as AcademieReportData;
+          return `${d.presentStudents || 0} / ${d.actualStudents || 0}`;
+        } },
         actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     default:
