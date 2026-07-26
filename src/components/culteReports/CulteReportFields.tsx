@@ -28,10 +28,6 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
             <input type="text" value={v.messageSource} onChange={set('messageSource')} className={inputCls} />
           </div>
         </div>
-        <div>
-          <label className={labelCls}>Orateur</label>
-          <input type="text" value={v.speakerName} onChange={set('speakerName')} className={inputCls} />
-        </div>
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Présence</legend>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

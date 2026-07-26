@@ -1,17 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Eye, Pencil, Trash2, Search } from 'lucide-react';
+import {
+  Eye, Pencil, Trash2, Search, Plus, X, BarChart3, TrendingUp, UserPlus, CalendarDays,
+  Coins, GraduationCap, Wine, Radio, Sparkles,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import { CustomTable } from '../components/ui/CustomTable';
 import { CustomPagination } from '../components/ui/CustomPagination';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
 import { CulteReportService } from '../services/culteReport.service';
+import { MeetingTypeService } from '../services/meetingTypeSpeaker.service';
 import EditCulteReportModal from '../components/culteReports/EditCulteReportModal';
+import CulteReportSubmitForm from '../components/culteReports/CulteReportSubmitForm';
 import { CulteBreakdownChart, ChartBreakdown } from '../components/dashboard/stats/CulteBreakdownChart';
 import {
   CulteReport,
   CulteReportType,
+  CulteReportMeetingType,
   CULTE_REPORT_TYPE_LABELS,
   DEPARTMENT_NAME_BY_REPORT_TYPE,
   WorshipReportData,
@@ -39,112 +48,298 @@ function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function getBreakdowns(reportType: CulteReportType): ChartBreakdown[] {
+function avg(values: number[]): number {
+  return values.length > 0 ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : 0;
+}
+
+interface StatCardConfig {
+  label: string;
+  icon: LucideIcon;
+  color: 'teal' | 'green' | 'blue' | 'amber';
+  compute: (reports: CulteReport[]) => string | number;
+}
+
+interface SummaryMetricConfig {
+  label: string;
+  compute: (reports: CulteReport[]) => number;
+}
+
+interface ColumnConfig {
+  key: string;
+  title: string;
+  render: (report: CulteReport) => React.ReactNode;
+}
+
+interface DeptViewConfig {
+  icon: LucideIcon;
+  subtitle: string;
+  statCards: StatCardConfig[];
+  summaryMetrics: SummaryMetricConfig[];
+  columns: ColumnConfig[];
+  breakdowns: ChartBreakdown[];
+}
+
+const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], string> = {
+  teal: 'text-[#00665C]',
+  green: 'text-green-600',
+  blue: 'text-blue-600',
+  amber: 'text-amber-600',
+};
+
+function lastReportDate(reports: CulteReport[]): string {
+  return reports.length > 0 ? reports[0].serviceDate : '-';
+}
+
+function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport) => void, onDelete: (r: CulteReport) => void): ColumnConfig {
+  return {
+    key: 'actions',
+    title: 'Actions',
+    render: (row) => (
+      <div className="flex items-center gap-2">
+        <button onClick={() => onView(row)} className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded" title="Voir">
+          <Eye className="w-4 h-4" />
+        </button>
+        <button onClick={() => onEdit(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier">
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button onClick={() => onDelete(row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    ),
+  };
+}
+
+function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'> {
   switch (reportType) {
     case 'worship':
-      return [
-        {
-          key: 'presence', label: 'Présence',
-          series: [
-            { key: 'total', label: 'Total', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
-            { key: 'adults', label: 'Adultes', color: '#3b82f6', type: 'line', extractValue: (r) => {
-              const a = (r.data as WorshipReportData).attendance?.adults;
-              return (a?.men || 0) + (a?.women || 0);
-            } },
-            { key: 'children', label: 'Enfants', color: '#F2B636', type: 'line', extractValue: (r) => {
-              const c = (r.data as WorshipReportData).attendance?.children;
-              return (c?.boys || 0) + (c?.girls || 0);
-            } },
-          ],
-        },
-        {
-          key: 'conversions', label: 'Conversions',
-          series: [
-            { key: 'men', label: 'Hommes', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.conversions?.men || 0 },
-            { key: 'women', label: 'Femmes', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.conversions?.women || 0 },
-          ],
-        },
-        {
-          key: 'gender', label: 'H / F',
-          series: [
-            { key: 'men', label: 'Hommes', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
-            { key: 'women', label: 'Femmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
-          ],
-        },
-      ];
-    case 'adn':
-      return [
-        {
-          key: 'visitors', label: 'Nouveaux visiteurs et décisions',
-          series: [
-            { key: 'visitors', label: 'Nouveaux visiteurs', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AdnReportData).totalNewVisitors || 0 },
-            { key: 'join', label: 'Veut rejoindre', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as AdnReportData).totalWantsToJoin || 0 },
-          ],
-        },
-      ];
+      return {
+        icon: Sparkles,
+        subtitle: 'Gérez les rapports de présence et informations générales des cultes',
+        statCards: [
+          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
+          { label: 'Participation moy.', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as WorshipReportData).totalParticipants || 0)) },
+          { label: 'Nvx membres moy.', icon: UserPlus, color: 'blue', compute: (r) => avg(r.map((x) => (x.data as WorshipReportData).totalNewMembers || 0)) },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+        ],
+        summaryMetrics: [
+          { label: 'Total participants', compute: (r) => r.reduce((s, x) => s + ((x.data as WorshipReportData).totalParticipants || 0), 0) },
+          { label: 'Total conversions', compute: (r) => r.reduce((s, x) => {
+            const c = (x.data as WorshipReportData).attendance?.conversions;
+            return s + (c?.men || 0) + (c?.women || 0);
+          }, 0) },
+          { label: 'Nouveaux membres', compute: (r) => r.reduce((s, x) => s + ((x.data as WorshipReportData).totalNewMembers || 0), 0) },
+        ],
+        breakdowns: [
+          {
+            key: 'presence', label: 'Présence',
+            series: [
+              { key: 'total', label: 'Total', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
+              { key: 'adults', label: 'Adultes', color: '#3b82f6', type: 'line', extractValue: (r) => {
+                const a = (r.data as WorshipReportData).attendance?.adults;
+                return (a?.men || 0) + (a?.women || 0);
+              } },
+              { key: 'children', label: 'Enfants', color: '#F2B636', type: 'line', extractValue: (r) => {
+                const c = (r.data as WorshipReportData).attendance?.children;
+                return (c?.boys || 0) + (c?.girls || 0);
+              } },
+            ],
+          },
+          {
+            key: 'conversions', label: 'Conversions',
+            series: [
+              { key: 'conversions', label: 'Conversions', color: '#3b82f6', type: 'bar', extractValue: (r) => {
+                const c = (r.data as WorshipReportData).attendance?.conversions;
+                return (c?.men || 0) + (c?.women || 0);
+              } },
+              { key: 'newMembers', label: 'Nouveaux membres', color: '#a855f7', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).totalNewMembers || 0 },
+            ],
+          },
+          {
+            key: 'gender', label: 'H / F',
+            series: [
+              { key: 'men', label: 'Hommes', color: '#3b82f6', type: 'bar', stackId: 'hf', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
+              { key: 'women', label: 'Femmes', color: '#ec4899', type: 'bar', stackId: 'hf', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
+            ],
+          },
+        ],
+      };
     case 'finance':
-      return [
-        {
-          key: 'finances', label: 'Finances',
-          series: [
-            { key: 'total', label: 'Total', color: '#00665C', type: 'line', extractValue: (r) => (r.data as FinanceReportData).totalFinances || 0 },
-            { key: 'tithes', label: 'Dîmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as FinanceReportData).tithes || 0 },
-          ],
-        },
-      ];
+      return {
+        icon: Coins,
+        subtitle: 'Gérez les rapports financiers des cultes',
+        statCards: [
+          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
+          { label: 'Moy. collectée', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as FinanceReportData).totalFinances || 0)) },
+          { label: 'Moy. dîmes', icon: UserPlus, color: 'blue', compute: (r) => avg(r.map((x) => (x.data as FinanceReportData).tithes || 0)) },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+        ],
+        summaryMetrics: [
+          { label: 'Total collecté', compute: (r) => r.reduce((s, x) => s + ((x.data as FinanceReportData).totalFinances || 0), 0) },
+          { label: 'Total dîmes', compute: (r) => r.reduce((s, x) => s + ((x.data as FinanceReportData).tithes || 0), 0) },
+          { label: 'Total offrandes', compute: (r) => r.reduce((s, x) => s + ((x.data as FinanceReportData).regularOfferings || 0) + ((x.data as FinanceReportData).specialOfferings || 0), 0) },
+        ],
+        breakdowns: [
+          {
+            key: 'finances', label: 'Finances',
+            series: [
+              { key: 'total', label: 'Total', color: '#00665C', type: 'line', extractValue: (r) => (r.data as FinanceReportData).totalFinances || 0 },
+              { key: 'tithes', label: 'Dîmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as FinanceReportData).tithes || 0 },
+            ],
+          },
+        ],
+      };
+    case 'adn':
+      return {
+        icon: UserPlus,
+        subtitle: 'Gérez les rapports de suivi des nouveaux visiteurs',
+        statCards: [
+          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
+          { label: 'Moy. visiteurs', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as AdnReportData).totalNewVisitors || 0)) },
+          { label: 'Moy. veut rejoindre', icon: UserPlus, color: 'blue', compute: (r) => avg(r.map((x) => (x.data as AdnReportData).totalWantsToJoin || 0)) },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+        ],
+        summaryMetrics: [
+          { label: 'Total visiteurs', compute: (r) => r.reduce((s, x) => s + ((x.data as AdnReportData).totalNewVisitors || 0), 0) },
+          { label: 'Total veut rejoindre', compute: (r) => r.reduce((s, x) => s + ((x.data as AdnReportData).totalWantsToJoin || 0), 0) },
+          { label: 'Total indécis', compute: (r) => r.reduce((s, x) => s + ((x.data as AdnReportData).visitorDecisions?.undecided || 0), 0) },
+        ],
+        breakdowns: [
+          {
+            key: 'visitors', label: 'Nouveaux visiteurs et décisions',
+            series: [
+              { key: 'visitors', label: 'Nouveaux visiteurs', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AdnReportData).totalNewVisitors || 0 },
+              { key: 'join', label: 'Veut rejoindre', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as AdnReportData).totalWantsToJoin || 0 },
+            ],
+          },
+        ],
+      };
     case 'sainte_cene':
-      return [
-        {
-          key: 'distribution', label: 'Distribution',
-          series: [
-            { key: 'pains', label: 'Pains distribués', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
-            { key: 'vins', label: 'Vins distribués', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
-          ],
-        },
-      ];
+      return {
+        icon: Wine,
+        subtitle: 'Gérez les rapports de la Sainte Cène',
+        statCards: [
+          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
+          { label: 'Moy. pains distribués', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as SainteCeneReportData).painsDistribuees || 0)) },
+          { label: 'Moy. vins distribués', icon: UserPlus, color: 'blue', compute: (r) => avg(r.map((x) => (x.data as SainteCeneReportData).vinsDistribuees || 0)) },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+        ],
+        summaryMetrics: [
+          { label: 'Total pains distribués', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).painsDistribuees || 0), 0) },
+          { label: 'Total vins distribués', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).vinsDistribuees || 0), 0) },
+          { label: 'Célébrations', compute: (r) => r.length },
+        ],
+        breakdowns: [
+          {
+            key: 'distribution', label: 'Distribution',
+            series: [
+              { key: 'pains', label: 'Pains distribués', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
+              { key: 'vins', label: 'Vins distribués', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+            ],
+          },
+        ],
+      };
     case 'academie':
-      return [
-        {
-          key: 'presence', label: 'Présence',
-          series: [{ key: 'present', label: 'Étudiants présents', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 }],
-        },
-      ];
+      return {
+        icon: GraduationCap,
+        subtitle: "Gérez les rapports de l'Académie d'Honneur",
+        statCards: [
+          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
+          { label: 'Moy. présents', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as AcademieReportData).presentStudents || 0)) },
+          { label: 'Moy. inscrits', icon: UserPlus, color: 'blue', compute: (r) => avg(r.map((x) => (x.data as AcademieReportData).actualStudents || 0)) },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+        ],
+        summaryMetrics: [
+          { label: 'Total présents', compute: (r) => r.reduce((s, x) => s + ((x.data as AcademieReportData).presentStudents || 0), 0) },
+          { label: 'Total inscrits', compute: (r) => r.reduce((s, x) => s + ((x.data as AcademieReportData).actualStudents || 0), 0) },
+          { label: 'Cours dispensés', compute: (r) => r.length },
+        ],
+        breakdowns: [
+          {
+            key: 'presence', label: 'Présence',
+            series: [{ key: 'present', label: 'Étudiants présents', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 }],
+          },
+        ],
+      };
     case 'sono':
-      return [
-        {
-          key: 'reports', label: 'Rapports soumis',
-          series: [{ key: 'count', label: 'Rapports soumis', color: '#00665C', type: 'bar', extractValue: () => 1 }],
-        },
-      ];
+      return {
+        icon: Radio,
+        subtitle: 'Gérez les rapports de sonorisation et communication',
+        statCards: [
+          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+          { label: '', icon: BarChart3, color: 'teal', compute: () => '' },
+          { label: '', icon: BarChart3, color: 'teal', compute: () => '' },
+        ],
+        summaryMetrics: [{ label: 'Rapports soumis', compute: (r) => r.length }],
+        breakdowns: [
+          {
+            key: 'reports', label: 'Rapports soumis',
+            series: [{ key: 'count', label: 'Rapports soumis', color: '#00665C', type: 'bar', extractValue: () => 1 }],
+          },
+        ],
+      };
     default:
-      return [];
+      return { icon: BarChart3, subtitle: '', statCards: [], summaryMetrics: [], breakdowns: [] };
   }
 }
 
-function extractRowMetric(report: CulteReport): { theme: string; total: number; extra: number } {
-  switch (report.reportType) {
-    case 'worship': {
-      const d = report.data as WorshipReportData;
-      return { theme: d.messageTheme || '-', total: d.totalParticipants || 0, extra: d.totalNewMembers || 0 };
-    }
-    case 'adn': {
-      const d = report.data as AdnReportData;
-      return { theme: '-', total: d.totalNewVisitors || 0, extra: d.totalWantsToJoin || 0 };
-    }
-    case 'finance': {
-      const d = report.data as FinanceReportData;
-      return { theme: '-', total: d.totalFinances || 0, extra: d.tithes || 0 };
-    }
-    case 'sainte_cene': {
-      const d = report.data as SainteCeneReportData;
-      return { theme: '-', total: d.painsDistribuees || 0, extra: d.vinsDistribuees || 0 };
-    }
-    case 'academie': {
-      const d = report.data as AcademieReportData;
-      return { theme: d.className || '-', total: d.presentStudents || 0, extra: d.actualStudents || 0 };
-    }
+function getColumns(
+  reportType: CulteReportType,
+  onView: (r: CulteReport) => void,
+  onEdit: (r: CulteReport) => void,
+  onDelete: (r: CulteReport) => void
+): ColumnConfig[] {
+  const base: ColumnConfig[] = [{ key: 'serviceDate', title: 'Date', render: (r) => r.serviceDate }];
+
+  switch (reportType) {
+    case 'worship':
+      return [
+        ...base,
+        { key: 'theme', title: 'Thème', render: (r) => (r.data as WorshipReportData).messageTheme || '-' },
+        { key: 'speaker', title: 'Orateur', render: (r) => (r.data as WorshipReportData).speakerName || '-' },
+        { key: 'total', title: 'Total', render: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
+        { key: 'new', title: 'Nouveaux', render: (r) => (r.data as WorshipReportData).totalNewMembers || 0 },
+        actionsColumn(onView, onEdit, onDelete),
+      ];
+    case 'finance':
+      return [
+        ...base,
+        { key: 'total', title: 'Total', render: (r) => (r.data as FinanceReportData).totalFinances || 0 },
+        { key: 'tithes', title: 'Dîmes', render: (r) => (r.data as FinanceReportData).tithes || 0 },
+        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        actionsColumn(onView, onEdit, onDelete),
+      ];
+    case 'adn':
+      return [
+        ...base,
+        { key: 'visitors', title: 'Nouveaux visiteurs', render: (r) => (r.data as AdnReportData).totalNewVisitors || 0 },
+        { key: 'join', title: 'Veut rejoindre', render: (r) => (r.data as AdnReportData).totalWantsToJoin || 0 },
+        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        actionsColumn(onView, onEdit, onDelete),
+      ];
+    case 'sainte_cene':
+      return [
+        ...base,
+        { key: 'pains', title: 'Pains distribués', render: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
+        { key: 'vins', title: 'Vins distribués', render: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        actionsColumn(onView, onEdit, onDelete),
+      ];
+    case 'academie':
+      return [
+        ...base,
+        { key: 'className', title: 'Classe', render: (r) => (r.data as AcademieReportData).className || '-' },
+        { key: 'present', title: 'Présents', render: (r) => (r.data as AcademieReportData).presentStudents || 0 },
+        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        actionsColumn(onView, onEdit, onDelete),
+      ];
     default:
-      return { theme: '-', total: 0, extra: 0 };
+      return [
+        ...base,
+        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        actionsColumn(onView, onEdit, onDelete),
+      ];
   }
 }
 
@@ -158,14 +353,42 @@ export default function CulteReportDepartmentView() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [range, setRange] = useState({ startDate: daysAgo(90), endDate: today() });
+  const [filterRange, setFilterRange] = useState({ startDate: '', endDate: '' });
+  const [meetingTypeFilter, setMeetingTypeFilter] = useState('');
+  const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
+  const [chartRange, setChartRange] = useState({ startDate: daysAgo(90), endDate: today() });
+  const [chartReports, setChartReports] = useState<CulteReport[]>([]);
   const [editingReport, setEditingReport] = useState<CulteReport | null>(null);
+  const [viewingReport, setViewingReport] = useState<CulteReport | null>(null);
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => { MeetingTypeService.list().then(setMeetingTypes); }, []);
+
+  useEffect(() => {
+    if (!departmentName) return;
+    supabase
+      .from('departments')
+      .select('id, name')
+      .eq('church_id', getChurchId())
+      .then((res: { data: { id: string; name: string }[] | null }) => {
+        const data = res.data;
+        const normalized = departmentName.toUpperCase().trim().replace(/\s+/g, ' ');
+        const match = (data ?? []).find((d: any) => d.name.toUpperCase().trim().replace(/\s+/g, ' ') === normalized);
+        setDepartmentId(match?.id || null);
+      });
+  }, [departmentName]);
 
   const loadReports = useCallback(async () => {
     if (!departmentName) return;
     setLoading(true);
     try {
-      const data = await CulteReportService.getHistory({ reportType: type, startDate: range.startDate, endDate: range.endDate });
+      const data = await CulteReportService.getHistory({
+        reportType: type,
+        startDate: filterRange.startDate || undefined,
+        endDate: filterRange.endDate || undefined,
+        meetingTypeName: meetingTypeFilter || undefined,
+      });
       setReports(data);
     } catch (error) {
       console.error('Error loading department reports:', error);
@@ -173,9 +396,20 @@ export default function CulteReportDepartmentView() {
     } finally {
       setLoading(false);
     }
-  }, [type, departmentName, range]);
+  }, [type, departmentName, filterRange, meetingTypeFilter]);
+
+  const loadChartReports = useCallback(async () => {
+    if (!departmentName) return;
+    try {
+      const data = await CulteReportService.getHistory({ reportType: type, startDate: chartRange.startDate, endDate: chartRange.endDate });
+      setChartReports(data);
+    } catch (error) {
+      console.error('Error loading chart reports:', error);
+    }
+  }, [type, departmentName, chartRange]);
 
   useEffect(() => { loadReports(); }, [loadReports]);
+  useEffect(() => { loadChartReports(); }, [loadChartReports]);
 
   if (!departmentName) {
     return <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">Type de rapport inconnu.</div>;
@@ -187,107 +421,147 @@ export default function CulteReportDepartmentView() {
         await CulteReportService.deleteReport(report.id);
         toast.success('Rapport supprimé');
         loadReports();
+        loadChartReports();
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');
       }
     }
   };
 
-  const filtered = reports.filter((r) => {
-    const { theme } = extractRowMetric(r);
-    return (
-      r.submittedByName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      theme.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+  const config = getConfig(type);
+  const columns = getColumns(type, setViewingReport, setEditingReport, handleDelete);
 
+  const filtered = reports.filter((r) => r.submittedByName.toLowerCase().includes(searchTerm.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const totalCount = reports.length;
-  const avgTotal = totalCount > 0 ? Math.round(reports.reduce((s, r) => s + extractRowMetric(r).total, 0) / totalCount) : 0;
-  const avgExtra = totalCount > 0 ? Math.round(reports.reduce((s, r) => s + extractRowMetric(r).extra, 0) / totalCount) : 0;
-  const lastReportDate = reports.length > 0 ? reports[0].serviceDate : null;
-
-  const columns = [
-    { key: 'serviceDate', title: 'Date', render: (v: string) => v },
-    { key: 'theme', title: 'Thème', render: (_: any, row: CulteReport) => extractRowMetric(row).theme },
-    { key: 'total', title: 'Total', render: (_: any, row: CulteReport) => extractRowMetric(row).total },
-    { key: 'submittedByName', title: 'Soumis par', render: (v: string) => v },
-    {
-      key: 'actions',
-      title: 'Actions',
-      render: (_: any, row: CulteReport) => (
-        <div className="flex items-center gap-2">
-          <button onClick={() => setEditingReport(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier">
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button onClick={() => handleDelete(row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
-    },
-  ];
+  const Icon = config.icon;
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-        <Eye className="w-6 h-6 text-[#00665C]" /> {CULTE_REPORT_TYPE_LABELS[type]}
-      </h1>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <p className="text-2xl font-bold text-gray-900">{totalCount}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Total rapports</p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Icon className="w-6 h-6 text-[#00665C]" />
+          <div>
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{CULTE_REPORT_TYPE_LABELS[type]}</h1>
+            <p className="text-sm text-gray-500">{config.subtitle}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <p className="text-2xl font-bold text-gray-900">{avgTotal}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Moyenne (principal)</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <p className="text-2xl font-bold text-gray-900">{avgExtra}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Moyenne (secondaire)</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <p className="text-lg font-bold text-gray-900">{lastReportDate || '-'}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Dernier rapport</p>
-        </div>
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-lg"
+        >
+          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showForm ? 'Fermer le formulaire' : 'Nouveau rapport'}
+        </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {config.statCards.map((sc, i) => (
+          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-medium text-gray-500 uppercase">{sc.label}</p>
+              <sc.icon className={`w-4 h-4 ${STAT_COLOR_CLASSES[sc.color]}`} />
+            </div>
+            <p className={`text-2xl font-bold mt-1 ${STAT_COLOR_CLASSES[sc.color]}`}>{sc.compute(reports)}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Recherche</label>
+          <Search className="absolute left-3 top-1/2 translate-y-1 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher..."
+            placeholder="Rechercher par thème, source, prédicateur..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-9 pr-4 h-9 text-sm border border-gray-200 rounded-xl focus:ring-[#00665C] focus:border-[#00665C]"
+            className="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
           />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {RANGE_PRESETS.map((preset) => (
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Du</label>
+          <input type="date" value={filterRange.startDate} onChange={(e) => setFilterRange((p) => ({ ...p, startDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Au</label>
+          <input type="date" value={filterRange.endDate} onChange={(e) => setFilterRange((p) => ({ ...p, endDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Type de rencontre</label>
+          <select
+            value={meetingTypeFilter}
+            onChange={(e) => setMeetingTypeFilter(e.target.value)}
+            className="h-9 px-2 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
+          >
+            <option value="">Sélectionner un type</option>
+            {meetingTypes.map((mt) => (
+              <option key={mt.id} value={mt.name}>{mt.name}</option>
+            ))}
+          </select>
+        </div>
+        <span className="text-xs text-gray-400 sm:ml-auto">{paginated.length} / {filtered.length}</span>
+      </div>
+
+      {showForm && (
+        <CulteReportSubmitForm
+          reportType={type}
+          departmentId={departmentId}
+          departmentName={departmentName}
+          onCancel={() => setShowForm(false)}
+          onSuccess={() => { setShowForm(false); loadReports(); loadChartReports(); }}
+        />
+      )}
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <Icon className="w-4 h-4 text-[#00665C]" /> Évolution — {CULTE_REPORT_TYPE_LABELS[type]}
+        </h2>
+
+        {config.summaryMetrics.length > 0 && (
+          <div className={`grid grid-cols-1 sm:grid-cols-${config.summaryMetrics.length} gap-3`}>
+            {config.summaryMetrics.map((m) => (
+              <div key={m.label} className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-xl font-bold text-gray-900">{m.compute(chartReports)}</p>
+                <p className="text-xs text-gray-500">{m.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap justify-between">
+          <div className="flex gap-1 flex-wrap">
+            {RANGE_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setChartRange({ startDate: daysAgo(preset.days), endDate: today() })}
+                className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                {preset.label}
+              </button>
+            ))}
             <button
-              key={preset.label}
-              onClick={() => setRange({ startDate: daysAgo(preset.days), endDate: today() })}
+              onClick={() => setChartRange({ startDate: '2020-01-01', endDate: today() })}
               className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200"
             >
-              {preset.label}
+              Tout
             </button>
-          ))}
-          <input type="date" value={range.startDate} onChange={(e) => setRange((p) => ({ ...p, startDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-xl" />
-          <input type="date" value={range.endDate} onChange={(e) => setRange((p) => ({ ...p, endDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-xl" />
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="date" value={chartRange.startDate} onChange={(e) => setChartRange((p) => ({ ...p, startDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
+            <input type="date" value={chartRange.endDate} onChange={(e) => setChartRange((p) => ({ ...p, endDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
+          </div>
         </div>
+
+        <CulteBreakdownChart reports={chartReports} breakdowns={config.breakdowns} />
       </div>
 
       {loading ? (
         <div className="text-center py-10 text-gray-500">Chargement...</div>
       ) : (
         <>
-          <CulteBreakdownChart title={`Évolution — ${CULTE_REPORT_TYPE_LABELS[type]}`} reports={reports} breakdowns={getBreakdowns(type)} />
-
-          <CustomTable data={paginated} columns={columns} />
+          <CustomTable data={paginated} columns={columns.map((c) => ({ key: c.key, title: c.title, render: (_: any, row: CulteReport) => c.render(row) }))} />
 
           {totalPages > 1 && (
             <CustomPagination
@@ -301,12 +575,12 @@ export default function CulteReportDepartmentView() {
         </>
       )}
 
-      {editingReport && (
+      {(editingReport || viewingReport) && (
         <EditCulteReportModal
-          report={editingReport}
-          isOpen={!!editingReport}
-          onClose={() => setEditingReport(null)}
-          onSuccess={() => { setEditingReport(null); loadReports(); }}
+          report={(editingReport || viewingReport)!}
+          isOpen={true}
+          onClose={() => { setEditingReport(null); setViewingReport(null); }}
+          onSuccess={() => { setEditingReport(null); setViewingReport(null); loadReports(); loadChartReports(); }}
         />
       )}
       <ConfirmModal {...confirmModalProps} />

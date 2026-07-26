@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Modal } from '../ui/Modal';
-import { CulteReport, CULTE_REPORT_TYPE_LABELS } from '../../types/culteReport.types';
+import { CulteReport, CulteReportSpeaker, CULTE_REPORT_TYPE_LABELS } from '../../types/culteReport.types';
 import { CulteReportFields } from './CulteReportFields';
 import { CulteReportFormValues, valuesFromExistingData, buildCulteReportData } from '../../utils/culteReportFormHelpers';
 import { CulteReportService } from '../../services/culteReport.service';
+import { SpeakerService } from '../../services/meetingTypeSpeaker.service';
 
 interface EditCulteReportModalProps {
   report: CulteReport;
@@ -21,6 +22,11 @@ export default function EditCulteReportModal({ report, isOpen, onClose, onSucces
   const [notes, setNotes] = useState(report.notes || '');
   const [values, setValues] = useState<CulteReportFormValues>(() => valuesFromExistingData(report.reportType, report.data));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [speakers, setSpeakers] = useState<CulteReportSpeaker[]>([]);
+
+  useEffect(() => {
+    if (report.reportType === 'worship') SpeakerService.list().then(setSpeakers);
+  }, [report.reportType]);
 
   const handleFieldChange = <K extends keyof CulteReportFormValues>(key: K, value: CulteReportFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -53,6 +59,18 @@ export default function EditCulteReportModal({ report, isOpen, onClose, onSucces
           <label className={labelCls}>Date du culte</label>
           <input type="date" required value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className={inputCls} />
         </div>
+
+        {report.reportType === 'worship' && (
+          <div>
+            <label className={labelCls}>Orateur</label>
+            <select value={values.speakerName} onChange={(e) => handleFieldChange('speakerName', e.target.value)} className={inputCls}>
+              <option value="">Sélectionner un orateur</option>
+              {speakers.map((sp) => (
+                <option key={sp.id} value={sp.name}>{sp.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <CulteReportFields reportType={report.reportType} values={values} onChange={handleFieldChange} />
 

@@ -8,6 +8,7 @@ export interface ChartSeries {
   label: string;
   color: string;
   type: 'bar' | 'line';
+  stackId?: string;
   extractValue: (report: CulteReport) => number;
 }
 
@@ -95,7 +96,7 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
             <Legend />
             {active?.series.map((s) =>
               s.type === 'bar' ? (
-                <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[3, 3, 0, 0]} />
+                <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} stackId={s.stackId} radius={s.stackId ? undefined : [3, 3, 0, 0]} />
               ) : (
                 <Line
                   key={s.key}
