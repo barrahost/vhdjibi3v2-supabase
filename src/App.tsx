@@ -39,6 +39,10 @@ const ShepherdFamilyManagement = lazy(() => import('./pages/ShepherdFamilyManage
 const CulteReportForm = lazy(() => import('./pages/CulteReportForm'));
 const CulteReportsHistory = lazy(() => import('./pages/CulteReportsHistory'));
 const CulteNeedsManagement = lazy(() => import('./pages/CulteNeedsManagement'));
+const CulteReportsDashboard = lazy(() => import('./pages/CulteReportsDashboard'));
+const CulteReportDepartmentView = lazy(() => import('./pages/CulteReportDepartmentView'));
+const MeetingTypeSettings = lazy(() => import('./pages/MeetingTypeSettings'));
+const SpeakerSettings = lazy(() => import('./pages/SpeakerSettings'));
 const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
 const ShepherdReminders = lazy(() => import('./pages/ShepherdReminders'));
 const SMSManagement = lazy(() => import('./pages/SMSManagement'));
@@ -386,6 +390,11 @@ function AppContent() {
           } />
 
           {/* Rapports de culte */}
+          <Route path="tableau-de-bord-rapports" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteReportsDashboard />
+            </PrivateRoute>
+          } />
           <Route path="rapport-culte" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <CulteReportForm />
@@ -399,6 +408,21 @@ function AppContent() {
           <Route path="besoins-rapports" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <CulteNeedsManagement />
+            </PrivateRoute>
+          } />
+          <Route path="rapports/:reportType" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteReportDepartmentView />
+            </PrivateRoute>
+          } />
+          <Route path="parametres-types-rencontre" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <MeetingTypeSettings />
+            </PrivateRoute>
+          } />
+          <Route path="parametres-orateurs" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <SpeakerSettings />
             </PrivateRoute>
           } />
 

@@ -9,6 +9,24 @@ export const CULTE_REPORT_TYPE_LABELS: Record<CulteReportType, string> = {
   academie: "Académie d'Honneur",
 };
 
+export const DEPARTMENT_NAME_BY_REPORT_TYPE: Record<CulteReportType, string> = {
+  worship: 'GESTION DES CULTES',
+  adn: 'AMIS DES NOUVEAUX',
+  finance: 'FINANCE',
+  sainte_cene: 'SAINTE CENE',
+  sono: 'SONORISATION',
+  academie: "ACADEMIE D'HONNEUR",
+};
+
+export const CULTE_REPORT_TYPE_COLORS: Record<CulteReportType, { header: string; accent: string; icon: string }> = {
+  worship: { header: 'bg-[#00665C]', accent: 'text-[#00665C]', icon: 'text-[#00665C]' },
+  finance: { header: 'bg-amber-500', accent: 'text-amber-600', icon: 'text-amber-500' },
+  adn: { header: 'bg-purple-500', accent: 'text-purple-600', icon: 'text-purple-500' },
+  academie: { header: 'bg-violet-500', accent: 'text-violet-600', icon: 'text-violet-500' },
+  sono: { header: 'bg-blue-500', accent: 'text-blue-600', icon: 'text-blue-500' },
+  sainte_cene: { header: 'bg-pink-500', accent: 'text-pink-600', icon: 'text-pink-500' },
+};
+
 export interface GenderCount {
   men: number;
   women: number;

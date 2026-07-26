@@ -28,6 +28,7 @@ import {
   HandHeart,
   History,
   HandHelping,
+  Mic,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChurch } from '../contexts/ChurchContext';
@@ -284,14 +285,21 @@ export function useNavigationItems(): NavItem[] {
     });
   }
 
-  // Rapports de culte (admin / super_admin) : historique + besoins signalés
+  // Rapports de culte (admin / super_admin) : tableau de bord + une page par département + besoins
   if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && activeRole !== ROLES.DEPARTMENT_LEADER) {
     items.push({
       id: 'culte-reports',
       label: 'Rapports de culte',
       icon: <History className="w-5 h-5" />,
       children: [
-        { id: 'culte-reports-history', label: 'Historique', href: '/historique-rapports', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-dashboard', label: 'Tableau de bord', href: '/tableau-de-bord-rapports', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { id: 'culte-reports-worship', label: 'Gestion de Culte', href: '/rapports/worship', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-adn', label: 'ADN', href: '/rapports/adn', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-finance', label: 'Finance', href: '/rapports/finance', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-academie', label: 'Académie', href: '/rapports/academie', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-sainte-cene', label: 'Sainte Cène', href: '/rapports/sainte_cene', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-sono', label: 'Communication & Sono', href: '/rapports/sono', icon: <History className="w-5 h-5" /> },
+        { id: 'culte-reports-history', label: 'Historique (tous types)', href: '/historique-rapports', icon: <History className="w-5 h-5" /> },
         { id: 'culte-reports-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> },
       ],
     });
@@ -302,7 +310,8 @@ export function useNavigationItems(): NavItem[] {
     hasPermission(PERMISSIONS.MANAGE_DEPARTMENTS) ||
     hasPermission(PERMISSIONS.MANAGE_SETTINGS) ||
     hasPermission(PERMISSIONS.MANAGE_FAMILIES) ||
-    hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)
+    hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS) ||
+    hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)
   ) {
     const children: NavItem[] = [];
 
@@ -314,6 +323,10 @@ export function useNavigationItems(): NavItem[] {
     }
     if (hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)) {
       children.push({ id: 'settings', label: 'Paramètres', href: '/parametres', icon: <Settings className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && activeRole !== ROLES.DEPARTMENT_LEADER) {
+      children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
+      children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
     }
 
     const hostname = window.location.hostname;

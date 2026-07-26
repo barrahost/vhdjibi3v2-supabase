@@ -8,6 +8,13 @@ import {
   CulteReportSpeaker,
   CulteNeed,
   CulteNeedPriority,
+  WorshipReportData,
+  AdnReportData,
+  FinanceReportData,
+  SainteCeneReportData,
+  SonoReportData,
+  AcademieReportData,
+  CULTE_REPORT_TYPE_LABELS,
 } from '../types/culteReport.types';
 
 function mapReport(row: any): CulteReport {
@@ -190,4 +197,168 @@ export const CulteReportService = {
       .eq('id', needId);
     if (error) throw error;
   },
+
+  async updateReport(id: string, updates: { data?: CulteReportData; notes?: string; serviceDate?: string }): Promise<CulteReport> {
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (updates.data !== undefined) patch.data = updates.data;
+    if (updates.notes !== undefined) patch.notes = updates.notes || null;
+    if (updates.serviceDate !== undefined) patch.service_date = updates.serviceDate;
+
+    const { data, error } = await supabase
+      .from('culte_reports')
+      .update(patch)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return mapReport(data);
+  },
+
+  async deleteReport(id: string): Promise<void> {
+    const { error } = await supabase.from('culte_reports').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async getDashboardStats(startDate: string, endDate: string): Promise<DashboardStats> {
+    const [worshipReports, financeReports] = await Promise.all([
+      this.getHistory({ reportType: 'worship', startDate, endDate }),
+      this.getHistory({ reportType: 'finance', startDate, endDate }),
+    ]);
+
+    const totalParticipants = worshipReports.reduce(
+      (sum, r) => sum + ((r.data as WorshipReportData).totalParticipants || 0),
+      0
+    );
+    const totalNewMembers = worshipReports.reduce(
+      (sum, r) => sum + ((r.data as WorshipReportData).totalNewMembers || 0),
+      0
+    );
+    const totalFinances = financeReports.reduce(
+      (sum, r) => sum + ((r.data as FinanceReportData).totalFinances || 0),
+      0
+    );
+    const averageAttendance = worshipReports.length > 0 ? Math.round(totalParticipants / worshipReports.length) : 0;
+
+    return {
+      totalParticipants,
+      totalNewMembers,
+      totalFinances,
+      averageAttendance,
+      worshipReports,
+    };
+  },
+
+  async getConsolidatedByDepartment(startDate: string, endDate: string): Promise<ConsolidatedDepartment[]> {
+    const types: CulteReportType[] = ['worship', 'adn', 'finance', 'sainte_cene', 'sono', 'academie'];
+    const results = await Promise.all(types.map((t) => this.getHistory({ reportType: t, startDate, endDate })));
+
+    return types.map((reportType, i) => {
+      const reports = results[i];
+      const lastReportDate = reports.length > 0
+        ? reports.reduce((max, r) => (r.serviceDate > max ? r.serviceDate : max), reports[0].serviceDate)
+        : null;
+      const latest = reports[0]; // le plus récent (getHistory trie déjà par service_date desc)
+
+      let metrics: DepartmentMetric[] = [];
+      switch (reportType) {
+        case 'worship': {
+          const totalParticipants = reports.reduce((s, r) => s + ((r.data as WorshipReportData).totalParticipants || 0), 0);
+          const totalNewMembers = reports.reduce((s, r) => s + ((r.data as WorshipReportData).totalNewMembers || 0), 0);
+          metrics = [
+            { label: 'Moy. participants', value: reports.length ? Math.round(totalParticipants / reports.length) : 0 },
+            { label: 'Moy. nouveaux', value: reports.length ? Math.round(totalNewMembers / reports.length) : 0 },
+          ];
+          break;
+        }
+        case 'adn': {
+          const totalVisitors = reports.reduce((s, r) => s + ((r.data as AdnReportData).totalNewVisitors || 0), 0);
+          const totalJoin = reports.reduce((s, r) => s + ((r.data as AdnReportData).totalWantsToJoin || 0), 0);
+          metrics = [
+            { label: 'Nouveaux visiteurs', value: totalVisitors },
+            { label: 'Veut rejoindre', value: totalJoin },
+          ];
+          break;
+        }
+        case 'finance': {
+          const total = reports.reduce((s, r) => s + ((r.data as FinanceReportData).totalFinances || 0), 0);
+          const tithes = reports.reduce((s, r) => s + ((r.data as FinanceReportData).tithes || 0), 0);
+          const offerings = reports.reduce(
+            (s, r) => s + ((r.data as FinanceReportData).regularOfferings || 0) + ((r.data as FinanceReportData).specialOfferings || 0),
+            0
+          );
+          metrics = [
+            { label: 'Total (FCFA)', value: total },
+            { label: 'Dîmes (FCFA)', value: tithes },
+            { label: 'Offrandes (FCFA)', value: offerings },
+          ];
+          break;
+        }
+        case 'sainte_cene': {
+          const pains = reports.reduce((s, r) => s + ((r.data as SainteCeneReportData).painsDistribuees || 0), 0);
+          const vins = reports.reduce((s, r) => s + ((r.data as SainteCeneReportData).vinsDistribuees || 0), 0);
+          metrics = [
+            { label: 'Pains distribués', value: pains },
+            { label: 'Vins distribués', value: vins },
+          ];
+          break;
+        }
+        case 'sono': {
+          const latestData = latest?.data as SonoReportData | undefined;
+          const checksOk = latestData
+            ? Object.values(latestData.beforeService || {}).filter((v) => v === 'OK').length
+            : 0;
+          metrics = [
+            { label: 'Checks OK (dernier)', value: latestData ? `${checksOk}/6` : 'N/A' },
+            { label: 'Live stream (dernier)', value: latestData?.duringService?.liveStreaming || 'N/A' },
+          ];
+          break;
+        }
+        case 'academie': {
+          const totalPresent = reports.reduce((s, r) => s + ((r.data as AcademieReportData).presentStudents || 0), 0);
+          metrics = [
+            { label: 'Étudiants présents', value: totalPresent },
+            { label: 'Cours dispensés', value: reports.length },
+          ];
+          break;
+        }
+      }
+
+      return {
+        reportType,
+        label: CULTE_REPORT_TYPE_LABELS[reportType],
+        count: reports.length,
+        lastReportDate,
+        metrics,
+      };
+    });
+  },
+
+  async getPreviousPeriodStats(startDate: string, endDate: string): Promise<DashboardStats> {
+    const durationMs = new Date(endDate).getTime() - new Date(startDate).getTime();
+    const prevEnd = new Date(new Date(startDate).getTime() - 24 * 60 * 60 * 1000);
+    const prevStart = new Date(prevEnd.getTime() - durationMs);
+    return this.getDashboardStats(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0]);
+  },
 };
+
+export interface DashboardStats {
+  totalParticipants: number;
+  totalNewMembers: number;
+  totalFinances: number;
+  averageAttendance: number;
+  worshipReports: CulteReport[];
+}
+
+export interface DepartmentMetric {
+  label: string;
+  value: string | number;
+}
+
+export interface ConsolidatedDepartment {
+  reportType: CulteReportType;
+  label: string;
+  count: number;
+  lastReportDate: string | null;
+  metrics: DepartmentMetric[];
+}
