@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { LayoutDashboard, LayoutGrid, Users, UserPlus, Coins, TrendingUp, TrendingDown, Download, HandHelping, ArrowRight, CalendarDays, Link2, Eye } from 'lucide-react';
+import {
+  LayoutDashboard, LayoutGrid, Users, UserPlus, Coins, TrendingUp, Download, HandHelping,
+  ArrowRight, CalendarDays, Link2, Eye, CheckCircle2, Music2, BookOpen, Radio, Wheat,
+} from 'lucide-react';
 import { CulteBreakdownChart, ChartBreakdown } from '../components/dashboard/stats/CulteBreakdownChart';
-import { CulteReportService, DashboardStats, ConsolidatedDepartment } from '../services/culteReport.service';
+import { CulteReportService, DashboardStats, ConsolidatedDepartment, ConsolidatedGlobalStats } from '../services/culteReport.service';
 import { MeetingTypeService } from '../services/meetingTypeSpeaker.service';
 import {
   CulteReport,
@@ -36,7 +39,7 @@ const BREAKDOWNS: ChartBreakdown[] = [
     series: [
       { key: 'men', label: 'Hommes', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
       { key: 'women', label: 'Femmes', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
-      { key: 'total', label: 'Total', color: '#dc2626', type: 'line', extractValue: (r) => {
+      { key: 'total', label: 'Total', color: '#b12029', type: 'line', extractValue: (r) => {
         const a = (r.data as WorshipReportData).attendance?.adults;
         return (a?.men || 0) + (a?.women || 0);
       } },
@@ -47,9 +50,9 @@ const BREAKDOWNS: ChartBreakdown[] = [
     series: [
       { key: 'men', label: 'Hommes', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.served?.men || 0 },
       { key: 'women', label: 'Femmes', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.served?.women || 0 },
-      { key: 'total', label: 'Total', color: '#dc2626', type: 'line', extractValue: (r) => {
-        const s = (r.data as WorshipReportData).attendance?.served;
-        return (s?.men || 0) + (s?.women || 0);
+      { key: 'total', label: 'Total', color: '#b12029', type: 'line', extractValue: (r) => {
+        const a = r.data as WorshipReportData;
+        return (a.attendance?.served?.men || 0) + (a.attendance?.served?.women || 0) + (a.attendance?.blooms || 0);
       } },
     ],
   },
@@ -58,7 +61,7 @@ const BREAKDOWNS: ChartBreakdown[] = [
     series: [
       { key: 'boys', label: 'Garçons', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.children?.boys || 0 },
       { key: 'girls', label: 'Filles', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.children?.girls || 0 },
-      { key: 'total', label: 'Total', color: '#dc2626', type: 'line', extractValue: (r) => {
+      { key: 'total', label: 'Total', color: '#b12029', type: 'line', extractValue: (r) => {
         const c = (r.data as WorshipReportData).attendance?.children;
         return (c?.boys || 0) + (c?.girls || 0);
       } },
@@ -66,11 +69,17 @@ const BREAKDOWNS: ChartBreakdown[] = [
   },
   {
     key: 'men', label: 'Évolution des Hommes',
-    series: [{ key: 'men', label: 'Hommes', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 }],
+    series: [{ key: 'total', label: 'Total', color: '#b12029', type: 'line', extractValue: (r) => {
+      const a = r.data as WorshipReportData;
+      return (a.attendance?.adults?.men || 0) + (a.attendance?.served?.men || 0);
+    } }],
   },
   {
     key: 'women', label: 'Évolution des Femmes',
-    series: [{ key: 'women', label: 'Femmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 }],
+    series: [{ key: 'total', label: 'Total', color: '#b12029', type: 'line', extractValue: (r) => {
+      const a = r.data as WorshipReportData;
+      return (a.attendance?.adults?.women || 0) + (a.attendance?.served?.women || 0);
+    } }],
   },
 ];
 
@@ -90,6 +99,15 @@ function lastMonth(): string {
   return d.toISOString().split('T')[0];
 }
 
+const DEPT_ICONS: Record<CulteReportType, React.ElementType> = {
+  worship: Music2,
+  finance: Coins,
+  adn: Users,
+  academie: BookOpen,
+  sono: Radio,
+  sainte_cene: Wheat,
+};
+
 function trendPct(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
@@ -100,31 +118,27 @@ interface StatMiniCardProps {
   value: number | string;
   icon: React.ElementType;
   trendPct?: number;
-  color: 'blue' | 'green' | 'amber' | 'purple';
+  borderColor: string;
 }
 
-const STAT_COLOR_CLASSES: Record<StatMiniCardProps['color'], { border: string; icon: string }> = {
-  blue: { border: 'border-l-blue-500', icon: 'text-blue-500' },
-  green: { border: 'border-l-green-500', icon: 'text-green-500' },
-  amber: { border: 'border-l-amber-500', icon: 'text-amber-500' },
-  purple: { border: 'border-l-purple-500', icon: 'text-purple-500' },
-};
-
-function StatMiniCard({ title, value, icon: Icon, trendPct: trend, color }: StatMiniCardProps) {
-  const colors = STAT_COLOR_CLASSES[color];
+function StatMiniCard({ title, value, icon: Icon, trendPct: trend, borderColor }: StatMiniCardProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-100 border-l-4 ${colors.border} p-4`}>
-      <div className="flex items-start justify-between">
-        <p className="text-sm text-gray-600">{title}</p>
-        <Icon className={`w-5 h-5 ${colors.icon}`} />
-      </div>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-      {trend !== undefined && (
-        <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-          {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-          {trend >= 0 ? '+' : ''}{trend}%
+    <div
+      className="bg-white p-3 sm:p-4 md:p-5 lg:p-6 rounded-lg shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md"
+      style={{ borderLeftWidth: '4px', borderLeftStyle: 'solid', borderLeftColor: borderColor }}
+    >
+      <div className="flex justify-between items-start gap-2">
+        <div className="space-y-1 sm:space-y-1.5 md:space-y-2 flex-1 min-w-0">
+          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 truncate">{title}</p>
+          <p className="text-base md:text-lg lg:text-2xl font-bold text-gray-900 break-words">{value}</p>
+          {trend !== undefined && (
+            <p className={`text-[10px] sm:text-xs md:text-sm flex items-center ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+            </p>
+          )}
         </div>
-      )}
+        <div className="text-[#00665C] flex-shrink-0"><Icon className="h-5 w-5 md:h-6 md:w-6" /></div>
+      </div>
     </div>
   );
 }
@@ -143,6 +157,7 @@ export default function CulteReportsDashboard() {
   const [loadingGeneral, setLoadingGeneral] = useState(true);
 
   const [consolidated, setConsolidated] = useState<ConsolidatedDepartment[]>([]);
+  const [globalStats, setGlobalStats] = useState<ConsolidatedGlobalStats>({ avgAttendance: 0, totalVisitors: 0, totalFinances: 0 });
   const [needs, setNeeds] = useState<CulteNeed[]>([]);
   const [loadingConsolidated, setLoadingConsolidated] = useState(true);
 
@@ -170,12 +185,14 @@ export default function CulteReportsDashboard() {
   const loadConsolidated = useCallback(async () => {
     setLoadingConsolidated(true);
     try {
-      const [depts, allNeeds] = await Promise.all([
+      const [depts, allNeeds, globals] = await Promise.all([
         CulteReportService.getConsolidatedByDepartment(consolidatedRange.startDate, consolidatedRange.endDate),
         CulteReportService.getNeeds({ isAddressed: false }),
+        CulteReportService.getConsolidatedGlobalStats(consolidatedRange.startDate, consolidatedRange.endDate),
       ]);
       setConsolidated(depts);
       setNeeds(allNeeds);
+      setGlobalStats(globals);
     } catch (error) {
       console.error('Error loading consolidated view:', error);
       toast.error('Erreur lors du chargement de la vue consolidée');
@@ -239,28 +256,27 @@ export default function CulteReportsDashboard() {
                   value={stats.averageAttendance}
                   icon={Users}
                   trendPct={previousStats ? trendPct(stats.averageAttendance, previousStats.averageAttendance) : 0}
-                  color="blue"
+                  borderColor="#3B82F6"
                 />
                 <StatMiniCard
                   title="Nouveaux membres"
                   value={stats.totalNewMembers}
                   icon={UserPlus}
                   trendPct={previousStats ? trendPct(stats.totalNewMembers, previousStats.totalNewMembers) : 0}
-                  color="green"
+                  borderColor="#10B981"
                 />
                 <StatMiniCard
                   title="Moyenne présence"
-                  value={stats.averageAttendance}
+                  value={Math.round(stats.averageAttendance)}
                   icon={TrendingUp}
-                  trendPct={previousStats ? trendPct(stats.averageAttendance, previousStats.averageAttendance) : 0}
-                  color="amber"
+                  borderColor="#F59E0B"
                 />
                 <StatMiniCard
                   title="Total entrées"
                   value={`${stats.totalFinances.toLocaleString('fr-FR')} FCFA`}
                   icon={Coins}
                   trendPct={previousStats ? trendPct(stats.totalFinances, previousStats.totalFinances) : 0}
-                  color="purple"
+                  borderColor="#8B5CF6"
                 />
               </div>
 
@@ -304,7 +320,7 @@ export default function CulteReportsDashboard() {
                 </button>
               </div>
 
-              <CulteBreakdownChart title="Évolution générale" reports={stats.worshipReports} breakdowns={BREAKDOWNS} />
+              <CulteBreakdownChart reports={stats.worshipReports} breakdowns={BREAKDOWNS} legendPosition="top" />
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -386,15 +402,42 @@ export default function CulteReportsDashboard() {
             <div className="text-center py-10 text-gray-500">Chargement...</div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {consolidated.map((dept) => {
-                  const colors = CULTE_REPORT_TYPE_COLORS[dept.reportType];
-                  return (
-                    <div key={dept.reportType} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                      <div className={`${colors.header} px-4 py-2.5 flex items-center justify-between text-white`}>
-                        <h3 className="text-sm font-semibold">{dept.label}</h3>
-                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{dept.count} rapport{dept.count !== 1 ? 's' : ''}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Rapports soumis', value: consolidated.reduce((s, d) => s + d.count, 0), icon: CheckCircle2, color: 'text-[#00665C]' },
+                  { label: 'Moy. participants', value: globalStats.avgAttendance, icon: Users, color: 'text-indigo-600' },
+                  { label: 'Total finances', value: `${globalStats.totalFinances.toLocaleString('fr-FR')} F`, icon: Coins, color: 'text-[#F2B636]' },
+                  { label: 'Visiteurs accueillis', value: globalStats.totalVisitors, icon: TrendingUp, color: 'text-purple-600' },
+                ].map((stat) => (
+                  <div key={stat.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                        <p className="text-xl font-bold text-gray-900">{stat.value}</p>
                       </div>
+                      <stat.icon className={`w-[18px] h-[18px] ${stat.color}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Par département</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {consolidated.map((dept) => {
+                    const colors = CULTE_REPORT_TYPE_COLORS[dept.reportType];
+                    const DeptIcon = DEPT_ICONS[dept.reportType];
+                    return (
+                      <div key={dept.reportType} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                        <div className={`${colors.header} px-4 py-3 flex items-center justify-between`}>
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-white/20">
+                              <DeptIcon className="w-4 h-4 text-white" />
+                            </div>
+                            <span className="font-semibold text-sm text-white">{dept.label}</span>
+                          </div>
+                          <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">{dept.count} rapport{dept.count !== 1 ? 's' : ''}</span>
+                        </div>
                       <div className="p-4 space-y-3">
                         {dept.metrics.length === 0 ? (
                           <p className="text-sm text-gray-400 italic">Aucun rapport sur la période</p>
@@ -416,8 +459,9 @@ export default function CulteReportsDashboard() {
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">

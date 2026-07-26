@@ -20,11 +20,11 @@ export const DEPARTMENT_NAME_BY_REPORT_TYPE: Record<CulteReportType, string> = {
 
 export const CULTE_REPORT_TYPE_COLORS: Record<CulteReportType, { header: string; accent: string; icon: string }> = {
   worship: { header: 'bg-[#00665C]', accent: 'text-[#00665C]', icon: 'text-[#00665C]' },
-  finance: { header: 'bg-amber-500', accent: 'text-amber-600', icon: 'text-amber-500' },
-  adn: { header: 'bg-purple-500', accent: 'text-purple-600', icon: 'text-purple-500' },
-  academie: { header: 'bg-violet-500', accent: 'text-violet-600', icon: 'text-violet-500' },
-  sono: { header: 'bg-blue-500', accent: 'text-blue-600', icon: 'text-blue-500' },
-  sainte_cene: { header: 'bg-pink-500', accent: 'text-pink-600', icon: 'text-pink-500' },
+  finance: { header: 'bg-[#F2B636]', accent: 'text-[#F2B636]', icon: 'text-[#F2B636]' },
+  adn: { header: 'bg-indigo-600', accent: 'text-indigo-600', icon: 'text-indigo-600' },
+  academie: { header: 'bg-purple-600', accent: 'text-purple-600', icon: 'text-purple-600' },
+  sono: { header: 'bg-sky-600', accent: 'text-sky-600', icon: 'text-sky-600' },
+  sainte_cene: { header: 'bg-rose-600', accent: 'text-rose-600', icon: 'text-rose-600' },
 };
 
 export interface GenderCount {

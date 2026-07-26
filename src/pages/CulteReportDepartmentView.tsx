@@ -79,11 +79,11 @@ interface DeptViewConfig {
   breakdowns: ChartBreakdown[];
 }
 
-const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], string> = {
-  teal: 'text-[#00665C]',
-  green: 'text-green-600',
-  blue: 'text-blue-600',
-  amber: 'text-amber-600',
+const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], { border: string; icon: string; value: string }> = {
+  teal: { border: 'border-[#00665C]', icon: 'text-[#00665C]', value: 'text-[#00665C]' },
+  green: { border: 'border-green-500', icon: 'text-green-500', value: 'text-green-600' },
+  blue: { border: 'border-blue-400', icon: 'text-blue-400', value: 'text-blue-600' },
+  amber: { border: 'border-amber-400', icon: 'text-amber-400', value: 'text-gray-900' },
 };
 
 function lastReportDate(reports: CulteReport[]): string {
@@ -139,7 +139,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
                 const a = (r.data as WorshipReportData).attendance?.adults;
                 return (a?.men || 0) + (a?.women || 0);
               } },
-              { key: 'children', label: 'Enfants', color: '#F2B636', type: 'line', extractValue: (r) => {
+              { key: 'children', label: 'Enfants', color: '#F59E0B', type: 'line', extractValue: (r) => {
                 const c = (r.data as WorshipReportData).attendance?.children;
                 return (c?.boys || 0) + (c?.girls || 0);
               } },
@@ -456,16 +456,19 @@ export default function CulteReportDepartmentView() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {config.statCards.map((sc, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-            <div className="flex items-start justify-between">
-              <p className="text-xs font-medium text-gray-500 uppercase">{sc.label}</p>
-              <sc.icon className={`w-4 h-4 ${STAT_COLOR_CLASSES[sc.color]}`} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {config.statCards.map((sc, i) => {
+          const colors = STAT_COLOR_CLASSES[sc.color];
+          return (
+            <div key={i} className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${colors.border}`}>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{sc.label}</h3>
+                <sc.icon className={`h-4 w-4 ${colors.icon} opacity-70`} />
+              </div>
+              <p className={`text-2xl font-bold ${colors.value}`}>{sc.compute(reports)}</p>
             </div>
-            <p className={`text-2xl font-bold mt-1 ${STAT_COLOR_CLASSES[sc.color]}`}>{sc.compute(reports)}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">

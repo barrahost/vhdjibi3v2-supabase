@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp } from 'lucide-react';
 import { CulteReport } from '../../../types/culteReport.types';
 
 export interface ChartSeries {
@@ -22,36 +21,28 @@ interface CulteBreakdownChartProps {
   title?: string;
   reports: CulteReport[];
   breakdowns: ChartBreakdown[];
+  legendPosition?: 'top' | 'bottom';
+  showTabTitle?: boolean;
 }
 
-function getWeekNumber(date: Date): number {
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-  return Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7);
-}
-
-function buildWeeklyPoints(reports: CulteReport[], series: ChartSeries[]): Record<string, any>[] {
-  const byWeek = new Map<string, Record<string, any>>();
-  for (const report of reports) {
+function buildPoints(reports: CulteReport[], series: ChartSeries[]): Record<string, any>[] {
+  const sorted = [...reports].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
+  return sorted.map((report) => {
     const date = new Date(report.serviceDate);
-    const week = `S${getWeekNumber(date)} ${date.getFullYear()}`;
-    const existing = byWeek.get(week) || { week };
+    const point: Record<string, any> = {
+      date: date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+    };
     for (const s of series) {
-      existing[s.key] = (existing[s.key] || 0) + (s.extractValue(report) || 0);
+      point[s.key] = s.extractValue(report) || 0;
     }
-    byWeek.set(week, existing);
-  }
-  return Array.from(byWeek.values()).sort((a, b) => {
-    const [, wa, ya] = a.week.match(/S(\d+) (\d+)/) || [];
-    const [, wb, yb] = b.week.match(/S(\d+) (\d+)/) || [];
-    return Number(ya) - Number(yb) || Number(wa) - Number(wb);
+    return point;
   });
 }
 
-export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns }: CulteBreakdownChartProps) {
+export function CulteBreakdownChart({ reports, breakdowns, legendPosition = 'bottom', showTabTitle = true }: CulteBreakdownChartProps) {
   const [activeKey, setActiveKey] = useState(breakdowns[0]?.key);
   const active = breakdowns.find((b) => b.key === activeKey) || breakdowns[0];
-  const points = active ? buildWeeklyPoints(reports, active.series) : [];
+  const points = active ? buildPoints(reports, active.series) : [];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -60,8 +51,8 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
           <button
             key={b.key}
             onClick={() => setActiveKey(b.key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-              b.key === activeKey ? 'bg-[#00665C] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+              b.key === activeKey ? 'bg-[#00665C] text-white shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {b.label}
@@ -69,21 +60,16 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
         ))}
       </div>
 
-      <h3 className="text-base font-semibold text-gray-900 mb-3">{active?.label || title}</h3>
-
-      <div className="flex items-center gap-2 mb-3 text-sm text-[#00665C] font-medium">
-        <TrendingUp className="w-4 h-4" />
-        <span>{active?.label}</span>
-      </div>
+      {showTabTitle && <h3 className="text-base font-semibold text-gray-900 mb-3">{active?.label}</h3>}
 
       {points.length === 0 ? (
         <p className="text-sm text-gray-400 py-8 text-center">Aucune donnée sur cette période.</p>
       ) : (
-        <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart data={points} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={points} margin={{ top: 5, right: 20, left: 0, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="week" tick={{ fontSize: 10 }} stroke="#666" angle={-45} textAnchor="end" height={60} />
-            <YAxis tick={{ fontSize: 12 }} stroke="#666" />
+            <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
+            <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'white',
@@ -91,12 +77,11 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
                 borderRadius: '6px',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
-              labelFormatter={(label) => `Semaine : ${label}`}
             />
-            <Legend />
+            <Legend verticalAlign={legendPosition} height={36} />
             {active?.series.map((s) =>
               s.type === 'bar' ? (
-                <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} stackId={s.stackId} radius={s.stackId ? undefined : [3, 3, 0, 0]} />
+                <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} stackId={s.stackId} radius={s.stackId ? undefined : [4, 4, 0, 0]} />
               ) : (
                 <Line
                   key={s.key}
@@ -104,9 +89,9 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
                   dataKey={s.key}
                   name={s.label}
                   stroke={s.color}
-                  strokeWidth={3}
-                  dot={{ fill: s.color, strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: s.color, strokeWidth: 2, fill: 'white' }}
+                  strokeWidth={2}
+                  dot={{ fill: s.color, r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
               )
             )}

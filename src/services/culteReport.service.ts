@@ -267,18 +267,27 @@ export const CulteReportService = {
         case 'worship': {
           const totalParticipants = reports.reduce((s, r) => s + ((r.data as WorshipReportData).totalParticipants || 0), 0);
           const totalNewMembers = reports.reduce((s, r) => s + ((r.data as WorshipReportData).totalNewMembers || 0), 0);
+          const totalChildren = reports.reduce((s, r) => {
+            const c = (r.data as WorshipReportData).attendance?.children;
+            return s + (c?.boys || 0) + (c?.girls || 0);
+          }, 0);
           metrics = [
             { label: 'Moy. participants', value: reports.length ? Math.round(totalParticipants / reports.length) : 0 },
             { label: 'Moy. nouveaux', value: reports.length ? Math.round(totalNewMembers / reports.length) : 0 },
+            { label: 'Moy. enfants', value: reports.length ? Math.round(totalChildren / reports.length) : 0 },
+            { label: 'Cultes', value: reports.length },
           ];
           break;
         }
         case 'adn': {
           const totalVisitors = reports.reduce((s, r) => s + ((r.data as AdnReportData).totalNewVisitors || 0), 0);
           const totalJoin = reports.reduce((s, r) => s + ((r.data as AdnReportData).totalWantsToJoin || 0), 0);
+          const totalGiveLife = reports.reduce((s, r) => s + ((r.data as AdnReportData).totalWantsToGiveLifeToJesus || 0), 0);
           metrics = [
-            { label: 'Nouveaux visiteurs', value: totalVisitors },
+            { label: 'Visiteurs', value: totalVisitors },
             { label: 'Veut rejoindre', value: totalJoin },
+            { label: 'Décision Christ', value: totalGiveLife },
+            { label: 'Rapports', value: reports.length },
           ];
           break;
         }
@@ -290,9 +299,10 @@ export const CulteReportService = {
             0
           );
           metrics = [
-            { label: 'Total (FCFA)', value: total },
-            { label: 'Dîmes (FCFA)', value: tithes },
-            { label: 'Offrandes (FCFA)', value: offerings },
+            { label: 'Total', value: `${total.toLocaleString('fr-FR')} F` },
+            { label: 'Dîmes', value: `${tithes.toLocaleString('fr-FR')} F` },
+            { label: 'Offrandes', value: `${offerings.toLocaleString('fr-FR')} F` },
+            { label: 'Rapports', value: reports.length },
           ];
           break;
         }
@@ -302,6 +312,7 @@ export const CulteReportService = {
           metrics = [
             { label: 'Pains distribués', value: pains },
             { label: 'Vins distribués', value: vins },
+            { label: 'Célébrations', value: reports.length },
           ];
           break;
         }
@@ -310,17 +321,26 @@ export const CulteReportService = {
           const checksOk = latestData
             ? Object.values(latestData.beforeService || {}).filter((v) => v === 'OK').length
             : 0;
-          metrics = [
-            { label: 'Checks OK (dernier)', value: latestData ? `${checksOk}/6` : 'N/A' },
-            { label: 'Live stream (dernier)', value: latestData?.duringService?.liveStreaming || 'N/A' },
-          ];
+          const checksTotal = latestData ? Object.values(latestData.beforeService || {}).length : 0;
+          metrics = latestData
+            ? [
+                { label: 'Checks OK', value: `${checksOk}/${checksTotal}` },
+                { label: 'Live stream', value: latestData.duringService?.liveStreaming || '-' },
+                { label: 'Son salle', value: latestData.duringService?.roomSoundQuality === 'SATISFAISANT' ? '✓' : '⚠' },
+                { label: 'Rapports', value: reports.length },
+              ]
+            : [{ label: 'Rapports', value: reports.length }];
           break;
         }
         case 'academie': {
+          const totalActual = reports.reduce((s, r) => s + ((r.data as AcademieReportData).actualStudents || 0), 0);
           const totalPresent = reports.reduce((s, r) => s + ((r.data as AcademieReportData).presentStudents || 0), 0);
+          const attendRate = totalActual > 0 ? Math.round((totalPresent / totalActual) * 100) : 0;
           metrics = [
-            { label: 'Étudiants présents', value: totalPresent },
-            { label: 'Cours dispensés', value: reports.length },
+            { label: 'Taux présence', value: `${attendRate}%` },
+            { label: 'Présents total', value: totalPresent },
+            { label: 'Inscrits total', value: totalActual },
+            { label: 'Sessions', value: reports.length },
           ];
           break;
         }
@@ -334,6 +354,20 @@ export const CulteReportService = {
         metrics,
       };
     });
+  },
+
+  async getConsolidatedGlobalStats(startDate: string, endDate: string): Promise<ConsolidatedGlobalStats> {
+    const [worshipReports, adnReports, financeReports] = await Promise.all([
+      this.getHistory({ reportType: 'worship', startDate, endDate }),
+      this.getHistory({ reportType: 'adn', startDate, endDate }),
+      this.getHistory({ reportType: 'finance', startDate, endDate }),
+    ]);
+    const avgAttendance = worshipReports.length
+      ? Math.round(worshipReports.reduce((s, r) => s + ((r.data as WorshipReportData).totalParticipants || 0), 0) / worshipReports.length)
+      : 0;
+    const totalVisitors = adnReports.reduce((s, r) => s + ((r.data as AdnReportData).totalNewVisitors || 0), 0);
+    const totalFinances = financeReports.reduce((s, r) => s + ((r.data as FinanceReportData).totalFinances || 0), 0);
+    return { avgAttendance, totalVisitors, totalFinances };
   },
 
   async getPreviousPeriodStats(startDate: string, endDate: string, meetingTypeName?: string): Promise<DashboardStats> {
@@ -350,6 +384,12 @@ export interface DashboardStats {
   totalFinances: number;
   averageAttendance: number;
   worshipReports: CulteReport[];
+}
+
+export interface ConsolidatedGlobalStats {
+  avgAttendance: number;
+  totalVisitors: number;
+  totalFinances: number;
 }
 
 export interface DepartmentMetric {
