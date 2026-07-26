@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Eye, Pencil, Trash2, Search, Plus, X, BarChart3, TrendingUp, UserPlus, CalendarDays,
-  Coins, GraduationCap, Wine, Radio, Sparkles,
+  Coins, GraduationCap, Wine, Radio, Sparkles, Download,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -15,7 +15,9 @@ import { useConfirmModal } from '../hooks/useConfirmModal';
 import { CulteReportService } from '../services/culteReport.service';
 import { MeetingTypeService } from '../services/meetingTypeSpeaker.service';
 import EditCulteReportModal from '../components/culteReports/EditCulteReportModal';
+import CulteReportPreviewModal from '../components/culteReports/CulteReportPreviewModal';
 import CulteReportSubmitForm from '../components/culteReports/CulteReportSubmitForm';
+import { exportCulteReportPdf } from '../utils/culteReportPdf';
 import { CulteBreakdownChart, ChartBreakdown } from '../components/dashboard/stats/CulteBreakdownChart';
 import {
   CulteReport,
@@ -95,7 +97,7 @@ function defaultSearchFields(r: CulteReport): string[] {
   return [r.serviceDate, r.notes || '', r.submittedByName];
 }
 
-function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport) => void, onDelete: (r: CulteReport) => void): ColumnConfig {
+function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport) => void, onDelete: (r: CulteReport) => void, onDownloadPdf: (r: CulteReport) => void): ColumnConfig {
   return {
     key: 'actions',
     title: 'Actions',
@@ -106,6 +108,9 @@ function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport
         </button>
         <button onClick={() => onEdit(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier">
           <Pencil className="w-4 h-4" />
+        </button>
+        <button onClick={() => onDownloadPdf(row)} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Télécharger en PDF">
+          <Download className="w-4 h-4" />
         </button>
         <button onClick={() => onDelete(row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
           <Trash2 className="w-4 h-4" />
@@ -310,7 +315,8 @@ function getColumns(
   reportType: CulteReportType,
   onView: (r: CulteReport) => void,
   onEdit: (r: CulteReport) => void,
-  onDelete: (r: CulteReport) => void
+  onDelete: (r: CulteReport) => void,
+  onDownloadPdf: (r: CulteReport) => void
 ): ColumnConfig[] {
   const base: ColumnConfig[] = [{ key: 'serviceDate', title: 'Date', render: (r) => r.serviceDate }];
 
@@ -322,7 +328,7 @@ function getColumns(
         { key: 'speaker', title: 'Orateur', render: (r) => (r.data as WorshipReportData).speakerName || '-' },
         { key: 'total', title: 'Total', render: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
         { key: 'new', title: 'Nouveaux', render: (r) => (r.data as WorshipReportData).totalNewMembers || 0 },
-        actionsColumn(onView, onEdit, onDelete),
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     case 'finance':
       return [
@@ -330,7 +336,7 @@ function getColumns(
         { key: 'total', title: 'Total', render: (r) => (r.data as FinanceReportData).totalFinances || 0 },
         { key: 'tithes', title: 'Dîmes', render: (r) => (r.data as FinanceReportData).tithes || 0 },
         { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
-        actionsColumn(onView, onEdit, onDelete),
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     case 'adn':
       return [
@@ -338,7 +344,7 @@ function getColumns(
         { key: 'visitors', title: 'Nouveaux visiteurs', render: (r) => (r.data as AdnReportData).totalNewVisitors || 0 },
         { key: 'join', title: 'Veut rejoindre', render: (r) => (r.data as AdnReportData).totalWantsToJoin || 0 },
         { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
-        actionsColumn(onView, onEdit, onDelete),
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     case 'sainte_cene':
       return [
@@ -346,7 +352,7 @@ function getColumns(
         { key: 'pains', title: 'Pains distribués', render: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
         { key: 'vins', title: 'Vins distribués', render: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
         { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
-        actionsColumn(onView, onEdit, onDelete),
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     case 'academie':
       return [
@@ -354,13 +360,13 @@ function getColumns(
         { key: 'className', title: 'Classe', render: (r) => (r.data as AcademieReportData).className || '-' },
         { key: 'present', title: 'Présents', render: (r) => (r.data as AcademieReportData).presentStudents || 0 },
         { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
-        actionsColumn(onView, onEdit, onDelete),
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     default:
       return [
         ...base,
         { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
-        actionsColumn(onView, onEdit, onDelete),
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
   }
 }
@@ -464,7 +470,7 @@ export default function CulteReportDepartmentView() {
   };
 
   const config = getConfig(type);
-  const columns = getColumns(type, setViewingReport, setEditingReport, handleDelete);
+  const columns = getColumns(type, setViewingReport, setEditingReport, handleDelete, exportCulteReportPdf);
 
   const filtered = reports.filter((r) =>
     !searchTerm || config.searchFields(r).some((f) => f.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -615,12 +621,19 @@ export default function CulteReportDepartmentView() {
         </>
       )}
 
-      {(editingReport || viewingReport) && (
+      {editingReport && (
         <EditCulteReportModal
-          report={(editingReport || viewingReport)!}
+          report={editingReport}
           isOpen={true}
-          onClose={() => { setEditingReport(null); setViewingReport(null); }}
-          onSuccess={() => { setEditingReport(null); setViewingReport(null); loadReports(); loadChartReports(); loadAllReports(); }}
+          onClose={() => setEditingReport(null)}
+          onSuccess={() => { setEditingReport(null); loadReports(); loadChartReports(); loadAllReports(); }}
+        />
+      )}
+      {viewingReport && (
+        <CulteReportPreviewModal
+          report={viewingReport}
+          isOpen={true}
+          onClose={() => setViewingReport(null)}
         />
       )}
       <ConfirmModal {...confirmModalProps} />
