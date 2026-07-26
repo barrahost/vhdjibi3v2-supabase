@@ -35,11 +35,34 @@ import {
   Radio,
   Wheat,
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChurch } from '../contexts/ChurchContext';
 import { ROLES, PERMISSIONS } from '../constants/roles';
 import { usePermissions } from './usePermissions';
 import { useAdminNotifications } from './useAdminNotifications';
+import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
+import { getProfileDepartmentIds } from '../types/businessProfile.types';
+import { CulteReportType, DEPARTMENT_TO_REPORT_TYPE, normalizeDeptName } from '../types/culteReport.types';
+
+const CULTE_REPORT_NAV_LABEL: Record<CulteReportType, string> = {
+  worship: 'Gestion de Culte',
+  adn: 'ADN',
+  finance: 'Finance',
+  academie: 'Académie',
+  sainte_cene: 'Sainte Cène',
+  sono: 'Communication & Sono',
+};
+
+const CULTE_REPORT_NAV_ICON: Record<CulteReportType, React.ReactNode> = {
+  worship: <Presentation className="w-5 h-5" />,
+  adn: <Users className="w-5 h-5" />,
+  finance: <Coins className="w-5 h-5" />,
+  academie: <BookOpen className="w-5 h-5" />,
+  sainte_cene: <Wheat className="w-5 h-5" />,
+  sono: <Radio className="w-5 h-5" />,
+};
 
 export interface NavItem {
   id: string;
@@ -52,13 +75,46 @@ export interface NavItem {
 }
 
 export function useNavigationItems(): NavItem[] {
-  const { userRole, activeRole } = useAuth();
+  const { user, userRole, activeRole } = useAuth();
   const { hasPermission } = usePermissions();
   const { hasModule } = useChurch();
   const { alerts } = useAdminNotifications();
 
   const alertCount = (type: string) =>
     alerts.find(a => a.type === type)?.count ?? 0;
+
+  const [ledCulteReports, setLedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
+
+  useEffect(() => {
+    if (activeRole !== ROLES.DEPARTMENT_LEADER || !user?.businessProfiles) {
+      setLedCulteReports([]);
+      return;
+    }
+    const profile = (user.businessProfiles as any[]).find((p) => p.type === 'department_leader');
+    const departmentIds = getProfileDepartmentIds(profile);
+    if (departmentIds.length === 0) {
+      setLedCulteReports([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('church_id', getChurchId())
+        .in('id', departmentIds);
+      const mapped = (data || [])
+        .map((d: { id: string; name: string }) => {
+          const reportType = DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(d.name)];
+          return reportType ? { reportType } : null;
+        })
+        .filter((d: { reportType: CulteReportType } | null): d is { reportType: CulteReportType } => d !== null);
+      if (!cancelled) setLedCulteReports(mapped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRole, user]);
 
   const items: NavItem[] = [
     {
@@ -115,7 +171,18 @@ export function useNavigationItems(): NavItem[] {
       children.push({ id: 'sms', label: 'SMS', href: '/sms', icon: <MessageSquare className="w-5 h-5" /> });
     }
     if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
-      children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
+      if (ledCulteReports.length > 0) {
+        ledCulteReports.forEach(({ reportType }) => {
+          children.push({
+            id: `culte-report-${reportType}`,
+            label: CULTE_REPORT_NAV_LABEL[reportType],
+            href: `/rapports/${reportType}`,
+            icon: CULTE_REPORT_NAV_ICON[reportType],
+          });
+        });
+      } else {
+        children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
+      }
     }
 
     if (children.length > 0) {

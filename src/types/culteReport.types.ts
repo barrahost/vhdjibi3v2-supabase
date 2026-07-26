@@ -18,6 +18,15 @@ export const DEPARTMENT_NAME_BY_REPORT_TYPE: Record<CulteReportType, string> = {
   academie: "ACADEMIE D'HONNEUR",
 };
 
+/** Normalise un nom de département pour une comparaison insensible à la casse et aux espaces. */
+export function normalizeDeptName(name: string): string {
+  return name.toUpperCase().trim().replace(/\s+/g, ' ');
+}
+
+export const DEPARTMENT_TO_REPORT_TYPE: Record<string, CulteReportType> = Object.fromEntries(
+  (Object.entries(DEPARTMENT_NAME_BY_REPORT_TYPE) as [CulteReportType, string][]).map(([type, name]) => [name, type])
+);
+
 export const CULTE_REPORT_TYPE_COLORS: Record<CulteReportType, { header: string; accent: string; icon: string }> = {
   worship: { header: 'bg-[#00665C]', accent: 'text-[#00665C]', icon: 'text-[#00665C]' },
   finance: { header: 'bg-[#F2B636]', accent: 'text-[#F2B636]', icon: 'text-[#F2B636]' },

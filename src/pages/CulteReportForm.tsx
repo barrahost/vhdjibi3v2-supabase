@@ -3,7 +3,7 @@ import { FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
-import { CulteReportType, DEPARTMENT_NAME_BY_REPORT_TYPE } from '../types/culteReport.types';
+import { CulteReportType, DEPARTMENT_TO_REPORT_TYPE, normalizeDeptName } from '../types/culteReport.types';
 import { getProfileDepartmentIds } from '../types/businessProfile.types';
 import CulteReportSubmitForm from '../components/culteReports/CulteReportSubmitForm';
 
@@ -11,14 +11,6 @@ interface DeptInfo {
   id: string;
   name: string;
   reportType: CulteReportType;
-}
-
-const DEPARTMENT_TO_REPORT_TYPE: Record<string, CulteReportType> = Object.fromEntries(
-  (Object.entries(DEPARTMENT_NAME_BY_REPORT_TYPE) as [CulteReportType, string][]).map(([type, name]) => [name, type])
-);
-
-function normalizeDeptName(name: string): string {
-  return name.toUpperCase().trim().replace(/\s+/g, ' ');
 }
 
 export default function CulteReportForm() {
