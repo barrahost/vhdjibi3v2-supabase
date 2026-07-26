@@ -56,7 +56,6 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
     'MANAGE_PROFILE'
   ],
   department_leader: [
-    'MANAGE_SERVANTS',
     'MANAGE_DEPARTMENT_SERVANTS',
     'MANAGE_PROFILE',
     'MANAGE_CULTE_REPORTS'
