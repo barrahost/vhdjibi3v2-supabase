@@ -23,7 +23,6 @@ import {
   CulteReport,
   CulteReportType,
   CulteReportMeetingType,
-  CULTE_REPORT_TYPE_LABELS,
   DEPARTMENT_NAME_BY_REPORT_TYPE,
   WorshipReportData,
   AdnReportData,
@@ -126,6 +125,8 @@ interface ColumnConfig {
 
 interface DeptViewConfig {
   icon: LucideIcon;
+  /** Exact page h1 text from the old app's desktop view — distinct from CULTE_REPORT_TYPE_LABELS (used for dropdowns/PDF titles, which have different phrasing). */
+  pageTitle: string;
   subtitle: string;
   statCards: StatCardConfig[];
   summaryMetrics: SummaryMetricConfig[];
@@ -268,6 +269,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'worship':
       return {
         icon: Sparkles,
+        pageTitle: 'Gestion de Culte',
         subtitle: 'Gérez les rapports de présence et informations générales des cultes',
         statCards: [
           { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
@@ -342,6 +344,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'finance':
       return {
         icon: Coins,
+        pageTitle: 'Finance',
         subtitle: 'Gérez les rapports financiers des cultes',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
@@ -389,6 +392,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'adn':
       return {
         icon: UserPlus,
+        pageTitle: 'ADN',
         subtitle: 'Gérez les rapports de suivi des nouveaux visiteurs',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', hex: '#0F6E56', compute: (r) => r.length },
@@ -440,6 +444,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'sainte_cene':
       return {
         icon: Wine,
+        pageTitle: 'Rapports Sainte Cène',
         subtitle: 'Gérez les rapports de la Sainte Cène',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
@@ -498,6 +503,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'academie':
       return {
         icon: GraduationCap,
+        pageTitle: 'Rapports Académie',
         subtitle: "Gérez les rapports de l'Académie d'Honneur",
         statCards: [],
         summaryMetrics: [
@@ -543,6 +549,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'sono':
       return {
         icon: Radio,
+        pageTitle: 'Communication & Sono',
         subtitle: 'Gérez les rapports de sonorisation et communication',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
@@ -584,7 +591,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
       };
     default:
       return {
-        icon: BarChart3, subtitle: '', statCards: [], summaryMetrics: [], breakdowns: [],
+        icon: BarChart3, pageTitle: '', subtitle: '', statCards: [], summaryMetrics: [], breakdowns: [],
         searchFields: defaultSearchFields, searchPlaceholder: 'Rechercher...', statsSource: 'all',
         evolutionTitle: 'Évolution', evolutionIcon: BarChart3,
         periodPresets: WORSHIP_STYLE_PRESETS, defaultPeriodPresetId: '3m', periodSelectorStyle: 'simple',
@@ -808,7 +815,7 @@ export default function CulteReportDepartmentView() {
         <div className="flex items-center gap-2">
           <Icon className="w-6 h-6 text-[#00665C]" />
           <div>
-            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{CULTE_REPORT_TYPE_LABELS[type]}</h1>
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{config.pageTitle}</h1>
             <p className="text-sm text-gray-500">{config.subtitle}</p>
           </div>
         </div>
