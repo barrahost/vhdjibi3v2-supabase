@@ -443,8 +443,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         subtitle: 'Gérez les rapports de la Sainte Cène',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
-          { label: 'Pains Totaux Distribués', icon: TrendingUp, color: 'green', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).painsDistribuees || 0), 0) },
-          { label: 'Vins Totaux Distribués', icon: UserPlus, color: 'blue', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).vinsDistribuees || 0), 0) },
+          { label: 'Pains Totaux Distribués', icon: TrendingUp, color: 'green', borderHex: '#10B981', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).painsDistribuees || 0), 0) },
+          { label: 'Vins Totaux Distribués', icon: UserPlus, color: 'blue', borderHex: '#3B82F6', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).vinsDistribuees || 0), 0) },
           { label: 'Dernier Rapport', icon: CalendarDays, color: 'purpleGray', compute: lastReportDateFull },
         ],
         summaryMetrics: [
@@ -546,8 +546,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         subtitle: 'Gérez les rapports de sonorisation et communication',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
-          { label: 'Matériel OK', icon: TrendingUp, color: 'green', compute: (r) => r.filter((x) => (x.data as SonoReportData).beforeService?.materialCheck === 'OK').length },
-          { label: 'Lives Effectués', icon: UserPlus, color: 'blue', compute: (r) => r.filter((x) => (x.data as SonoReportData).duringService?.liveStreaming === 'OUI').length },
+          { label: 'Matériel OK', icon: TrendingUp, color: 'green', borderHex: '#10B981', compute: (r) => r.filter((x) => (x.data as SonoReportData).beforeService?.materialCheck === 'OK').length },
+          { label: 'Lives Effectués', icon: UserPlus, color: 'blue', borderHex: '#3B82F6', compute: (r) => r.filter((x) => (x.data as SonoReportData).duringService?.liveStreaming === 'OUI').length },
           { label: 'Dernier Rapport', icon: CalendarDays, color: 'purpleGray', compute: lastReportDateFull },
         ],
         summaryMetrics: [

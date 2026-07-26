@@ -5,7 +5,7 @@ export const CULTE_REPORT_TYPE_LABELS: Record<CulteReportType, string> = {
   adn: 'ADN — Amis des Nouveaux',
   finance: 'Finance',
   sainte_cene: 'Sainte Cène',
-  sono: 'Sonorisation',
+  sono: 'Communication & Sono',
   academie: "Académie d'Honneur",
 };
 
