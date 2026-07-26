@@ -25,21 +25,53 @@ const GENERAL_RANGE_PRESETS = [
 ];
 
 const BREAKDOWNS: ChartBreakdown[] = [
-  { key: 'general', label: 'Évolution générale', extractValue: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
-  { key: 'adults', label: 'Évolution des Adultes', extractValue: (r) => {
-    const a = (r.data as WorshipReportData).attendance?.adults;
-    return (a?.men || 0) + (a?.women || 0);
-  } },
-  { key: 'served', label: 'Évolution des Boss', extractValue: (r) => {
-    const s = (r.data as WorshipReportData).attendance?.served;
-    return (s?.men || 0) + (s?.women || 0);
-  } },
-  { key: 'children', label: 'Évolution des Enfants', extractValue: (r) => {
-    const c = (r.data as WorshipReportData).attendance?.children;
-    return (c?.boys || 0) + (c?.girls || 0);
-  } },
-  { key: 'men', label: 'Évolution des Hommes', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
-  { key: 'women', label: 'Évolution des Femmes', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
+  {
+    key: 'general', label: 'Évolution générale',
+    series: [
+      { key: 'total', label: 'Total participants', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
+    ],
+  },
+  {
+    key: 'adults', label: 'Évolution des Adultes',
+    series: [
+      { key: 'men', label: 'Hommes', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
+      { key: 'women', label: 'Femmes', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
+      { key: 'total', label: 'Total', color: '#dc2626', type: 'line', extractValue: (r) => {
+        const a = (r.data as WorshipReportData).attendance?.adults;
+        return (a?.men || 0) + (a?.women || 0);
+      } },
+    ],
+  },
+  {
+    key: 'served', label: 'Évolution des Boss',
+    series: [
+      { key: 'men', label: 'Hommes', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.served?.men || 0 },
+      { key: 'women', label: 'Femmes', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.served?.women || 0 },
+      { key: 'total', label: 'Total', color: '#dc2626', type: 'line', extractValue: (r) => {
+        const s = (r.data as WorshipReportData).attendance?.served;
+        return (s?.men || 0) + (s?.women || 0);
+      } },
+    ],
+  },
+  {
+    key: 'children', label: 'Évolution des Enfants',
+    series: [
+      { key: 'boys', label: 'Garçons', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.children?.boys || 0 },
+      { key: 'girls', label: 'Filles', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.children?.girls || 0 },
+      { key: 'total', label: 'Total', color: '#dc2626', type: 'line', extractValue: (r) => {
+        const c = (r.data as WorshipReportData).attendance?.children;
+        return (c?.boys || 0) + (c?.girls || 0);
+      } },
+    ],
+  },
+  {
+    key: 'men', label: 'Évolution des Hommes',
+    series: [{ key: 'men', label: 'Hommes', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 }],
+  },
+  {
+    key: 'women', label: 'Évolution des Femmes',
+    series: [{ key: 'women', label: 'Femmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 }],
+  },
 ];
 
 function daysAgo(days: number): string {
@@ -120,16 +152,13 @@ export default function CulteReportsDashboard() {
     setLoadingGeneral(true);
     try {
       const [dashboardStats, previous, recent] = await Promise.all([
-        CulteReportService.getDashboardStats(generalRange.startDate, generalRange.endDate),
-        CulteReportService.getPreviousPeriodStats(generalRange.startDate, generalRange.endDate),
-        CulteReportService.getHistory({ startDate: generalRange.startDate, endDate: generalRange.endDate }),
+        CulteReportService.getDashboardStats(generalRange.startDate, generalRange.endDate, meetingTypeFilter || undefined),
+        CulteReportService.getPreviousPeriodStats(generalRange.startDate, generalRange.endDate, meetingTypeFilter || undefined),
+        CulteReportService.getHistory({ startDate: generalRange.startDate, endDate: generalRange.endDate, meetingTypeName: meetingTypeFilter || undefined }),
       ]);
       setStats(dashboardStats);
       setPreviousStats(previous);
-      const filteredRecent = meetingTypeFilter
-        ? recent.filter((r) => r.meetingTypeName === meetingTypeFilter)
-        : recent;
-      setRecentReports(filteredRecent.slice(0, 5));
+      setRecentReports(recent.slice(0, 5));
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
       toast.error('Erreur lors du chargement des statistiques');

@@ -43,39 +43,79 @@ function getBreakdowns(reportType: CulteReportType): ChartBreakdown[] {
   switch (reportType) {
     case 'worship':
       return [
-        { key: 'total', label: 'Présence', extractValue: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
-        { key: 'adults', label: 'Adultes', extractValue: (r) => {
-          const a = (r.data as WorshipReportData).attendance?.adults;
-          return (a?.men || 0) + (a?.women || 0);
-        } },
-        { key: 'children', label: 'Enfants', extractValue: (r) => {
-          const c = (r.data as WorshipReportData).attendance?.children;
-          return (c?.boys || 0) + (c?.girls || 0);
-        } },
-        { key: 'men', label: 'Hommes', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
-        { key: 'women', label: 'Femmes', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
+        {
+          key: 'presence', label: 'Présence',
+          series: [
+            { key: 'total', label: 'Total', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).totalParticipants || 0 },
+            { key: 'adults', label: 'Adultes', color: '#3b82f6', type: 'line', extractValue: (r) => {
+              const a = (r.data as WorshipReportData).attendance?.adults;
+              return (a?.men || 0) + (a?.women || 0);
+            } },
+            { key: 'children', label: 'Enfants', color: '#F2B636', type: 'line', extractValue: (r) => {
+              const c = (r.data as WorshipReportData).attendance?.children;
+              return (c?.boys || 0) + (c?.girls || 0);
+            } },
+          ],
+        },
+        {
+          key: 'conversions', label: 'Conversions',
+          series: [
+            { key: 'men', label: 'Hommes', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.conversions?.men || 0 },
+            { key: 'women', label: 'Femmes', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as WorshipReportData).attendance?.conversions?.women || 0 },
+          ],
+        },
+        {
+          key: 'gender', label: 'H / F',
+          series: [
+            { key: 'men', label: 'Hommes', color: '#00665C', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.men || 0 },
+            { key: 'women', label: 'Femmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as WorshipReportData).attendance?.adults?.women || 0 },
+          ],
+        },
       ];
     case 'adn':
       return [
-        { key: 'visitors', label: 'Nouveaux visiteurs', extractValue: (r) => (r.data as AdnReportData).totalNewVisitors || 0 },
-        { key: 'join', label: 'Veut rejoindre', extractValue: (r) => (r.data as AdnReportData).totalWantsToJoin || 0 },
+        {
+          key: 'visitors', label: 'Nouveaux visiteurs et décisions',
+          series: [
+            { key: 'visitors', label: 'Nouveaux visiteurs', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AdnReportData).totalNewVisitors || 0 },
+            { key: 'join', label: 'Veut rejoindre', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as AdnReportData).totalWantsToJoin || 0 },
+          ],
+        },
       ];
     case 'finance':
       return [
-        { key: 'total', label: 'Total', extractValue: (r) => (r.data as FinanceReportData).totalFinances || 0 },
-        { key: 'tithes', label: 'Dîmes', extractValue: (r) => (r.data as FinanceReportData).tithes || 0 },
+        {
+          key: 'finances', label: 'Finances',
+          series: [
+            { key: 'total', label: 'Total', color: '#00665C', type: 'line', extractValue: (r) => (r.data as FinanceReportData).totalFinances || 0 },
+            { key: 'tithes', label: 'Dîmes', color: '#F2B636', type: 'line', extractValue: (r) => (r.data as FinanceReportData).tithes || 0 },
+          ],
+        },
       ];
     case 'sainte_cene':
       return [
-        { key: 'pains', label: 'Pains distribués', extractValue: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
-        { key: 'vins', label: 'Vins distribués', extractValue: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+        {
+          key: 'distribution', label: 'Distribution',
+          series: [
+            { key: 'pains', label: 'Pains distribués', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
+            { key: 'vins', label: 'Vins distribués', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+          ],
+        },
       ];
     case 'academie':
       return [
-        { key: 'present', label: 'Étudiants présents', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 },
+        {
+          key: 'presence', label: 'Présence',
+          series: [{ key: 'present', label: 'Étudiants présents', color: '#00665C', type: 'line', extractValue: (r) => (r.data as AcademieReportData).presentStudents || 0 }],
+        },
       ];
     case 'sono':
-      return [{ key: 'count', label: 'Rapports soumis', extractValue: () => 1 }];
+      return [
+        {
+          key: 'reports', label: 'Rapports soumis',
+          series: [{ key: 'count', label: 'Rapports soumis', color: '#00665C', type: 'bar', extractValue: () => 1 }],
+        },
+      ];
     default:
       return [];
   }

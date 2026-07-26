@@ -137,6 +137,7 @@ export const CulteReportService = {
     reportType?: CulteReportType;
     startDate?: string;
     endDate?: string;
+    meetingTypeName?: string;
   }): Promise<CulteReport[]> {
     let query = supabase
       .from('culte_reports')
@@ -148,6 +149,7 @@ export const CulteReportService = {
     if (filters.reportType) query = query.eq('report_type', filters.reportType);
     if (filters.startDate) query = query.gte('service_date', filters.startDate);
     if (filters.endDate) query = query.lte('service_date', filters.endDate);
+    if (filters.meetingTypeName) query = query.eq('meeting_type_name', filters.meetingTypeName);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -220,10 +222,10 @@ export const CulteReportService = {
     if (error) throw error;
   },
 
-  async getDashboardStats(startDate: string, endDate: string): Promise<DashboardStats> {
+  async getDashboardStats(startDate: string, endDate: string, meetingTypeName?: string): Promise<DashboardStats> {
     const [worshipReports, financeReports] = await Promise.all([
-      this.getHistory({ reportType: 'worship', startDate, endDate }),
-      this.getHistory({ reportType: 'finance', startDate, endDate }),
+      this.getHistory({ reportType: 'worship', startDate, endDate, meetingTypeName }),
+      this.getHistory({ reportType: 'finance', startDate, endDate, meetingTypeName }),
     ]);
 
     const totalParticipants = worshipReports.reduce(
@@ -334,11 +336,11 @@ export const CulteReportService = {
     });
   },
 
-  async getPreviousPeriodStats(startDate: string, endDate: string): Promise<DashboardStats> {
+  async getPreviousPeriodStats(startDate: string, endDate: string, meetingTypeName?: string): Promise<DashboardStats> {
     const durationMs = new Date(endDate).getTime() - new Date(startDate).getTime();
     const prevEnd = new Date(new Date(startDate).getTime() - 24 * 60 * 60 * 1000);
     const prevStart = new Date(prevEnd.getTime() - durationMs);
-    return this.getDashboardStats(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0]);
+    return this.getDashboardStats(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0], meetingTypeName);
   },
 };
 

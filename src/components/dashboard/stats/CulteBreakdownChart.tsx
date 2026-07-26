@@ -1,12 +1,20 @@
 import { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { CulteReport } from '../../../types/culteReport.types';
+
+export interface ChartSeries {
+  key: string;
+  label: string;
+  color: string;
+  type: 'bar' | 'line';
+  extractValue: (report: CulteReport) => number;
+}
 
 export interface ChartBreakdown {
   key: string;
   label: string;
-  extractValue: (report: CulteReport) => number;
+  series: ChartSeries[];
 }
 
 interface CulteBreakdownChartProps {
@@ -15,25 +23,22 @@ interface CulteBreakdownChartProps {
   breakdowns: ChartBreakdown[];
 }
 
-interface WeeklyPoint {
-  week: string;
-  value: number;
-}
-
 function getWeekNumber(date: Date): number {
   const startOfYear = new Date(date.getFullYear(), 0, 1);
   const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
   return Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7);
 }
 
-function buildWeeklyPoints(reports: CulteReport[], extractValue: (r: CulteReport) => number): WeeklyPoint[] {
-  const byWeek = new Map<string, WeeklyPoint>();
+function buildWeeklyPoints(reports: CulteReport[], series: ChartSeries[]): Record<string, any>[] {
+  const byWeek = new Map<string, Record<string, any>>();
   for (const report of reports) {
     const date = new Date(report.serviceDate);
-    const key = `S${getWeekNumber(date)} ${date.getFullYear()}`;
-    const existing = byWeek.get(key) || { week: key, value: 0 };
-    existing.value += extractValue(report) || 0;
-    byWeek.set(key, existing);
+    const week = `S${getWeekNumber(date)} ${date.getFullYear()}`;
+    const existing = byWeek.get(week) || { week };
+    for (const s of series) {
+      existing[s.key] = (existing[s.key] || 0) + (s.extractValue(report) || 0);
+    }
+    byWeek.set(week, existing);
   }
   return Array.from(byWeek.values()).sort((a, b) => {
     const [, wa, ya] = a.week.match(/S(\d+) (\d+)/) || [];
@@ -45,7 +50,7 @@ function buildWeeklyPoints(reports: CulteReport[], extractValue: (r: CulteReport
 export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns }: CulteBreakdownChartProps) {
   const [activeKey, setActiveKey] = useState(breakdowns[0]?.key);
   const active = breakdowns.find((b) => b.key === activeKey) || breakdowns[0];
-  const points = active ? buildWeeklyPoints(reports, active.extractValue) : [];
+  const points = active ? buildWeeklyPoints(reports, active.series) : [];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -73,8 +78,8 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
       {points.length === 0 ? (
         <p className="text-sm text-gray-400 py-8 text-center">Aucune donnée sur cette période.</p>
       ) : (
-        <ResponsiveContainer width="100%" height={240}>
-          <LineChart data={points} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
+        <ResponsiveContainer width="100%" height={280}>
+          <ComposedChart data={points} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="week" tick={{ fontSize: 10 }} stroke="#666" angle={-45} textAnchor="end" height={60} />
             <YAxis tick={{ fontSize: 12 }} stroke="#666" />
@@ -85,18 +90,26 @@ export function CulteBreakdownChart({ title = 'Évolution', reports, breakdowns 
                 borderRadius: '6px',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
-              formatter={(value) => [value as number, active?.label]}
               labelFormatter={(label) => `Semaine : ${label}`}
             />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#00665C"
-              strokeWidth={3}
-              dot={{ fill: '#00665C', strokeWidth: 2, r: 4 }}
-              activeDot={{ r: 6, stroke: '#00665C', strokeWidth: 2, fill: 'white' }}
-            />
-          </LineChart>
+            <Legend />
+            {active?.series.map((s) =>
+              s.type === 'bar' ? (
+                <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[3, 3, 0, 0]} />
+              ) : (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.label}
+                  stroke={s.color}
+                  strokeWidth={3}
+                  dot={{ fill: s.color, strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: s.color, strokeWidth: 2, fill: 'white' }}
+                />
+              )
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       )}
     </div>
