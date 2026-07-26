@@ -29,7 +29,7 @@ import {
   History,
   HandHelping,
   Mic,
-  Music2,
+  Presentation,
   Coins,
   BookOpen,
   Radio,
@@ -298,7 +298,7 @@ export function useNavigationItems(): NavItem[] {
       icon: <History className="w-5 h-5" />,
       children: [
         { id: 'culte-reports-dashboard', label: 'Tableau de bord', href: '/tableau-de-bord-rapports', icon: <LayoutDashboard className="w-5 h-5" /> },
-        { id: 'culte-reports-worship', label: 'Gestion de Culte', href: '/rapports/worship', icon: <Music2 className="w-5 h-5" /> },
+        { id: 'culte-reports-worship', label: 'Gestion de Culte', href: '/rapports/worship', icon: <Presentation className="w-5 h-5" /> },
         { id: 'culte-reports-adn', label: 'ADN', href: '/rapports/adn', icon: <Users className="w-5 h-5" /> },
         { id: 'culte-reports-finance', label: 'Finance', href: '/rapports/finance', icon: <Coins className="w-5 h-5" /> },
         { id: 'culte-reports-academie', label: 'Académie', href: '/rapports/academie', icon: <BookOpen className="w-5 h-5" /> },
