@@ -35,18 +35,18 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
-function daysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split('T')[0];
-}
-
 function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
 function toIso(d: Date): string {
   return d.toISOString().split('T')[0];
+}
+
+function monthsAgo(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return toIso(d);
 }
 
 function startOfWeekMonday(d: Date): Date {
@@ -64,10 +64,10 @@ interface PeriodPreset {
 }
 
 const WORSHIP_STYLE_PRESETS: PeriodPreset[] = [
-  { id: '1m', label: '1 mois', getRange: () => ({ startDate: daysAgo(30), endDate: today() }) },
-  { id: '3m', label: '3 mois', getRange: () => ({ startDate: daysAgo(90), endDate: today() }) },
-  { id: '6m', label: '6 mois', getRange: () => ({ startDate: daysAgo(180), endDate: today() }) },
-  { id: '1a', label: '1 an', getRange: () => ({ startDate: daysAgo(365), endDate: today() }) },
+  { id: '1m', label: '1 mois', getRange: () => ({ startDate: monthsAgo(1), endDate: today() }) },
+  { id: '3m', label: '3 mois', getRange: () => ({ startDate: monthsAgo(3), endDate: today() }) },
+  { id: '6m', label: '6 mois', getRange: () => ({ startDate: monthsAgo(6), endDate: today() }) },
+  { id: '1a', label: '1 an', getRange: () => ({ startDate: monthsAgo(12), endDate: today() }) },
   { id: 'all', label: 'Tout', getRange: () => ({ startDate: '2020-01-01', endDate: today() }) },
 ];
 
@@ -86,7 +86,7 @@ const FINANCE_STYLE_PRESETS: PeriodPreset[] = [
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return { startDate: toIso(start), endDate: toIso(end) };
   } },
-  { id: '3m', label: '3 mois', getRange: () => ({ startDate: daysAgo(90), endDate: today() }) },
+  { id: '3m', label: '3 mois', getRange: () => ({ startDate: monthsAgo(3), endDate: today() }) },
   { id: 'year', label: 'Cette année', getRange: () => {
     const now = new Date();
     return { startDate: `${now.getFullYear()}-01-01`, endDate: `${now.getFullYear()}-12-31` };
@@ -101,13 +101,21 @@ function avg(values: number[]): number {
 interface StatCardConfig {
   label: string;
   icon: LucideIcon;
-  color: 'teal' | 'green' | 'blue' | 'amber' | 'purple';
+  color: 'teal' | 'green' | 'blue' | 'amber' | 'purple' | 'purpleGray';
   compute: (reports: CulteReport[]) => string | number;
+  /** Optional exact hex override (border+icon+value all use this color) when the old app used a bespoke palette instead of the shared bucket — e.g. ADN's #0F6E56/#185FA5/#534AB7/#BA7517. */
+  hex?: string;
+  /** Optional border-left-only hex override — keeps the bucket's icon/value Tailwind classes but matches an exact inline-style border color (e.g. Finance's #10B981/#3B82F6). */
+  borderHex?: string;
 }
 
 interface SummaryMetricConfig {
   label: string;
   compute: (reports: CulteReport[]) => number;
+  /** Optional override for the box background + value classes (defaults to the plain gray box). Used by Sono's colored score boxes. */
+  bgClass?: string;
+  valueClass?: (value: number) => string;
+  suffix?: string;
 }
 
 interface ColumnConfig {
@@ -135,6 +143,10 @@ interface DeptViewConfig {
   periodSelectorStyle: 'simple' | 'boxed';
   /** Old app order differs by type: Worship/SainteCène/Sono put the filter bar before the chart; Finance/ADN/Académie put the chart first. */
   layoutOrder: 'filtersFirst' | 'chartFirst';
+  /** Finance's chart aggregates reports by month (matches FinanceTrendChart.tsx); all other types plot per-report. */
+  chartAggregation: 'report' | 'month';
+  /** When true, shows a toggle letting the user switch the chart between per-report and monthly-aggregated (Finance only). */
+  allowAggregationToggle: boolean;
 }
 
 const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], { border: string; icon: string; value: string }> = {
@@ -143,14 +155,89 @@ const STAT_COLOR_CLASSES: Record<StatCardConfig['color'], { border: string; icon
   blue: { border: 'border-blue-400', icon: 'text-blue-400', value: 'text-blue-600' },
   amber: { border: 'border-amber-400', icon: 'text-amber-400', value: 'text-gray-900' },
   purple: { border: 'border-[#8B5CF6]', icon: 'text-[#8B5CF6]', value: 'text-[#00665C]' },
+  purpleGray: { border: 'border-[#8B5CF6]', icon: 'text-[#8B5CF6]', value: 'text-gray-900' },
 };
 
-function lastReportDate(reports: CulteReport[]): string {
-  return reports.length > 0 ? reports[0].serviceDate : '-';
+function lastReportDateShort(reports: CulteReport[]): string {
+  return reports.length > 0 ? new Date(reports[0].serviceDate).toLocaleDateString('fr-FR') : '-';
+}
+
+function lastReportDateFull(reports: CulteReport[]): string {
+  if (reports.length === 0) return '-';
+  return new Date(`${reports[0].serviceDate}T00:00:00`).toLocaleDateString('fr-FR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
 }
 
 function defaultSearchFields(r: CulteReport): string[] {
   return [r.serviceDate, r.notes || '', r.submittedByName];
+}
+
+function computeSonoScores(r: CulteReport): { avant: number; pendant: number; apres: number; global: number } {
+  const d = r.data as SonoReportData;
+  const bs = d.beforeService;
+  const ds = d.duringService;
+  const as_ = d.afterService;
+  const okV = (v?: string) => (v === 'OK' ? 1 : 0);
+  const effectV = (v?: string) => (v === 'EFFECTUEE' ? 1 : 0);
+  const satV = (v?: string) => (v === 'SATISFAISANT' ? 1 : 0);
+  const qualV = (v?: string) => (v === 'BONNE' ? 1 : v === 'MOYENNE' ? 0.5 : 0);
+  const ouiV = (v?: string) => (v === 'OUI' ? 1 : 0);
+  const vidV = (v?: string) => (v === 'OK' ? 1 : v === 'EN_COURS' ? 0.5 : 0);
+
+  const avantVals = [okV(bs?.materialCheck), okV(bs?.soundQualityTest), okV(bs?.liveStreamingTest), okV(bs?.onlineSoundTest), okV(bs?.onlineVideoTest), okV(bs?.photoEquipmentPrep)];
+  const pendantVals = [okV(ds?.proclamationLaunch), satV(ds?.roomSoundQuality), ouiV(ds?.liveStreaming), qualV(ds?.onlineSoundQuality), qualV(ds?.onlineVideoQuality), ouiV(ds?.photoshootDuringService)];
+  const apresVals = [effectV(as_?.servantsPhotos), effectV(as_?.photoMasking), okV(as_?.audioReplayPublication), vidV(as_?.videoReplayPublication), okV(as_?.fileArchiving)];
+
+  const avg = (vals: number[]) => Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100);
+  const avant = avg(avantVals);
+  const pendant = avg(pendantVals);
+  const apres = avg(apresVals);
+  return { avant, pendant, apres, global: Math.round((avant + pendant + apres) / 3) };
+}
+
+function scoreValueClass(v: number): string {
+  return v >= 80 ? 'text-green-700' : v >= 60 ? 'text-amber-700' : 'text-red-700';
+}
+
+function rateColorClass(v: number): string {
+  return v >= 90 ? 'text-green-700' : v >= 70 ? 'text-amber-700' : 'text-red-700';
+}
+
+function aggregateFinanceByMonth(reports: CulteReport[]): CulteReport[] {
+  const map = new Map<string, { tithes: number; regularOfferings: number; specialOfferings: number; totalFinances: number }>();
+  reports.forEach((r) => {
+    const d = new Date(r.serviceDate);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const data = r.data as FinanceReportData;
+    const existing = map.get(key) || { tithes: 0, regularOfferings: 0, specialOfferings: 0, totalFinances: 0 };
+    existing.tithes += data.tithes || 0;
+    existing.regularOfferings += data.regularOfferings || 0;
+    existing.specialOfferings += data.specialOfferings || 0;
+    existing.totalFinances += data.totalFinances || 0;
+    map.set(key, existing);
+  });
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, totals]) => ({
+      id: key,
+      churchId: '',
+      reportType: 'finance' as CulteReportType,
+      departmentId: null,
+      departmentName: '',
+      worshipReportId: null,
+      serviceDate: `${key}-01`,
+      meetingTypeId: null,
+      meetingTypeName: null,
+      submittedBy: null,
+      submittedByName: '',
+      data: totals as FinanceReportData,
+      notes: null,
+      needsNotes: null,
+      legacyFirestoreId: null,
+      createdAt: '',
+      updatedAt: '',
+    }));
 }
 
 function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport) => void, onDelete: (r: CulteReport) => void, onDownloadPdf: (r: CulteReport) => void): ColumnConfig {
@@ -186,7 +273,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
           { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
           { label: 'Participation moy.', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as WorshipReportData).totalParticipants || 0)) },
           { label: 'Nvx membres moy.', icon: UserPlus, color: 'blue', compute: (r) => avg(r.map((x) => (x.data as WorshipReportData).totalNewMembers || 0)) },
-          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDateShort },
         ],
         summaryMetrics: [
           { label: 'Total participants', compute: (r) => r.reduce((s, x) => s + ((x.data as WorshipReportData).totalParticipants || 0), 0) },
@@ -249,6 +336,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
         layoutOrder: 'filtersFirst',
+        chartAggregation: 'report',
+        allowAggregationToggle: false,
       };
     case 'finance':
       return {
@@ -256,8 +345,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         subtitle: 'Gérez les rapports financiers des cultes',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
-          { label: 'Total Dîmes', icon: TrendingUp, color: 'green', compute: (r) => `${r.reduce((s, x) => s + ((x.data as FinanceReportData).tithes || 0), 0).toLocaleString('fr-FR')} FCFA` },
-          { label: 'Total Offrandes', icon: UserPlus, color: 'blue', compute: (r) => `${r.reduce((s, x) => s + ((x.data as FinanceReportData).regularOfferings || 0) + ((x.data as FinanceReportData).specialOfferings || 0), 0).toLocaleString('fr-FR')} FCFA` },
+          { label: 'Total Dîmes', icon: TrendingUp, color: 'green', borderHex: '#10B981', compute: (r) => `${r.reduce((s, x) => s + ((x.data as FinanceReportData).tithes || 0), 0).toLocaleString('fr-FR')} FCFA` },
+          { label: 'Total Offrandes', icon: UserPlus, color: 'blue', borderHex: '#3B82F6', compute: (r) => `${r.reduce((s, x) => s + ((x.data as FinanceReportData).regularOfferings || 0) + ((x.data as FinanceReportData).specialOfferings || 0), 0).toLocaleString('fr-FR')} FCFA` },
           { label: 'Total Général', icon: Coins, color: 'purple', compute: (r) => `${r.reduce((s, x) => s + ((x.data as FinanceReportData).totalFinances || 0), 0).toLocaleString('fr-FR')} FCFA` },
         ],
         summaryMetrics: [],
@@ -294,26 +383,24 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'boxed',
         layoutOrder: 'chartFirst',
+        chartAggregation: 'month',
+        allowAggregationToggle: true,
       };
     case 'adn':
       return {
         icon: UserPlus,
         subtitle: 'Gérez les rapports de suivi des nouveaux visiteurs',
         statCards: [
-          { label: 'Total rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
-          { label: 'Visiteurs moy.', icon: TrendingUp, color: 'green', compute: (r) => avg(r.map((x) => (x.data as AdnReportData).totalNewVisitors || 0)) },
-          { label: 'Taux conversion', icon: UserPlus, color: 'blue', compute: (r) => {
+          { label: 'Total Rapports', icon: BarChart3, color: 'teal', hex: '#0F6E56', compute: (r) => r.length },
+          { label: 'Visiteurs moy.', icon: TrendingUp, color: 'blue', hex: '#185FA5', compute: (r) => avg(r.map((x) => (x.data as AdnReportData).totalNewVisitors || 0)) },
+          { label: 'Taux conversion', icon: UserPlus, color: 'purple', hex: '#534AB7', compute: (r) => {
             const totalVisitors = r.reduce((s, x) => s + ((x.data as AdnReportData).totalNewVisitors || 0), 0);
             const totalJoin = r.reduce((s, x) => s + ((x.data as AdnReportData).totalWantsToJoin || 0), 0);
             return totalVisitors > 0 ? `${Math.round((totalJoin / totalVisitors) * 100)}%` : '0%';
           } },
-          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+          { label: 'Dernier rapport', icon: CalendarDays, color: 'amber', hex: '#BA7517', compute: lastReportDateShort },
         ],
-        summaryMetrics: [
-          { label: 'Total visiteurs', compute: (r) => r.reduce((s, x) => s + ((x.data as AdnReportData).totalNewVisitors || 0), 0) },
-          { label: 'Total veut rejoindre', compute: (r) => r.reduce((s, x) => s + ((x.data as AdnReportData).totalWantsToJoin || 0), 0) },
-          { label: 'Total indécis', compute: (r) => r.reduce((s, x) => s + ((x.data as AdnReportData).visitorDecisions?.undecided || 0), 0) },
-        ],
+        summaryMetrics: [],
         breakdowns: [
           {
             key: 'visitors', label: 'Évolution des nouveaux visiteurs',
@@ -347,6 +434,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
         layoutOrder: 'chartFirst',
+        chartAggregation: 'report',
+        allowAggregationToggle: false,
       };
     case 'sainte_cene':
       return {
@@ -356,27 +445,55 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
           { label: 'Pains Totaux Distribués', icon: TrendingUp, color: 'green', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).painsDistribuees || 0), 0) },
           { label: 'Vins Totaux Distribués', icon: UserPlus, color: 'blue', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).vinsDistribuees || 0), 0) },
-          { label: 'Dernier Rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+          { label: 'Dernier Rapport', icon: CalendarDays, color: 'purpleGray', compute: lastReportDateFull },
         ],
-        summaryMetrics: [],
+        summaryMetrics: [
+          { label: 'Pains distribués', bgClass: 'bg-amber-50', valueClass: () => 'text-amber-700', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).painsDistribuees || 0), 0) },
+          { label: 'Vins distribués', bgClass: 'bg-purple-50', valueClass: () => 'text-purple-700', compute: (r) => r.reduce((s, x) => s + ((x.data as SainteCeneReportData).vinsDistribuees || 0), 0) },
+          { label: 'Taux moy. pains', bgClass: 'bg-blue-50', suffix: '%', valueClass: rateColorClass, compute: (r) => avg(r.map((x) => {
+            const d = x.data as SainteCeneReportData;
+            return d.painsPreparees > 0 ? Math.round((d.painsDistribuees / d.painsPreparees) * 100) : 0;
+          })) },
+          { label: 'Taux moy. vins', bgClass: 'bg-green-50', suffix: '%', valueClass: rateColorClass, compute: (r) => avg(r.map((x) => {
+            const d = x.data as SainteCeneReportData;
+            return d.vinsPreparees > 0 ? Math.round((d.vinsDistribuees / d.vinsPreparees) * 100) : 0;
+          })) },
+        ],
         breakdowns: [
           {
             key: 'distribution', label: 'Distribution',
             series: [
-              { key: 'pains', label: 'Pains distribués', color: '#00665C', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
-              { key: 'vins', label: 'Vins distribués', color: '#F2B636', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+              { key: 'painsPrep', label: 'Pains préparés', color: '#fbbf24', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).painsPreparees || 0 },
+              { key: 'painsDist', label: 'Pains distribués', color: '#d97706', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
+              { key: 'vinsPrep', label: 'Vins préparés', color: '#a78bfa', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).vinsPreparees || 0 },
+              { key: 'vinsDist', label: 'Vins distribués', color: '#7c3aed', type: 'bar', extractValue: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+            ],
+          },
+          {
+            key: 'taux', label: 'Taux %',
+            series: [
+              { key: 'tauxPains', label: 'Taux pains %', color: '#d97706', type: 'line', extractValue: (r) => {
+                const d = r.data as SainteCeneReportData;
+                return d.painsPreparees > 0 ? Math.round((d.painsDistribuees / d.painsPreparees) * 100) : 0;
+              } },
+              { key: 'tauxVins', label: 'Taux vins %', color: '#7c3aed', type: 'line', extractValue: (r) => {
+                const d = r.data as SainteCeneReportData;
+                return d.vinsPreparees > 0 ? Math.round((d.vinsDistribuees / d.vinsPreparees) * 100) : 0;
+              } },
             ],
           },
         ],
         searchFields: defaultSearchFields,
         searchPlaceholder: 'Rechercher par date…',
         statsSource: 'all',
-        evolutionTitle: 'Évolution — Sainte Cène',
+        evolutionTitle: 'Évolution Sainte Cène',
         evolutionIcon: Wine,
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
         layoutOrder: 'filtersFirst',
+        chartAggregation: 'report',
+        allowAggregationToggle: false,
       };
     case 'academie':
       return {
@@ -420,6 +537,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
         layoutOrder: 'chartFirst',
+        chartAggregation: 'report',
+        allowAggregationToggle: false,
       };
     case 'sono':
       return {
@@ -429,24 +548,39 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },
           { label: 'Matériel OK', icon: TrendingUp, color: 'green', compute: (r) => r.filter((x) => (x.data as SonoReportData).beforeService?.materialCheck === 'OK').length },
           { label: 'Lives Effectués', icon: UserPlus, color: 'blue', compute: (r) => r.filter((x) => (x.data as SonoReportData).duringService?.liveStreaming === 'OUI').length },
-          { label: 'Dernier Rapport', icon: CalendarDays, color: 'amber', compute: lastReportDate },
+          { label: 'Dernier Rapport', icon: CalendarDays, color: 'purpleGray', compute: lastReportDateFull },
         ],
-        summaryMetrics: [],
+        summaryMetrics: [
+          { label: 'Score global moy.', bgClass: 'bg-indigo-50', valueClass: scoreValueClass, suffix: '%', compute: (r) => avg(r.map((x) => computeSonoScores(x).global)) },
+          { label: 'Score avant', bgClass: 'bg-blue-50', valueClass: scoreValueClass, suffix: '%', compute: (r) => avg(r.map((x) => computeSonoScores(x).avant)) },
+          { label: 'Score pendant', bgClass: 'bg-green-50', valueClass: scoreValueClass, suffix: '%', compute: (r) => avg(r.map((x) => computeSonoScores(x).pendant)) },
+          { label: 'Score après', bgClass: 'bg-amber-50', valueClass: scoreValueClass, suffix: '%', compute: (r) => avg(r.map((x) => computeSonoScores(x).apres)) },
+        ],
         breakdowns: [
           {
-            key: 'reports', label: 'Rapports soumis',
-            series: [{ key: 'count', label: 'Rapports soumis', color: '#00665C', type: 'bar', extractValue: () => 1 }],
+            key: 'global', label: 'Score global',
+            series: [{ key: 'global', label: 'Score global', color: '#4f46e5', type: 'line', extractValue: (r) => computeSonoScores(r).global }],
+          },
+          {
+            key: 'detail', label: 'Détail',
+            series: [
+              { key: 'avant', label: 'Avant', color: '#3b82f6', type: 'bar', extractValue: (r) => computeSonoScores(r).avant },
+              { key: 'pendant', label: 'Pendant', color: '#22c55e', type: 'bar', extractValue: (r) => computeSonoScores(r).pendant },
+              { key: 'apres', label: 'Après', color: '#f59e0b', type: 'bar', extractValue: (r) => computeSonoScores(r).apres },
+            ],
           },
         ],
         searchFields: defaultSearchFields,
         searchPlaceholder: 'Rechercher par date ou observations…',
         statsSource: 'all',
-        evolutionTitle: 'Évolution — Sono & Médias',
+        evolutionTitle: 'Évolution Sono & Communication',
         evolutionIcon: Radio,
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
         layoutOrder: 'filtersFirst',
+        chartAggregation: 'report',
+        allowAggregationToggle: false,
       };
     default:
       return {
@@ -455,6 +589,8 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         evolutionTitle: 'Évolution', evolutionIcon: BarChart3,
         periodPresets: WORSHIP_STYLE_PRESETS, defaultPeriodPresetId: '3m', periodSelectorStyle: 'simple',
         layoutOrder: 'filtersFirst',
+        chartAggregation: 'report',
+        allowAggregationToggle: false,
       };
   }
 }
@@ -466,7 +602,7 @@ function getColumns(
   onDelete: (r: CulteReport) => void,
   onDownloadPdf: (r: CulteReport) => void
 ): ColumnConfig[] {
-  const base: ColumnConfig[] = [{ key: 'serviceDate', title: 'Date', render: (r) => r.serviceDate }];
+  const base: ColumnConfig[] = [{ key: 'serviceDate', title: 'Date', render: (r) => new Date(r.serviceDate).toLocaleDateString('fr-FR') }];
 
   switch (reportType) {
     case 'worship':
@@ -501,10 +637,13 @@ function getColumns(
       ];
     case 'sainte_cene':
       return [
-        ...base,
-        { key: 'pains', title: 'Pains distribués', render: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
-        { key: 'vins', title: 'Vins distribués', render: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
-        { key: 'submittedByName', title: 'Soumis par', render: (r) => r.submittedByName },
+        { key: 'serviceDate', title: 'Date', render: (r) => new Date(`${r.serviceDate}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
+        { key: 'painsPrep', title: 'Pains Préparés', render: (r) => (r.data as SainteCeneReportData).painsPreparees || 0 },
+        { key: 'vinsPrep', title: 'Vins Préparés', render: (r) => (r.data as SainteCeneReportData).vinsPreparees || 0 },
+        { key: 'pains', title: 'Pains Distribués', render: (r) => (r.data as SainteCeneReportData).painsDistribuees || 0 },
+        { key: 'vins', title: 'Vins Distribués', render: (r) => (r.data as SainteCeneReportData).vinsDistribuees || 0 },
+        { key: 'painsRest', title: 'Pains Restants', render: (r) => (r.data as SainteCeneReportData).painsRestantes || 0 },
+        { key: 'vinsRest', title: 'Vins Restants', render: (r) => (r.data as SainteCeneReportData).vinsRestantes || 0 },
         actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
     case 'academie':
@@ -516,6 +655,28 @@ function getColumns(
         { key: 'present', title: 'Présents', render: (r) => {
           const d = r.data as AcademieReportData;
           return `${d.presentStudents || 0} / ${d.actualStudents || 0}`;
+        } },
+        actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
+      ];
+    case 'sono':
+      return [
+        { key: 'serviceDate', title: 'Date', render: (r) => new Date(`${r.serviceDate}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) },
+        { key: 'materialCheck', title: 'Matériel Sono', render: (r) => {
+          const v = (r.data as SonoReportData).beforeService?.materialCheck;
+          return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${v === 'OK' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{v}</span>;
+        } },
+        { key: 'liveStreaming', title: 'Live Streaming', render: (r) => {
+          const v = (r.data as SonoReportData).duringService?.liveStreaming;
+          return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${v === 'OUI' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{v}</span>;
+        } },
+        { key: 'audioReplay', title: 'Audio Replay', render: (r) => {
+          const v = (r.data as SonoReportData).afterService?.audioReplayPublication;
+          return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${v === 'OK' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{v}</span>;
+        } },
+        { key: 'videoReplay', title: 'Vidéo Replay', render: (r) => {
+          const v = (r.data as SonoReportData).afterService?.videoReplayPublication;
+          const cls = v === 'OK' ? 'bg-green-100 text-green-800' : v === 'EN_COURS' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+          return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>{v === 'EN_COURS' ? 'En cours' : v}</span>;
         } },
         actionsColumn(onView, onEdit, onDelete, onDownloadPdf),
       ];
@@ -548,6 +709,7 @@ export default function CulteReportDepartmentView() {
     (config.periodPresets.find((p) => p.id === config.defaultPeriodPresetId) || config.periodPresets[0]).getRange()
   );
   const [chartReports, setChartReports] = useState<CulteReport[]>([]);
+  const [aggregationMode, setAggregationMode] = useState<'report' | 'month'>(config.chartAggregation);
   const [editingReport, setEditingReport] = useState<CulteReport | null>(null);
   const [viewingReport, setViewingReport] = useState<CulteReport | null>(null);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
@@ -673,12 +835,16 @@ export default function CulteReportDepartmentView() {
           {config.statCards.map((sc, i) => {
             const colors = STAT_COLOR_CLASSES[sc.color];
             return (
-              <div key={i} className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${colors.border}`}>
+              <div
+                key={i}
+                className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${sc.hex || sc.borderHex ? '' : colors.border}`}
+                style={sc.hex ? { borderLeftColor: sc.hex } : sc.borderHex ? { borderLeftColor: sc.borderHex } : undefined}
+              >
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{sc.label}</h3>
-                  <sc.icon className={`h-4 w-4 ${colors.icon} opacity-70`} />
+                  <sc.icon className={`h-4 w-4 ${sc.hex ? '' : colors.icon} opacity-70`} style={sc.hex ? { color: sc.hex } : undefined} />
                 </div>
-                <p className={`text-2xl font-bold ${colors.value}`}>{sc.compute(config.statsSource === 'chart' ? chartReports : (allReports.length > 0 ? allReports : reports))}</p>
+                <p className={`text-2xl font-bold ${sc.hex ? '' : colors.value}`} style={sc.hex ? { color: sc.hex } : undefined}>{sc.compute(config.statsSource === 'chart' ? chartReports : (allReports.length > 0 ? allReports : reports))}</p>
               </div>
             );
           })}
@@ -693,13 +859,16 @@ export default function CulteReportDepartmentView() {
             </h2>
 
             {config.summaryMetrics.length > 0 && (
-              <div className={`grid grid-cols-1 sm:grid-cols-${config.summaryMetrics.length} gap-3`}>
-                {config.summaryMetrics.map((m) => (
-                  <div key={m.label} className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-xl font-bold text-gray-900">{m.compute(chartReports)}</p>
-                    <p className="text-xs text-gray-500">{m.label}</p>
-                  </div>
-                ))}
+              <div className={`grid grid-cols-2 sm:grid-cols-${config.summaryMetrics.length} gap-3`}>
+                {config.summaryMetrics.map((m) => {
+                  const value = m.compute(chartReports);
+                  return (
+                    <div key={m.label} className={`${m.bgClass || 'bg-gray-50'} rounded-lg p-3 text-center`}>
+                      <p className={`text-xl font-bold ${m.valueClass ? m.valueClass(value) : 'text-gray-900'}`}>{value}{m.suffix || ''}</p>
+                      <p className="text-xs text-gray-500">{m.label}</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -749,7 +918,33 @@ export default function CulteReportDepartmentView() {
               </div>
             )}
 
-            <CulteBreakdownChart reports={chartReports} breakdowns={config.breakdowns} />
+            {config.allowAggregationToggle && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400 mr-1">Affichage :</span>
+                <button
+                  onClick={() => setAggregationMode('month')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    aggregationMode === 'month' ? 'bg-[#00665C] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Par mois
+                </button>
+                <button
+                  onClick={() => setAggregationMode('report')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    aggregationMode === 'report' ? 'bg-[#00665C] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Par rapport
+                </button>
+              </div>
+            )}
+
+            <CulteBreakdownChart
+              reports={aggregationMode === 'month' ? aggregateFinanceByMonth(chartReports) : chartReports}
+              breakdowns={config.breakdowns}
+              dateFormat={aggregationMode === 'month' ? 'month' : 'day'}
+            />
           </div>
         );
 

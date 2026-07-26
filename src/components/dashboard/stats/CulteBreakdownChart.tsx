@@ -23,14 +23,18 @@ interface CulteBreakdownChartProps {
   breakdowns: ChartBreakdown[];
   legendPosition?: 'top' | 'bottom';
   showTabTitle?: boolean;
+  /** 'day' (default) shows "22 juil." per report. 'month' shows "juillet 2026" — used when reports are pre-aggregated by month (Finance, matches old app). */
+  dateFormat?: 'day' | 'month';
 }
 
-function buildPoints(reports: CulteReport[], series: ChartSeries[]): Record<string, any>[] {
+function buildPoints(reports: CulteReport[], series: ChartSeries[], dateFormat: 'day' | 'month'): Record<string, any>[] {
   const sorted = [...reports].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
   return sorted.map((report) => {
     const date = new Date(report.serviceDate);
     const point: Record<string, any> = {
-      date: date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+      date: dateFormat === 'month'
+        ? date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+        : date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
     };
     for (const s of series) {
       point[s.key] = s.extractValue(report) || 0;
@@ -39,10 +43,10 @@ function buildPoints(reports: CulteReport[], series: ChartSeries[]): Record<stri
   });
 }
 
-export function CulteBreakdownChart({ reports, breakdowns, legendPosition = 'bottom', showTabTitle = true }: CulteBreakdownChartProps) {
+export function CulteBreakdownChart({ reports, breakdowns, legendPosition = 'bottom', showTabTitle = true, dateFormat = 'day' }: CulteBreakdownChartProps) {
   const [activeKey, setActiveKey] = useState(breakdowns[0]?.key);
   const active = breakdowns.find((b) => b.key === activeKey) || breakdowns[0];
-  const points = active ? buildPoints(reports, active.series) : [];
+  const points = active ? buildPoints(reports, active.series, dateFormat) : [];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
