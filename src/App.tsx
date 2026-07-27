@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -40,6 +40,14 @@ const CulteReportForm = lazy(() => import('./pages/CulteReportForm'));
 const CulteNeedsManagement = lazy(() => import('./pages/CulteNeedsManagement'));
 const CulteReportsDashboard = lazy(() => import('./pages/CulteReportsDashboard'));
 const CulteReportDepartmentView = lazy(() => import('./pages/CulteReportDepartmentView'));
+
+/** Remonte CulteReportDepartmentView a chaque changement de type de rapport, sinon React reutilise
+ * l'instance existante et des etats internes (mode d'agregation, periode...) fuient d'un type a l'autre
+ * (ex: le mode "Par mois" de Finance restait actif en passant sur Sainte Cene, faussant son graphique). */
+function CulteReportDepartmentViewRoute() {
+  const { reportType } = useParams<{ reportType: string }>();
+  return <CulteReportDepartmentView key={reportType} />;
+}
 const MeetingTypeSettings = lazy(() => import('./pages/MeetingTypeSettings'));
 const SpeakerSettings = lazy(() => import('./pages/SpeakerSettings'));
 const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
@@ -406,7 +414,7 @@ function AppContent() {
           } />
           <Route path="rapports/:reportType" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
-              <CulteReportDepartmentView />
+              <CulteReportDepartmentViewRoute />
             </PrivateRoute>
           } />
           <Route path="parametres-types-rencontre" element={
