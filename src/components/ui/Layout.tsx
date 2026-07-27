@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChurch } from '../../contexts/ChurchContext';
 import { Header } from './Header';
 import Navigation from './Navigation';
 import { Logo } from './Logo';
@@ -13,6 +14,7 @@ import { SMSStatusBanner } from '../sms/SMSStatusBanner';
 
 export default function Layout() {
   const { user } = useAuth();
+  const { church } = useChurch();
 
   if (!user) return null;
 
@@ -20,8 +22,11 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50">
       {/* Desktop sidebar — fixed, desktop only */}
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 z-20">
-        <div className="p-6 flex-shrink-0">
+        <div className="p-6 flex-shrink-0 flex flex-col items-center gap-2">
           <Logo className="h-16 w-auto" />
+          <span className="text-sm font-semibold text-[#00665C] text-center">
+            {church?.shortName || church?.name || 'Bergerie'}
+          </span>
         </div>
         <div className="flex-1 overflow-y-auto px-3 pb-6">
           <Navigation />
