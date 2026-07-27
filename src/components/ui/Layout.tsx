@@ -21,7 +21,7 @@ export default function Layout() {
       {/* Desktop sidebar — fixed, desktop only */}
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 z-20">
         <div className="p-6 flex-shrink-0">
-          <Logo className="h-10 w-auto" />
+          <Logo className="h-16 w-auto" />
         </div>
         <div className="flex-1 overflow-y-auto px-3 pb-6">
           <Navigation />

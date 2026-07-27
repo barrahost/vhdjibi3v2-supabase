@@ -10,7 +10,7 @@ export function Logo({ className = "h-8 w-auto" }: LogoProps) {
 
   return (
     <img
-      src={church?.logoUrl || "/logo-agc-bergerie.svg"}
+      src={church?.logoUrl || "/logo-agc-bergerie.png"}
       alt={alt}
       className={className}
     />
