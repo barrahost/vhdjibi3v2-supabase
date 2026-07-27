@@ -146,6 +146,7 @@ export interface CulteReport {
   departmentId: string | null;
   departmentName: string;
   worshipReportId: string | null;
+  eventId: string | null;
   serviceDate: string;
   meetingTypeId: string | null;
   meetingTypeName: string | null;
@@ -186,4 +187,37 @@ export interface CulteNeed {
   addressedBy: string | null;
   addressedAt: string | null;
   createdAt: string;
+}
+
+/** Un culte/evenement partage entre tous les departements (worship inclus) -- decouple des
+ * rapports eux-memes pour qu'aucun departement n'ait a attendre qu'un autre soumette en premier. */
+export interface CulteEvent {
+  id: string;
+  churchId: string;
+  serviceDate: string;
+  meetingTypeName: string;
+  createdAt: string;
+}
+
+/** 0 = dimanche ... 6 = samedi (convention JS Date.getDay()). */
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
+  0: 'Dimanche',
+  1: 'Lundi',
+  2: 'Mardi',
+  3: 'Mercredi',
+  4: 'Jeudi',
+  5: 'Vendredi',
+  6: 'Samedi',
+};
+
+/** Programme recurrent (ex: "Rendez-Vous des Champions" tous les mercredis) -- genere
+ * automatiquement les culte_events du jour a l'ouverture du formulaire de rapport. */
+export interface CulteRecurringSchedule {
+  id: string;
+  churchId: string;
+  meetingTypeName: string;
+  dayOfWeek: DayOfWeek;
+  isActive: boolean;
 }

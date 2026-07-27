@@ -50,6 +50,7 @@ function CulteReportDepartmentViewRoute() {
 }
 const MeetingTypeSettings = lazy(() => import('./pages/MeetingTypeSettings'));
 const SpeakerSettings = lazy(() => import('./pages/SpeakerSettings'));
+const RecurringScheduleSettings = lazy(() => import('./pages/RecurringScheduleSettings'));
 const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
 const ShepherdReminders = lazy(() => import('./pages/ShepherdReminders'));
 const SMSManagement = lazy(() => import('./pages/SMSManagement'));
@@ -425,6 +426,11 @@ function AppContent() {
           <Route path="parametres-orateurs" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <SpeakerSettings />
+            </PrivateRoute>
+          } />
+          <Route path="parametres-programme-recurrent" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <RecurringScheduleSettings />
             </PrivateRoute>
           } />
 

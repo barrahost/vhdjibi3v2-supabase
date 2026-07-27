@@ -29,6 +29,7 @@ import {
   History,
   HandHelping,
   Mic,
+  CalendarRange,
   Presentation,
   Coins,
   BookOpen,
@@ -398,6 +399,7 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && activeRole !== ROLES.DEPARTMENT_LEADER) {
       children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
       children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
+      children.push({ id: 'recurring-schedule', label: 'Programme récurrent', href: '/parametres-programme-recurrent', icon: <CalendarRange className="w-5 h-5" /> });
     }
 
     const hostname = window.location.hostname;

@@ -3,11 +3,12 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { CulteReportService } from '../../services/culteReport.service';
 import { MeetingTypeService, SpeakerService } from '../../services/meetingTypeSpeaker.service';
+import { CulteEventService } from '../../services/culteEvent.service';
 import {
   CulteReportType,
   CulteReportMeetingType,
   CulteReportSpeaker,
-  WorshipReportData,
+  CulteEvent,
 } from '../../types/culteReport.types';
 import { CulteReportFields } from './CulteReportFields';
 import { CulteReportFormValues, blankFormValues, buildCulteReportData } from '../../utils/culteReportFormHelpers';
@@ -30,8 +31,6 @@ const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
 export default function CulteReportSubmitForm({ reportType, departmentId, departmentName, onSuccess, onCancel }: CulteReportSubmitFormProps) {
   const { user } = useAuth();
-  const [serviceDate, setServiceDate] = useState(todayISO());
-  const [meetingTypeName, setMeetingTypeName] = useState('');
   const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
   const [speakers, setSpeakers] = useState<CulteReportSpeaker[]>([]);
   const [notes, setNotes] = useState('');
@@ -39,50 +38,78 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [values, setValues] = useState<CulteReportFormValues>(blankFormValues());
 
-  const [worshipReports, setWorshipReports] = useState<{ id: string; serviceDate: string; meetingTypeName: string | null; label: string }[]>([]);
-  const [selectedWorshipReportId, setSelectedWorshipReportId] = useState('');
-  const selectedWorshipReport = worshipReports.find((w) => w.id === selectedWorshipReportId) || null;
+  // Culte du jour, partage entre tous les departements (worship inclus) -- plus de dependance
+  // stricte envers "Gestion des Cultes" : n'importe qui peut creer l'evenement en premier.
+  const [events, setEvents] = useState<CulteEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const selectedEvent = events.find((ev) => ev.id === selectedEventId) || null;
+
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [newEventDate, setNewEventDate] = useState(todayISO());
+  const [newEventMeetingType, setNewEventMeetingType] = useState('');
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+
+  const loadEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      const today = todayISO();
+      // Genere les evenements du programme recurrent (mercredi/dimanche...) pour aujourd'hui
+      // s'ils n'existent pas encore, avant de charger la liste.
+      await CulteEventService.ensureRecurringEventsForDate(today);
+      const [recentEvents, ownReports] = await Promise.all([
+        CulteEventService.getRecentEvents(30),
+        CulteReportService.getHistory({ reportType }),
+      ]);
+      const alreadyUsed = new Set(ownReports.map((r) => r.eventId).filter((id): id is string => !!id));
+      setEvents(recentEvents.filter((ev) => !alreadyUsed.has(ev.id)));
+    } catch (error) {
+      console.error('Error loading culte events:', error);
+      toast.error('Erreur lors du chargement des cultes');
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
 
   useEffect(() => {
     MeetingTypeService.list().then(setMeetingTypes);
     if (reportType === 'worship') SpeakerService.list().then(setSpeakers);
   }, [reportType]);
 
-  // Departements dependants : on rattache le rapport a celui du "culte du jour" deja soumis par
-  // Gestion des Cultes -- pas besoin de ressaisir une date/type de rencontre, on les herite de lui.
-  // On exclut les rapports de culte pour lesquels ce departement a deja soumis son propre rapport,
-  // pour eviter un doublon accidentel.
   useEffect(() => {
-    if (reportType === 'worship') {
-      setWorshipReports([]);
-      return;
-    }
-    Promise.all([
-      CulteReportService.getRecentWorshipReports(20),
-      CulteReportService.getHistory({ reportType }),
-    ]).then(([worship, ownReports]) => {
-      const alreadyUsed = new Set(ownReports.map((r) => r.worshipReportId).filter((id): id is string => !!id));
-      setWorshipReports(
-        worship
-          .filter((r) => !alreadyUsed.has(r.id))
-          .map((r) => ({
-            id: r.id,
-            serviceDate: r.serviceDate,
-            meetingTypeName: r.meetingTypeName,
-            label: `${r.serviceDate} — ${r.meetingTypeName ? `${r.meetingTypeName} — ` : ''}${(r.data as WorshipReportData).messageTheme || 'Sans thème'}`,
-          }))
-      );
-    });
+    loadEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportType]);
 
   const handleFieldChange = <K extends keyof CulteReportFormValues>(key: K, value: CulteReportFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEventMeetingType.trim()) {
+      toast.error('Indiquez le type de rencontre');
+      return;
+    }
+    setIsCreatingEvent(true);
+    try {
+      const event = await CulteEventService.createEvent(newEventDate, newEventMeetingType);
+      toast.success('Culte créé');
+      setEvents((prev) => [event, ...prev.filter((ev) => ev.id !== event.id)]);
+      setSelectedEventId(event.id);
+      setShowCreateEvent(false);
+      setNewEventMeetingType('');
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la création du culte");
+    } finally {
+      setIsCreatingEvent(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (reportType !== 'worship' && !selectedWorshipReportId) {
-      toast.error('Sélectionnez le rapport de culte du jour auquel rattacher ce rapport');
+    if (!selectedEvent) {
+      toast.error('Sélectionnez (ou créez) le culte du jour auquel rattacher ce rapport');
       return;
     }
 
@@ -95,10 +122,11 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
         reportType,
         departmentId,
         departmentName,
-        worshipReportId: reportType === 'worship' ? null : selectedWorshipReportId,
-        serviceDate: reportType === 'worship' ? serviceDate : (selectedWorshipReport?.serviceDate || serviceDate),
+        worshipReportId: null,
+        eventId: selectedEvent.id,
+        serviceDate: selectedEvent.serviceDate,
         meetingTypeId: null,
-        meetingTypeName: reportType === 'worship' ? (meetingTypeName || null) : (selectedWorshipReport?.meetingTypeName || null),
+        meetingTypeName: selectedEvent.meetingTypeName,
         submittedBy: user?.id || null,
         submittedByName: user?.fullName || 'Inconnu',
         data,
@@ -108,8 +136,9 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
 
       toast.success('Rapport enregistré avec succès');
       setValues(blankFormValues());
-      setNotes(''); setNeedsNotes(''); setSelectedWorshipReportId('');
+      setNotes(''); setNeedsNotes(''); setSelectedEventId('');
       onSuccess?.();
+      loadEvents();
     } catch (error: any) {
       console.error('Error submitting culte report:', error);
       toast.error(error.message || "Erreur lors de l'enregistrement du rapport");
@@ -120,23 +149,73 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-      {reportType === 'worship' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>Type de rencontre</label>
-            <select value={meetingTypeName} onChange={(e) => setMeetingTypeName(e.target.value)} className={inputCls}>
-              <option value="">Sélectionner un type</option>
-              {meetingTypes.map((mt) => (
-                <option key={mt.id} value={mt.name}>{mt.name}</option>
-              ))}
-            </select>
+      <div>
+        <label className={labelCls}>Culte du jour (obligatoire)</label>
+        <select
+          required
+          value={selectedEventId}
+          onChange={(e) => setSelectedEventId(e.target.value)}
+          className={inputCls}
+          disabled={loadingEvents}
+        >
+          <option value="">-- Sélectionner --</option>
+          {events.map((ev) => (
+            <option key={ev.id} value={ev.id}>{ev.serviceDate} — {ev.meetingTypeName}</option>
+          ))}
+        </select>
+
+        {!loadingEvents && events.length === 0 && !showCreateEvent && (
+          <p className="mt-1 text-xs text-amber-600">
+            Aucun culte disponible — soit vous avez déjà soumis votre rapport pour tous les cultes récents, soit celui d'aujourd'hui n'a pas encore été créé.
+          </p>
+        )}
+
+        {!showCreateEvent ? (
+          <button
+            type="button"
+            onClick={() => setShowCreateEvent(true)}
+            className="mt-2 text-xs font-medium text-[#00665C] hover:underline"
+          >
+            + Créer ce culte (s'il n'apparaît pas dans la liste)
+          </button>
+        ) : (
+          <div className="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Date du culte</label>
+                <input type="date" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Type de rencontre</label>
+                <input
+                  type="text"
+                  list="meeting-type-suggestions"
+                  value={newEventMeetingType}
+                  onChange={(e) => setNewEventMeetingType(e.target.value)}
+                  placeholder="ex: Veillée de Prière"
+                  className={inputCls}
+                />
+                <datalist id="meeting-type-suggestions">
+                  {meetingTypes.map((mt) => <option key={mt.id} value={mt.name} />)}
+                </datalist>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCreateEvent}
+                disabled={isCreatingEvent}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md disabled:opacity-50"
+              >
+                {isCreatingEvent ? 'Création...' : 'Créer et sélectionner'}
+              </button>
+              <button type="button" onClick={() => setShowCreateEvent(false)} className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">
+                Annuler
+              </button>
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Date du culte</label>
-            <input type="date" required value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className={inputCls} />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {reportType === 'worship' && (
         <div>
@@ -147,31 +226,6 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
               <option key={sp.id} value={sp.name}>{sp.name}</option>
             ))}
           </select>
-        </div>
-      )}
-
-      {reportType !== 'worship' && (
-        <div>
-          <label className={labelCls}>Rapport de culte du jour (obligatoire)</label>
-          <select required value={selectedWorshipReportId} onChange={(e) => setSelectedWorshipReportId(e.target.value)} className={inputCls}>
-            <option value="">-- Sélectionner --</option>
-            {worshipReports.map((w) => (
-              <option key={w.id} value={w.id}>{w.label}</option>
-            ))}
-          </select>
-          {worshipReports.length === 0 && (
-            <p className="mt-1 text-xs text-amber-600">
-              Aucun rapport de culte disponible — soit aucun n'a encore été soumis par "Gestion des cultes", soit vous avez déjà soumis votre rapport pour tous les cultes récents.
-            </p>
-          )}
-          {selectedWorshipReport && (
-            <p className="mt-2 text-xs text-gray-500">
-              Date : <span className="font-medium text-gray-700">{selectedWorshipReport.serviceDate}</span>
-              {selectedWorshipReport.meetingTypeName && (
-                <> · Type : <span className="font-medium text-gray-700">{selectedWorshipReport.meetingTypeName}</span></>
-              )}
-            </p>
-          )}
         </div>
       )}
 

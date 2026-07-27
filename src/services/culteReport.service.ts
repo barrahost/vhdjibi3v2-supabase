@@ -25,6 +25,7 @@ function mapReport(row: any): CulteReport {
     departmentId: row.department_id,
     departmentName: row.department_name,
     worshipReportId: row.worship_report_id,
+    eventId: row.event_id,
     serviceDate: row.service_date,
     meetingTypeId: row.meeting_type_id,
     meetingTypeName: row.meeting_type_name,
@@ -67,6 +68,7 @@ export interface SubmitCulteReportInput {
   departmentId: string | null;
   departmentName: string;
   worshipReportId: string | null;
+  eventId: string | null;
   serviceDate: string;
   meetingTypeId: string | null;
   meetingTypeName: string | null;
@@ -87,6 +89,7 @@ export const CulteReportService = {
         department_id: input.departmentId,
         department_name: input.departmentName,
         worship_report_id: input.worshipReportId,
+        event_id: input.eventId,
         service_date: input.serviceDate,
         meeting_type_id: input.meetingTypeId,
         meeting_type_name: input.meetingTypeName,
@@ -117,35 +120,6 @@ export const CulteReportService = {
     }
 
     return mapReport(data);
-  },
-
-  async getWorshipReportsForDay(serviceDate: string): Promise<CulteReport[]> {
-    const { data, error } = await supabase
-      .from('culte_reports')
-      .select('*')
-      .eq('church_id', getChurchId())
-      .eq('report_type', 'worship')
-      .eq('service_date', serviceDate)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data ?? []).map(mapReport);
-  },
-
-  /** Derniers rapports de culte soumis, tous jours confondus — utilise par les departements
-   * dependants pour rattacher leur rapport sans avoir a d'abord filtrer par date. */
-  async getRecentWorshipReports(limitCount = 20): Promise<CulteReport[]> {
-    const { data, error } = await supabase
-      .from('culte_reports')
-      .select('*')
-      .eq('church_id', getChurchId())
-      .eq('report_type', 'worship')
-      .order('service_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(limitCount);
-
-    if (error) throw error;
-    return (data ?? []).map(mapReport);
   },
 
   async getHistory(filters: {

@@ -227,6 +227,7 @@ function aggregateFinanceByMonth(reports: CulteReport[]): CulteReport[] {
       departmentId: null,
       departmentName: '',
       worshipReportId: null,
+      eventId: null,
       serviceDate: `${key}-01`,
       meetingTypeId: null,
       meetingTypeName: null,
