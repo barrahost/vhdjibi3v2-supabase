@@ -50,19 +50,27 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
 
   // Departements dependants : on rattache le rapport a celui du "culte du jour" deja soumis par
   // Gestion des Cultes -- pas besoin de ressaisir une date/type de rencontre, on les herite de lui.
+  // On exclut les rapports de culte pour lesquels ce departement a deja soumis son propre rapport,
+  // pour eviter un doublon accidentel.
   useEffect(() => {
     if (reportType === 'worship') {
       setWorshipReports([]);
       return;
     }
-    CulteReportService.getRecentWorshipReports(20).then((reports) => {
+    Promise.all([
+      CulteReportService.getRecentWorshipReports(20),
+      CulteReportService.getHistory({ reportType }),
+    ]).then(([worship, ownReports]) => {
+      const alreadyUsed = new Set(ownReports.map((r) => r.worshipReportId).filter((id): id is string => !!id));
       setWorshipReports(
-        reports.map((r) => ({
-          id: r.id,
-          serviceDate: r.serviceDate,
-          meetingTypeName: r.meetingTypeName,
-          label: `${r.serviceDate} — ${r.meetingTypeName ? `${r.meetingTypeName} — ` : ''}${(r.data as WorshipReportData).messageTheme || 'Sans thème'}`,
-        }))
+        worship
+          .filter((r) => !alreadyUsed.has(r.id))
+          .map((r) => ({
+            id: r.id,
+            serviceDate: r.serviceDate,
+            meetingTypeName: r.meetingTypeName,
+            label: `${r.serviceDate} — ${r.meetingTypeName ? `${r.meetingTypeName} — ` : ''}${(r.data as WorshipReportData).messageTheme || 'Sans thème'}`,
+          }))
       );
     });
   }, [reportType]);
@@ -153,7 +161,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
           </select>
           {worshipReports.length === 0 && (
             <p className="mt-1 text-xs text-amber-600">
-              Aucun rapport de culte trouvé — demandez au responsable "Gestion des cultes" de le soumettre d'abord.
+              Aucun rapport de culte disponible — soit aucun n'a encore été soumis par "Gestion des cultes", soit vous avez déjà soumis votre rapport pour tous les cultes récents.
             </p>
           )}
           {selectedWorshipReport && (
