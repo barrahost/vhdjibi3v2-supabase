@@ -132,6 +132,22 @@ export const CulteReportService = {
     return (data ?? []).map(mapReport);
   },
 
+  /** Derniers rapports de culte soumis, tous jours confondus — utilise par les departements
+   * dependants pour rattacher leur rapport sans avoir a d'abord filtrer par date. */
+  async getRecentWorshipReports(limitCount = 20): Promise<CulteReport[]> {
+    const { data, error } = await supabase
+      .from('culte_reports')
+      .select('*')
+      .eq('church_id', getChurchId())
+      .eq('report_type', 'worship')
+      .order('service_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limitCount);
+
+    if (error) throw error;
+    return (data ?? []).map(mapReport);
+  },
+
   async getHistory(filters: {
     departmentId?: string;
     reportType?: CulteReportType;

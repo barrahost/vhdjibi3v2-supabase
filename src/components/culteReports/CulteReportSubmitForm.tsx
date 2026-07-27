@@ -39,28 +39,33 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [values, setValues] = useState<CulteReportFormValues>(blankFormValues());
 
-  const [worshipReports, setWorshipReports] = useState<{ id: string; label: string }[]>([]);
+  const [worshipReports, setWorshipReports] = useState<{ id: string; serviceDate: string; meetingTypeName: string | null; label: string }[]>([]);
   const [selectedWorshipReportId, setSelectedWorshipReportId] = useState('');
+  const selectedWorshipReport = worshipReports.find((w) => w.id === selectedWorshipReportId) || null;
 
   useEffect(() => {
     MeetingTypeService.list().then(setMeetingTypes);
     if (reportType === 'worship') SpeakerService.list().then(setSpeakers);
   }, [reportType]);
 
+  // Departements dependants : on rattache le rapport a celui du "culte du jour" deja soumis par
+  // Gestion des Cultes -- pas besoin de ressaisir une date/type de rencontre, on les herite de lui.
   useEffect(() => {
     if (reportType === 'worship') {
       setWorshipReports([]);
       return;
     }
-    CulteReportService.getWorshipReportsForDay(serviceDate).then((reports) => {
+    CulteReportService.getRecentWorshipReports(20).then((reports) => {
       setWorshipReports(
         reports.map((r) => ({
           id: r.id,
-          label: `${r.serviceDate} — ${(r.data as WorshipReportData).messageTheme || 'Sans thème'}`,
+          serviceDate: r.serviceDate,
+          meetingTypeName: r.meetingTypeName,
+          label: `${r.serviceDate} — ${r.meetingTypeName ? `${r.meetingTypeName} — ` : ''}${(r.data as WorshipReportData).messageTheme || 'Sans thème'}`,
         }))
       );
     });
-  }, [reportType, serviceDate]);
+  }, [reportType]);
 
   const handleFieldChange = <K extends keyof CulteReportFormValues>(key: K, value: CulteReportFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -83,9 +88,9 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
         departmentId,
         departmentName,
         worshipReportId: reportType === 'worship' ? null : selectedWorshipReportId,
-        serviceDate,
+        serviceDate: reportType === 'worship' ? serviceDate : (selectedWorshipReport?.serviceDate || serviceDate),
         meetingTypeId: null,
-        meetingTypeName: meetingTypeName || null,
+        meetingTypeName: reportType === 'worship' ? (meetingTypeName || null) : (selectedWorshipReport?.meetingTypeName || null),
         submittedBy: user?.id || null,
         submittedByName: user?.fullName || 'Inconnu',
         data,
@@ -107,21 +112,23 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className={labelCls}>Type de rencontre</label>
-          <select value={meetingTypeName} onChange={(e) => setMeetingTypeName(e.target.value)} className={inputCls}>
-            <option value="">Sélectionner un type</option>
-            {meetingTypes.map((mt) => (
-              <option key={mt.id} value={mt.name}>{mt.name}</option>
-            ))}
-          </select>
+      {reportType === 'worship' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Type de rencontre</label>
+            <select value={meetingTypeName} onChange={(e) => setMeetingTypeName(e.target.value)} className={inputCls}>
+              <option value="">Sélectionner un type</option>
+              {meetingTypes.map((mt) => (
+                <option key={mt.id} value={mt.name}>{mt.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Date du culte</label>
+            <input type="date" required value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className={inputCls} />
+          </div>
         </div>
-        <div>
-          <label className={labelCls}>Date du culte</label>
-          <input type="date" required value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className={inputCls} />
-        </div>
-      </div>
+      )}
 
       {reportType === 'worship' && (
         <div>
@@ -146,7 +153,15 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
           </select>
           {worshipReports.length === 0 && (
             <p className="mt-1 text-xs text-amber-600">
-              Aucun rapport de culte trouvé pour cette date — demandez au responsable "Gestion des cultes" de le soumettre d'abord.
+              Aucun rapport de culte trouvé — demandez au responsable "Gestion des cultes" de le soumettre d'abord.
+            </p>
+          )}
+          {selectedWorshipReport && (
+            <p className="mt-2 text-xs text-gray-500">
+              Date : <span className="font-medium text-gray-700">{selectedWorshipReport.serviceDate}</span>
+              {selectedWorshipReport.meetingTypeName && (
+                <> · Type : <span className="font-medium text-gray-700">{selectedWorshipReport.meetingTypeName}</span></>
+              )}
             </p>
           )}
         </div>
