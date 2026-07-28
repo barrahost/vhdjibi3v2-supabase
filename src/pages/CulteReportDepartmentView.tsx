@@ -695,12 +695,12 @@ export default function CulteReportDepartmentView() {
   const config = getConfig(type);
 
   const { confirm, confirmModalProps } = useConfirmModal();
-  const [reports, setReports] = useState<CulteReport[]>([]);
   const [allReports, setAllReports] = useState<CulteReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterRange, setFilterRange] = useState({ startDate: '', endDate: '' });
+  // Periode + type de rencontre pilotent a la fois le graphique et la liste des rapports --
+  // un seul filtre partage, plus besoin de deux selecteurs de date qui se ressemblent.
   const [meetingTypeFilter, setMeetingTypeFilter] = useState('');
   const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
   const [chartPresetId, setChartPresetId] = useState(config.defaultPeriodPresetId);
@@ -730,34 +730,24 @@ export default function CulteReportDepartmentView() {
       });
   }, [departmentName]);
 
-  const loadReports = useCallback(async () => {
+  const loadChartReports = useCallback(async () => {
     if (!departmentName) return;
     setLoading(true);
     try {
       const data = await CulteReportService.getHistory({
         reportType: type,
-        startDate: filterRange.startDate || undefined,
-        endDate: filterRange.endDate || undefined,
+        startDate: chartRange.startDate,
+        endDate: chartRange.endDate,
         meetingTypeName: meetingTypeFilter || undefined,
       });
-      setReports(data);
+      setChartReports(data);
     } catch (error) {
-      console.error('Error loading department reports:', error);
+      console.error('Error loading chart reports:', error);
       toast.error('Erreur lors du chargement des rapports');
     } finally {
       setLoading(false);
     }
-  }, [type, departmentName, filterRange, meetingTypeFilter]);
-
-  const loadChartReports = useCallback(async () => {
-    if (!departmentName) return;
-    try {
-      const data = await CulteReportService.getHistory({ reportType: type, startDate: chartRange.startDate, endDate: chartRange.endDate });
-      setChartReports(data);
-    } catch (error) {
-      console.error('Error loading chart reports:', error);
-    }
-  }, [type, departmentName, chartRange]);
+  }, [type, departmentName, chartRange, meetingTypeFilter]);
 
   const loadAllReports = useCallback(async () => {
     if (!departmentName) return;
@@ -769,9 +759,9 @@ export default function CulteReportDepartmentView() {
     }
   }, [type, departmentName]);
 
-  useEffect(() => { loadReports(); }, [loadReports]);
   useEffect(() => { loadChartReports(); }, [loadChartReports]);
   useEffect(() => { loadAllReports(); }, [loadAllReports]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, chartRange, meetingTypeFilter]);
 
   if (!departmentName) {
     return <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">Type de rapport inconnu.</div>;
@@ -782,7 +772,6 @@ export default function CulteReportDepartmentView() {
       try {
         await CulteReportService.deleteReport(report.id);
         toast.success('Rapport supprimé');
-        loadReports();
         loadChartReports();
         loadAllReports();
       } catch (error: any) {
@@ -793,7 +782,7 @@ export default function CulteReportDepartmentView() {
 
   const columns = getColumns(type, setViewingReport, setEditingReport, handleDelete, exportCulteReportPdf);
 
-  const filtered = reports.filter((r) =>
+  const filtered = chartReports.filter((r) =>
     !searchTerm || config.searchFields(r).some((f) => f.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -843,7 +832,7 @@ export default function CulteReportDepartmentView() {
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{sc.label}</h3>
                   <sc.icon className={`h-4 w-4 ${sc.hex ? '' : colors.icon} opacity-70`} style={sc.hex ? { color: sc.hex } : undefined} />
                 </div>
-                <p className={`text-2xl font-bold ${sc.hex ? '' : colors.value}`} style={sc.hex ? { color: sc.hex } : undefined}>{sc.compute(config.statsSource === 'chart' ? chartReports : (allReports.length > 0 ? allReports : reports))}</p>
+                <p className={`text-2xl font-bold ${sc.hex ? '' : colors.value}`} style={sc.hex ? { color: sc.hex } : undefined}>{sc.compute(config.statsSource === 'chart' ? chartReports : (allReports.length > 0 ? allReports : chartReports))}</p>
               </div>
             );
           })}
@@ -889,10 +878,20 @@ export default function CulteReportDepartmentView() {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 sm:ml-auto">
+                <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
                   <input type="date" value={chartRange.startDate} onChange={(e) => { setChartPresetId(''); setChartRange((p) => ({ ...p, startDate: e.target.value })); }} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white" />
                   <span className="text-sm text-gray-400">à</span>
                   <input type="date" value={chartRange.endDate} onChange={(e) => { setChartPresetId(''); setChartRange((p) => ({ ...p, endDate: e.target.value })); }} className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white" />
+                  <select
+                    value={meetingTypeFilter}
+                    onChange={(e) => setMeetingTypeFilter(e.target.value)}
+                    className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-[#00665C] focus:border-[#00665C]"
+                  >
+                    <option value="">Tous les types de rencontre</option>
+                    {meetingTypes.map((mt) => (
+                      <option key={mt.id} value={mt.name}>{mt.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             ) : (
@@ -910,9 +909,19 @@ export default function CulteReportDepartmentView() {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <input type="date" value={chartRange.startDate} onChange={(e) => { setChartPresetId(''); setChartRange((p) => ({ ...p, startDate: e.target.value })); }} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
                   <input type="date" value={chartRange.endDate} onChange={(e) => { setChartPresetId(''); setChartRange((p) => ({ ...p, endDate: e.target.value })); }} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
+                  <select
+                    value={meetingTypeFilter}
+                    onChange={(e) => setMeetingTypeFilter(e.target.value)}
+                    className="h-9 px-2 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
+                  >
+                    <option value="">Tous les types de rencontre</option>
+                    {meetingTypes.map((mt) => (
+                      <option key={mt.id} value={mt.name}>{mt.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
@@ -949,38 +958,17 @@ export default function CulteReportDepartmentView() {
 
         const filterFormBlock = (
           <div key="filters" className="space-y-4 sm:space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[180px]">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+              <div className="relative">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Recherche</label>
                 <Search className="absolute left-3 top-1/2 translate-y-1 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder={config.searchPlaceholder}
                   value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Du</label>
-                <input type="date" value={filterRange.startDate} onChange={(e) => setFilterRange((p) => ({ ...p, startDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Au</label>
-                <input type="date" value={filterRange.endDate} onChange={(e) => setFilterRange((p) => ({ ...p, endDate: e.target.value }))} className="h-9 px-2 text-sm border border-gray-200 rounded-md" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Type de rencontre</label>
-                <select
-                  value={meetingTypeFilter}
-                  onChange={(e) => setMeetingTypeFilter(e.target.value)}
-                  className="h-9 px-2 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
-                >
-                  <option value="">Sélectionner un type</option>
-                  {meetingTypes.map((mt) => (
-                    <option key={mt.id} value={mt.name}>{mt.name}</option>
-                  ))}
-                </select>
               </div>
             </div>
 
@@ -990,7 +978,7 @@ export default function CulteReportDepartmentView() {
                 departmentId={departmentId}
                 departmentName={departmentName}
                 onCancel={() => setShowForm(false)}
-                onSuccess={() => { setShowForm(false); loadReports(); loadChartReports(); loadAllReports(); }}
+                onSuccess={() => { setShowForm(false); loadChartReports(); loadAllReports(); }}
               />
             )}
           </div>
@@ -1025,7 +1013,7 @@ export default function CulteReportDepartmentView() {
           report={editingReport}
           isOpen={true}
           onClose={() => setEditingReport(null)}
-          onSuccess={() => { setEditingReport(null); loadReports(); loadChartReports(); loadAllReports(); }}
+          onSuccess={() => { setEditingReport(null); loadChartReports(); loadAllReports(); }}
         />
       )}
       {viewingReport && (
