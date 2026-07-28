@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Eye, Pencil, Trash2, Search, Plus, X, BarChart3, TrendingUp, UserPlus, CalendarDays,
+  Eye, Pencil, Trash2, Search, Plus, BarChart3, TrendingUp, UserPlus, CalendarDays,
   Coins, GraduationCap, Wine, Radio, Sparkles, Download, Users, BookOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -16,7 +16,7 @@ import { CulteReportService } from '../services/culteReport.service';
 import { MeetingTypeService } from '../services/meetingTypeSpeaker.service';
 import EditCulteReportModal from '../components/culteReports/EditCulteReportModal';
 import CulteReportPreviewModal from '../components/culteReports/CulteReportPreviewModal';
-import CulteReportSubmitForm from '../components/culteReports/CulteReportSubmitForm';
+import CulteReportSubmitModal from '../components/culteReports/CulteReportSubmitModal';
 import { exportCulteReportPdf } from '../utils/culteReportPdf';
 import { CulteBreakdownChart, ChartBreakdown } from '../components/dashboard/stats/CulteBreakdownChart';
 import {
@@ -801,11 +801,11 @@ export default function CulteReportDepartmentView() {
           </div>
         </div>
         <button
-          onClick={() => setShowForm((s) => !s)}
+          onClick={() => setShowForm(true)}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-lg"
         >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Fermer le formulaire' : 'Nouveau rapport'}
+          <Plus className="w-4 h-4" />
+          Nouveau rapport
         </button>
       </div>
 
@@ -957,30 +957,18 @@ export default function CulteReportDepartmentView() {
         );
 
         const filterFormBlock = (
-          <div key="filters" className="space-y-4 sm:space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-              <div className="relative">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Recherche</label>
-                <Search className="absolute left-3 top-1/2 translate-y-1 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder={config.searchPlaceholder}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
-                />
-              </div>
-            </div>
-
-            {showForm && (
-              <CulteReportSubmitForm
-                reportType={type}
-                departmentId={departmentId}
-                departmentName={departmentName}
-                onCancel={() => setShowForm(false)}
-                onSuccess={() => { setShowForm(false); loadChartReports(); loadAllReports(); }}
+          <div key="filters" className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <div className="relative">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Recherche</label>
+              <Search className="absolute left-3 top-1/2 translate-y-1 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder={config.searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
               />
-            )}
+            </div>
           </div>
         );
 
@@ -1024,6 +1012,14 @@ export default function CulteReportDepartmentView() {
         />
       )}
       <ConfirmModal {...confirmModalProps} />
+      <CulteReportSubmitModal
+        isOpen={showForm}
+        reportType={type}
+        departmentId={departmentId}
+        departmentName={departmentName}
+        onClose={() => setShowForm(false)}
+        onSuccess={() => { setShowForm(false); loadChartReports(); loadAllReports(); }}
+      />
     </div>
   );
 }

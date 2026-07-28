@@ -5,6 +5,9 @@ interface CulteReportFieldsProps {
   reportType: CulteReportType;
   values: CulteReportFormValues;
   onChange: <K extends keyof CulteReportFormValues>(key: K, value: CulteReportFormValues[K]) => void;
+  /** Sono uniquement : n'affiche qu'une des 3 sections (utilise par la modale en etapes).
+   * Omis = affiche les 3 sections d'un coup (ex: modale d'edition). */
+  sonoSection?: 'before' | 'during' | 'after';
 }
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]';
@@ -15,7 +18,7 @@ function selectOnFocus(e: React.FocusEvent<HTMLInputElement>) {
   e.target.select();
 }
 
-export function CulteReportFields({ reportType, values: v, onChange }: CulteReportFieldsProps) {
+export function CulteReportFields({ reportType, values: v, onChange, sonoSection }: CulteReportFieldsProps) {
   const set = <K extends keyof CulteReportFormValues>(key: K) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => onChange(key, e.target.value as CulteReportFormValues[K]);
@@ -115,36 +118,40 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
   }
 
   if (reportType === 'sono') {
-    return (
-      <>
-        <fieldset className="border rounded-md p-4 space-y-3">
-          <legend className="text-sm font-semibold text-gray-700 px-1">Avant le culte</legend>
-          {(Object.keys(v.sonoBefore) as (keyof typeof v.sonoBefore)[]).map((key) => (
-            <div key={key} className="flex items-center justify-between">
-              <label className="text-sm text-gray-700">{key}</label>
-              <select
-                value={v.sonoBefore[key]}
-                onChange={(e) => onChange('sonoBefore', { ...v.sonoBefore, [key]: e.target.value })}
-                className="px-2 py-1 border border-gray-300 rounded-md text-sm"
-              >
-                <option value="OK">OK</option>
-                <option value="NOK">NOK</option>
-              </select>
-            </div>
-          ))}
-        </fieldset>
-        <fieldset className="border rounded-md p-4 space-y-3">
-          <legend className="text-sm font-semibold text-gray-700 px-1">Pendant le culte</legend>
-          <div>
-            <label className={labelCls}>Problèmes techniques</label>
-            <textarea
-              rows={2}
-              value={v.sonoDuring.technicalProblems}
-              onChange={(e) => onChange('sonoDuring', { ...v.sonoDuring, technicalProblems: e.target.value })}
-              className={inputCls}
-            />
+    const beforeBlock = (
+      <fieldset className="border rounded-md p-4 space-y-3">
+        <legend className="text-sm font-semibold text-gray-700 px-1">Avant le culte</legend>
+        {(Object.keys(v.sonoBefore) as (keyof typeof v.sonoBefore)[]).map((key) => (
+          <div key={key} className="flex items-center justify-between">
+            <label className="text-sm text-gray-700">{key}</label>
+            <select
+              value={v.sonoBefore[key]}
+              onChange={(e) => onChange('sonoBefore', { ...v.sonoBefore, [key]: e.target.value })}
+              className="px-2 py-1 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="OK">OK</option>
+              <option value="NOK">NOK</option>
+            </select>
           </div>
-        </fieldset>
+        ))}
+      </fieldset>
+    );
+    const duringBlock = (
+      <fieldset className="border rounded-md p-4 space-y-3">
+        <legend className="text-sm font-semibold text-gray-700 px-1">Pendant le culte</legend>
+        <div>
+          <label className={labelCls}>Problèmes techniques</label>
+          <textarea
+            rows={2}
+            value={v.sonoDuring.technicalProblems}
+            onChange={(e) => onChange('sonoDuring', { ...v.sonoDuring, technicalProblems: e.target.value })}
+            className={inputCls}
+          />
+        </div>
+      </fieldset>
+    );
+    const afterBlock = (
+      <>
         <fieldset className="border rounded-md p-4 space-y-3">
           <legend className="text-sm font-semibold text-gray-700 px-1">Après le culte</legend>
           <div>
@@ -161,6 +168,17 @@ export function CulteReportFields({ reportType, values: v, onChange }: CulteRepo
           <label className={labelCls}>Observations générales</label>
           <textarea rows={3} value={v.generalObservations} onChange={set('generalObservations')} className={inputCls} />
         </div>
+      </>
+    );
+
+    if (sonoSection === 'before') return beforeBlock;
+    if (sonoSection === 'during') return duringBlock;
+    if (sonoSection === 'after') return afterBlock;
+    return (
+      <>
+        {beforeBlock}
+        {duringBlock}
+        {afterBlock}
       </>
     );
   }
