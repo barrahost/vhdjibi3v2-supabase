@@ -189,7 +189,7 @@ export function useNavigationItems(): NavItem[] {
     }
 
     if (children.length > 0) {
-      items.push({ id: 'department-management', label: 'Gestion Département', icon: <Briefcase className="w-5 h-5" />, children });
+      items.push({ id: 'department-management', label: 'Rapport', icon: <Briefcase className="w-5 h-5" />, children });
     }
   }
 
