@@ -14,13 +14,19 @@ interface TableProps {
   className?: string;
   /** Optional custom mobile card renderer — overrides the generic field list */
   mobileCard?: (item: any) => ReactNode;
+  /** Screen size at which the table takes over from the mobile card view. Default 'lg' (most tables).
+   * Use 'sm' for data-dense tables (many columns) so tablets get the touch-friendly card view too. */
+  breakpoint?: 'sm' | 'md' | 'lg';
 }
 
-export function CustomTable({ data, columns, onRowClick, className = '', mobileCard }: TableProps) {
+const HIDE_CLASS: Record<'sm' | 'md' | 'lg', string> = { sm: 'sm:hidden', md: 'md:hidden', lg: 'lg:hidden' };
+const SHOW_CLASS: Record<'sm' | 'md' | 'lg', string> = { sm: 'hidden sm:block', md: 'hidden md:block', lg: 'hidden lg:block' };
+
+export function CustomTable({ data, columns, onRowClick, className = '', mobileCard, breakpoint = 'lg' }: TableProps) {
   return (
     <>
-      {/* Mobile view (< lg) */}
-      <div className="lg:hidden">
+      {/* Mobile/card view */}
+      <div className={HIDE_CLASS[breakpoint]}>
         <MobileTableView
           data={data}
           columns={columns}
@@ -30,8 +36,8 @@ export function CustomTable({ data, columns, onRowClick, className = '', mobileC
         />
       </div>
 
-      {/* Desktop view (lg+) */}
-      <div className="hidden lg:block">
+      {/* Desktop/table view */}
+      <div className={SHOW_CLASS[breakpoint]}>
         <div className={`bg-white rounded-lg shadow-sm border overflow-hidden ${className}`}>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

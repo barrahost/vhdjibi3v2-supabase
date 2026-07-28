@@ -263,6 +263,67 @@ function actionsColumn(onView: (r: CulteReport) => void, onEdit: (r: CulteReport
   };
 }
 
+const MONTH_ABBR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+/** Carte compacte pour la vue mobile (< sm) : badge date colore, valeur phare, le reste des
+ * colonnes en detail, actions en icones larges (cible tactile) -- inspire de l'ancienne app
+ * dont la plupart des utilisateurs se servaient depuis leur telephone. */
+function renderMobileReportCard(
+  row: CulteReport,
+  columns: ColumnConfig[],
+  onView: (r: CulteReport) => void,
+  onEdit: (r: CulteReport) => void,
+  onDelete: (r: CulteReport) => void,
+  onDownloadPdf: (r: CulteReport) => void
+): React.ReactNode {
+  const d = new Date(`${row.serviceDate}T00:00:00`);
+  const detailColumns = columns.filter((c) => c.key !== 'serviceDate' && c.key !== 'actions');
+  const [headlineColumn, ...restColumns] = detailColumns;
+
+  return (
+    <div className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#00665C]/10 flex flex-col items-center justify-center">
+          <span className="text-lg font-bold text-[#00665C] leading-none">{d.getDate()}</span>
+          <span className="text-[10px] font-medium text-[#00665C]/80 uppercase leading-none mt-0.5">{MONTH_ABBR[d.getMonth()]}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          {headlineColumn && (
+            <p className="text-sm font-semibold text-gray-900 truncate">{headlineColumn.render(row)}</p>
+          )}
+          <p className="text-xs text-gray-400">{row.meetingTypeName || '—'}</p>
+        </div>
+      </div>
+
+      {restColumns.length > 0 && (
+        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {restColumns.map((c) => (
+            <div key={c.key} className="min-w-0">
+              <p className="text-[10px] font-medium text-gray-400 uppercase truncate">{c.title}</p>
+              <div className="text-sm text-gray-700 truncate">{c.render(row)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-100 -mx-1">
+        <button onClick={() => onView(row)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[#00665C] active:bg-[#00665C]/10 rounded-md text-xs font-medium">
+          <Eye className="w-4 h-4" /> Voir
+        </button>
+        <button onClick={() => onEdit(row)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-blue-600 active:bg-blue-50 rounded-md text-xs font-medium">
+          <Pencil className="w-4 h-4" /> Modifier
+        </button>
+        <button onClick={() => onDownloadPdf(row)} className="flex items-center justify-center p-2.5 text-gray-500 active:bg-gray-100 rounded-md">
+          <Download className="w-4 h-4" />
+        </button>
+        <button onClick={() => onDelete(row)} className="flex items-center justify-center p-2.5 text-red-600 active:bg-red-50 rounded-md">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'> {
   switch (reportType) {
     case 'worship':
@@ -865,12 +926,12 @@ export default function CulteReportDepartmentView() {
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500">
                   <CalendarDays className="h-4 w-4" /> Période du graphique :
                 </span>
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0">
                   {config.periodPresets.map((preset) => (
                     <button
                       key={preset.id}
                       onClick={() => { setChartPresetId(preset.id); setChartRange(preset.getRange()); }}
-                      className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                      className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap flex-shrink-0 transition-colors ${
                         chartPresetId === preset.id ? 'bg-[#00665C] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
                       }`}
                     >
@@ -896,12 +957,12 @@ export default function CulteReportDepartmentView() {
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap justify-between">
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex gap-1 overflow-x-auto -mx-1 px-1 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0">
                   {config.periodPresets.map((preset) => (
                     <button
                       key={preset.id}
                       onClick={() => { setChartPresetId(preset.id); setChartRange(preset.getRange()); }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap flex-shrink-0 ${
                         chartPresetId === preset.id ? 'bg-[#00665C] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
@@ -982,7 +1043,12 @@ export default function CulteReportDepartmentView() {
           <div className="flex items-center justify-end">
             <span className="text-xs text-gray-400">{paginated.length} / {filtered.length} rapport(s)</span>
           </div>
-          <CustomTable data={paginated} columns={columns.map((c) => ({ key: c.key, title: c.title, render: (_: any, row: CulteReport) => c.render(row) }))} />
+          <CustomTable
+            data={paginated}
+            columns={columns.map((c) => ({ key: c.key, title: c.title, render: (_: any, row: CulteReport) => c.render(row) }))}
+            breakpoint="sm"
+            mobileCard={(row: CulteReport) => renderMobileReportCard(row, columns, setViewingReport, setEditingReport, handleDelete, exportCulteReportPdf)}
+          />
 
           {totalPages > 1 && (
             <CustomPagination
