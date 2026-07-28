@@ -880,20 +880,20 @@ export default function CulteReportDepartmentView() {
       )}
 
       {config.statCards.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {config.statCards.map((sc, i) => {
             const colors = STAT_COLOR_CLASSES[sc.color];
             return (
               <div
                 key={i}
-                className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${sc.hex || sc.borderHex ? '' : colors.border}`}
+                className={`bg-white p-3 sm:p-4 rounded-lg shadow-sm border-l-4 ${sc.hex || sc.borderHex ? '' : colors.border}`}
                 style={sc.hex ? { borderLeftColor: sc.hex } : sc.borderHex ? { borderLeftColor: sc.borderHex } : undefined}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{sc.label}</h3>
-                  <sc.icon className={`h-4 w-4 ${sc.hex ? '' : colors.icon} opacity-70`} style={sc.hex ? { color: sc.hex } : undefined} />
+                  <h3 className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">{sc.label}</h3>
+                  <sc.icon className={`h-4 w-4 flex-shrink-0 ${sc.hex ? '' : colors.icon} opacity-70`} style={sc.hex ? { color: sc.hex } : undefined} />
                 </div>
-                <p className={`text-2xl font-bold ${sc.hex ? '' : colors.value}`} style={sc.hex ? { color: sc.hex } : undefined}>{sc.compute(config.statsSource === 'chart' ? chartReports : (allReports.length > 0 ? allReports : chartReports))}</p>
+                <p className={`text-lg sm:text-2xl font-bold ${sc.hex ? '' : colors.value}`} style={sc.hex ? { color: sc.hex } : undefined}>{sc.compute(config.statsSource === 'chart' ? chartReports : (allReports.length > 0 ? allReports : chartReports))}</p>
               </div>
             );
           })}
