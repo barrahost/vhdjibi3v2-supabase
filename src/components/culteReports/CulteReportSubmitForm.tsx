@@ -48,6 +48,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [newEventDate, setNewEventDate] = useState(todayISO());
   const [newEventMeetingType, setNewEventMeetingType] = useState('');
+  const [isCustomMeetingType, setIsCustomMeetingType] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   const loadEvents = async () => {
@@ -99,6 +100,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
       setSelectedEventId(event.id);
       setShowCreateEvent(false);
       setNewEventMeetingType('');
+      setIsCustomMeetingType(false);
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de la création du culte");
     } finally {
@@ -187,17 +189,38 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
               </div>
               <div>
                 <label className={labelCls}>Type de rencontre</label>
-                <input
-                  type="text"
-                  list="meeting-type-suggestions"
-                  value={newEventMeetingType}
-                  onChange={(e) => setNewEventMeetingType(e.target.value)}
-                  placeholder="ex: Veillée de Prière"
-                  className={inputCls}
-                />
-                <datalist id="meeting-type-suggestions">
-                  {meetingTypes.map((mt) => <option key={mt.id} value={mt.name} />)}
-                </datalist>
+                {isCustomMeetingType ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={newEventMeetingType}
+                      onChange={(e) => setNewEventMeetingType(e.target.value)}
+                      placeholder="ex: Veillée de Prière"
+                      className={inputCls}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setIsCustomMeetingType(false); setNewEventMeetingType(''); }}
+                      className="px-2 text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
+                    >
+                      Choisir dans la liste
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={newEventMeetingType}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') { setIsCustomMeetingType(true); setNewEventMeetingType(''); }
+                      else setNewEventMeetingType(e.target.value);
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">-- Sélectionner --</option>
+                    {meetingTypes.map((mt) => <option key={mt.id} value={mt.name}>{mt.name}</option>)}
+                    <option value="__custom__">Autre (nouveau type)...</option>
+                  </select>
+                )}
               </div>
             </div>
             <div className="flex gap-2">
