@@ -342,7 +342,7 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
     case 'finance':
       return {
         icon: Coins,
-        pageTitle: 'Finance',
+        pageTitle: 'Emmeraude',
         subtitle: 'Gérez les rapports financiers des cultes',
         statCards: [
           { label: 'Total Rapports', icon: BarChart3, color: 'teal', compute: (r) => r.length },

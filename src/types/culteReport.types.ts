@@ -3,7 +3,7 @@ export type CulteReportType = 'worship' | 'adn' | 'finance' | 'sainte_cene' | 's
 export const CULTE_REPORT_TYPE_LABELS: Record<CulteReportType, string> = {
   worship: 'Culte (rapport général)',
   adn: 'ADN — Amis des Nouveaux',
-  finance: 'Finance',
+  finance: 'Emmeraude',
   sainte_cene: 'Sainte Cène',
   sono: 'Communication & Sono',
   academie: "Académie d'Honneur",
