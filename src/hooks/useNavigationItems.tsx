@@ -159,18 +159,8 @@ export function useNavigationItems(): NavItem[] {
   ) {
     const children: NavItem[] = [];
 
-    if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
-      children.push({ id: 'servants', label: 'Serviteurs', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
-    }
-    if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
-      children.push({ id: 'interactions', label: 'Interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" /> });
-    }
-    if (hasPermission(PERMISSIONS.MANAGE_ATTENDANCES)) {
-      children.push({ id: 'attendance', label: 'Présences', href: '/presences', icon: <CalendarCheck className="w-5 h-5" /> });
-    }
-    if (hasPermission(PERMISSIONS.MANAGE_SMS)) {
-      children.push({ id: 'sms', label: 'SMS', href: '/sms', icon: <MessageSquare className="w-5 h-5" /> });
-    }
+    // Rapport(s) de culte en premier : c'est l'action la plus frequente d'un responsable de
+    // departement, et le menu mobile (bottom nav) prend le premier enfant comme raccourci direct.
     if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
       if (ledCulteReports.length > 0) {
         ledCulteReports.forEach(({ reportType }) => {
@@ -184,6 +174,18 @@ export function useNavigationItems(): NavItem[] {
       } else {
         children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
       }
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
+      children.push({ id: 'servants', label: 'Serviteurs', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
+      children.push({ id: 'interactions', label: 'Interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_ATTENDANCES)) {
+      children.push({ id: 'attendance', label: 'Présences', href: '/presences', icon: <CalendarCheck className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_SMS)) {
+      children.push({ id: 'sms', label: 'SMS', href: '/sms', icon: <MessageSquare className="w-5 h-5" /> });
     }
 
     if (children.length > 0) {
