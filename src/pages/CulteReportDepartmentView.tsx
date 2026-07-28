@@ -142,8 +142,6 @@ interface DeptViewConfig {
   defaultPeriodPresetId: string;
   /** 'simple' = flat buttons (Worship/ADN/…). 'boxed' = bordered box with "Période :" label (Finance, matches old app). */
   periodSelectorStyle: 'simple' | 'boxed';
-  /** Old app order differs by type: Worship/SainteCène/Sono put the filter bar before the chart; Finance/ADN/Académie put the chart first. */
-  layoutOrder: 'filtersFirst' | 'chartFirst';
   /** Finance's chart aggregates reports by month (matches FinanceTrendChart.tsx); all other types plot per-report. */
   chartAggregation: 'report' | 'month';
   /** When true, shows a toggle letting the user switch the chart between per-report and monthly-aggregated (Finance only). */
@@ -338,7 +336,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
-        layoutOrder: 'filtersFirst',
         chartAggregation: 'report',
         allowAggregationToggle: false,
       };
@@ -386,7 +383,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         periodPresets: FINANCE_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'boxed',
-        layoutOrder: 'chartFirst',
         chartAggregation: 'month',
         allowAggregationToggle: true,
       };
@@ -438,7 +434,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
-        layoutOrder: 'chartFirst',
         chartAggregation: 'report',
         allowAggregationToggle: false,
       };
@@ -497,7 +492,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
-        layoutOrder: 'filtersFirst',
         chartAggregation: 'report',
         allowAggregationToggle: false,
       };
@@ -543,7 +537,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
-        layoutOrder: 'chartFirst',
         chartAggregation: 'report',
         allowAggregationToggle: false,
       };
@@ -586,7 +579,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         periodPresets: WORSHIP_STYLE_PRESETS,
         defaultPeriodPresetId: '3m',
         periodSelectorStyle: 'simple',
-        layoutOrder: 'filtersFirst',
         chartAggregation: 'report',
         allowAggregationToggle: false,
       };
@@ -596,7 +588,6 @@ function getConfig(reportType: CulteReportType): Omit<DeptViewConfig, 'columns'>
         searchFields: defaultSearchFields, searchPlaceholder: 'Rechercher...', statsSource: 'all',
         evolutionTitle: 'Évolution', evolutionIcon: BarChart3,
         periodPresets: WORSHIP_STYLE_PRESETS, defaultPeriodPresetId: '3m', periodSelectorStyle: 'simple',
-        layoutOrder: 'filtersFirst',
         chartAggregation: 'report',
         allowAggregationToggle: false,
       };
@@ -833,7 +824,7 @@ export default function CulteReportDepartmentView() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-sm font-medium text-gray-700">Statistiques</h2>
           <span className="text-xs text-[#00665C] bg-[#00665C]/8 px-2 py-1 rounded-full">
-            Période : {(config.periodPresets.find((p) => p.id === chartPresetId)?.label) || 'Période personnalisée'}
+            Période du graphique : {(config.periodPresets.find((p) => p.id === chartPresetId)?.label) || 'personnalisée'}
           </span>
         </div>
       )}
@@ -883,7 +874,7 @@ export default function CulteReportDepartmentView() {
             {config.periodSelectorStyle === 'boxed' ? (
               <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-2">
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500">
-                  <CalendarDays className="h-4 w-4" /> Période :
+                  <CalendarDays className="h-4 w-4" /> Période du graphique :
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {config.periodPresets.map((preset) => (
@@ -991,7 +982,6 @@ export default function CulteReportDepartmentView() {
                   ))}
                 </select>
               </div>
-              <span className="text-xs text-gray-400 sm:ml-auto">{paginated.length} / {filtered.length}</span>
             </div>
 
             {showForm && (
@@ -1006,17 +996,16 @@ export default function CulteReportDepartmentView() {
           </div>
         );
 
-        return config.layoutOrder === 'chartFirst' ? (
-          <>{chartBlock}{filterFormBlock}</>
-        ) : (
-          <>{filterFormBlock}{chartBlock}</>
-        );
+        return <>{chartBlock}{filterFormBlock}</>;
       })()}
 
       {loading ? (
         <div className="text-center py-10 text-gray-500">Chargement...</div>
       ) : (
         <>
+          <div className="flex items-center justify-end">
+            <span className="text-xs text-gray-400">{paginated.length} / {filtered.length} rapport(s)</span>
+          </div>
           <CustomTable data={paginated} columns={columns.map((c) => ({ key: c.key, title: c.title, render: (_: any, row: CulteReport) => c.render(row) }))} />
 
           {totalPages > 1 && (
