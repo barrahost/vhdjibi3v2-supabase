@@ -15,12 +15,14 @@ function BadgeDot({ count }: { count: number }) {
   );
 }
 
-/** Pick up to 2 primary tab items from the nav tree (Dashboard + first meaningful item) */
+/** Pick up to 3 primary tab items from the nav tree (Dashboard + next 2 meaningful items).
+ * "Sortir" (deconnexion) n'occupe plus de place ici -- c'est une action rare, pas une
+ * destination de navigation, et elle reste accessible dans le panneau "Plus". */
 function getMobilePrimaryTabs(items: NavItem[]): Array<{ id: string; label: string; icon: React.ReactNode; href: string; badge: number }> {
   const tabs: Array<{ id: string; label: string; icon: React.ReactNode; href: string; badge: number }> = [];
 
   for (const item of items) {
-    if (tabs.length >= 2) break;
+    if (tabs.length >= 3) break;
 
     if (item.href) {
       tabs.push({ id: item.id, label: item.label, icon: item.icon, href: item.href, badge: item.badge ?? 0 });
@@ -92,16 +94,6 @@ export function MobileBottomNav() {
         >
           <MoreHorizontal className="w-5 h-5" />
           <span className="text-[10px] font-medium leading-none">Plus</span>
-        </button>
-
-        {/* Déconnexion */}
-        <button
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className="flex-1 flex flex-col items-center justify-center pt-2 pb-3 gap-0.5 text-red-400 hover:text-red-600 transition-colors"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="text-[10px] font-medium leading-none">Sortir</span>
         </button>
       </div>
 
