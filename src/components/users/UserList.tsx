@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { User } from '../../types/user.types';
-import { Search, Pencil, Trash2, User as UserIcon, Building2, Link2 } from 'lucide-react';
+import { Search, Pencil, Trash2, User as UserIcon, Building2, Link2, Eye } from 'lucide-react';
+import { impersonateUser, isImpersonating } from '../../utils/impersonation';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../constants/roles';
 import UserListItem from './UserListItem';
@@ -39,7 +40,8 @@ function ActionButtons({
   onGenerateLink,
   confirmationStatus,
   onEdit,
-  onDelete
+  onDelete,
+  onImpersonate
 }: {
   user: User;
   canEditUsers: boolean;
@@ -49,6 +51,7 @@ function ActionButtons({
   confirmationStatus?: { status: string; usedAt?: Date };
   onEdit: () => void;
   onDelete: () => void;
+  onImpersonate?: (user: User) => void;
 }) {
   const servantStatus = useServantStatus(user.email);
   
@@ -71,6 +74,15 @@ function ActionButtons({
 
   return (
     <div className="flex justify-end space-x-2">
+      {onImpersonate && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onImpersonate(user); }}
+          className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors"
+          title={`Se connecter en tant que ${user.fullName}`}
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+      )}
       {canEditUsers && (
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
@@ -124,10 +136,32 @@ function ActionButtons({
 
 export default function UserList({ filter, statusFilter, selectedUserIds = [], onSelectionChange, onPromoteShepherd }: UserListProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
-  const { userRole } = useAuth();
+  const { userRole, user: currentUser } = useAuth();
   const { hasPermission } = usePermissions();
   const canEditUsers = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_USERS);
   const canDeleteUsers = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_USERS);
+
+  // "Se connecter en tant que" : réservé aux admins, pas de cascade d'aperçus.
+  // Seul un super_admin peut apercevoir un autre admin.
+  const currentIsAdmin = isAdminUser({ role: userRole as string, businessProfiles: (currentUser as any)?.businessProfiles });
+  const currentIsSuperAdmin = userRole === 'super_admin';
+  const canImpersonateTarget = (target: User): boolean => {
+    if (!currentIsAdmin || isImpersonating()) return false;
+    if (target.id === (currentUser as any)?.id) return false;
+    if (isAdminUser(target) && !currentIsSuperAdmin) return false;
+    return true;
+  };
+  const handleImpersonate = async (target: User) => {
+    const ok = await confirm(
+      `Se connecter en tant que ${target.fullName} ? Vous verrez l'application exactement comme cet utilisateur, et les actions effectuées seront réelles.`
+    );
+    if (!ok) return;
+    try {
+      await impersonateUser(target.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Impossible de démarrer l'aperçu");
+    }
+  };
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -488,6 +522,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
             confirmationStatus={confirmationStatuses[user.id]}
             onEdit={() => setEditingUser(user)}
             onDelete={() => handleDelete(user.id, user.id)}
+            onImpersonate={canImpersonateTarget(user) ? handleImpersonate : undefined}
           />
         );
       }

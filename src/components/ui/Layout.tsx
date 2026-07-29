@@ -11,6 +11,7 @@ import { PWAInstallBanner } from './PWAInstallBanner';
 import BugReportButton from './BugReportButton';
 import { MobileBottomNav } from './MobileBottomNav';
 import { SMSStatusBanner } from '../sms/SMSStatusBanner';
+import { ImpersonationBanner } from './ImpersonationBanner';
 
 export default function Layout() {
   const { user } = useAuth();
@@ -35,6 +36,7 @@ export default function Layout() {
 
       {/* Main content — offset on desktop for sidebar */}
       <div className="lg:ml-64 flex flex-col min-h-screen">
+        <ImpersonationBanner />
         <Header />
         <SMSStatusBanner />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
