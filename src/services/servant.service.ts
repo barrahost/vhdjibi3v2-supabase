@@ -144,7 +144,7 @@ export class ServantService {
   static async updateServant(id: string, data: Partial<ServantFormData>): Promise<void> {
     try {
       const current = await this.getServant(id);
-      if (!current) throw new Error('Serviteur non trouvé');
+      if (!current) throw new Error('B.O.S.S non trouvé');
 
       // Validate phone
       let formattedPhone = current.phone;
@@ -212,10 +212,10 @@ export class ServantService {
   static async deleteServant(id: string): Promise<void> {
     try {
       const servant = await this.getServant(id);
-      if (!servant) throw new Error('Serviteur non trouvé');
+      if (!servant) throw new Error('B.O.S.S non trouvé');
 
       if (servant.isHead) {
-        throw new Error('Ce serviteur est responsable de département. Veuillez désigner un autre responsable avant de le supprimer.');
+        throw new Error('Ce B.O.S.S est responsable de département. Veuillez désigner un autre responsable avant de le supprimer.');
       }
 
       const { error } = await supabase.from('servants').delete().eq('id', id);
@@ -382,9 +382,9 @@ export class ServantService {
   }
 
   /**
-   * Trouve les serviteurs déjà existants parmi une liste de téléphones.
+   * Trouve les B.O.S.S déjà existants parmi une liste de téléphones.
    * Le dédoublonnage se fait par téléphone (comme dans createServant), pas
-   * par source_id : un serviteur saisi manuellement ou importé via Excel
+   * par source_id : un B.O.S.S saisi manuellement ou importé via Excel
    * n'a pas de source_id, et un dédoublonnage par source_id le manquerait,
    * créant un doublon à chaque nouvel import.
    */
@@ -431,7 +431,7 @@ export class ServantService {
 
         if (existing) {
           if (existing.departmentIds.includes(departmentId)) {
-            result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+            result.skipped.push({ name, reason: 'Déjà B.O.S.S dans ce département' });
             continue;
           }
           try {
@@ -440,7 +440,7 @@ export class ServantService {
               .update({ department_ids: merged, updated_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
-            result.skipped.push({ name, reason: 'Déjà serviteur — département ajouté à sa fiche existante' });
+            result.skipped.push({ name, reason: 'Déjà B.O.S.S — département ajouté à sa fiche existante' });
           } catch (e: any) {
             result.skipped.push({ name, reason: e?.message || 'Erreur lors de la mise à jour' });
           }
@@ -504,7 +504,7 @@ export class ServantService {
 
         if (existing) {
           if (existing.departmentIds.includes(departmentId)) {
-            result.skipped.push({ name, reason: 'Déjà serviteur dans ce département' });
+            result.skipped.push({ name, reason: 'Déjà B.O.S.S dans ce département' });
             continue;
           }
           try {
@@ -513,7 +513,7 @@ export class ServantService {
               .update({ department_ids: merged, updated_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
-            result.skipped.push({ name, reason: 'Déjà serviteur — département ajouté à sa fiche existante' });
+            result.skipped.push({ name, reason: 'Déjà B.O.S.S — département ajouté à sa fiche existante' });
           } catch (e: any) {
             result.skipped.push({ name, reason: e?.message || 'Erreur lors de la mise à jour' });
           }

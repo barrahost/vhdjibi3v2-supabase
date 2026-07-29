@@ -59,7 +59,7 @@ export default function ConvertServantToUserModal({ isOpen, onClose, servant, on
 
       if (error) throw error;
 
-      // Lier le serviteur à l'utilisateur créé
+      // Lier le B.O.S.S à l'utilisateur créé
       await supabase.from('servants').update({
         source_type: 'user',
         source_id: uid,

@@ -74,7 +74,7 @@ export default function EvangelizationForm() {
   const navLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Acces : deja connecte (session existante) -> direct ; sinon on demande de choisir
-  // entre se connecter (serviteur/evangeliste) et continuer en invite (sans compte).
+  // entre se connecter (B.O.S.S/evangeliste) et continuer en invite (sans compte).
   const [accessMode, setAccessMode] = useState<AccessMode>(user ? 'authenticated' : 'choice');
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -210,7 +210,7 @@ export default function EvangelizationForm() {
             {accessMode === 'choice' && (
               <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
                 <p className="text-sm text-gray-600">
-                  Es-tu serviteur / évangéliste avec un compte sur l'application ?
+                  Es-tu B.O.S.S / évangéliste avec un compte sur l'application ?
                 </p>
                 <button
                   onClick={() => setAccessMode('login')}

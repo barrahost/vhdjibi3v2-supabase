@@ -594,7 +594,7 @@ const handleDelete = (church: Church) => {
                 <ul className="text-xs text-gray-500 list-disc list-inside mb-4 space-y-1 bg-gray-50 rounded-lg p-3">
                   <li>Âmes, présences, interactions</li>
                   <li>Audios, enseignements</li>
-                  <li>Utilisateurs et serviteurs</li>
+                  <li>Utilisateurs et B.O.S.S</li>
                   <li>DNS et domaine Cloudflare</li>
                 </ul>
                 <p className="text-sm font-medium text-gray-700 mb-1">Tapez le nom exact pour confirmer :</p>

@@ -36,14 +36,14 @@ export function ChangelogModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
               <p className="text-sm font-medium">Version 1.7.17</p>
               <ul className="mt-2 space-y-1 text-sm">
                 <li>Ajout de filtres de statut pour la gestion des âmes (Actives/Inactives/Toutes)</li>
-                <li>Ajout de filtres de statut pour la gestion des serviteurs (Actifs/Inactifs/Tous)</li>
+                <li>Ajout de filtres de statut pour la gestion des B.O.S.S (Actifs/Inactifs/Tous)</li>
                 <li>Ajout de filtres de statut pour la gestion des utilisateurs (Actifs/Inactifs/Tous)</li>
                 <li>Par défaut, seules les entités actives sont affichées dans toutes les listes</li>
               </ul>
               <p className="text-sm font-medium">Version 1.7.16</p>
               <ul className="mt-2 space-y-1 text-sm">
                 <li>Ajout de la possibilité d'activer/désactiver les âmes depuis leur formulaire d'édition</li>
-                <li>Ajout de la possibilité d'activer/désactiver les serviteurs depuis leur formulaire d'édition</li>
+                <li>Ajout de la possibilité d'activer/désactiver les B.O.S.S depuis leur formulaire d'édition</li>
                 <li>Amélioration de la gestion des entités inactives dans l'application</li>
                 <li>Les bergers ne peuvent pas modifier le statut des âmes (restriction de permission)</li>
               </ul>
@@ -62,7 +62,7 @@ export function ChangelogModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
               <p className="text-sm font-medium">Version 1.7.13</p>
               <ul className="mt-2 space-y-1 text-sm">
                 <li>Réorganisation complète du menu de navigation pour le Super Admin en 5 groupes logiques</li>
-                <li>Gestion des Personnes : Utilisateurs, Âmes, Serviteurs, Familles de service, Âmes indécises</li>
+                <li>Gestion des Personnes : Utilisateurs, Âmes, B.O.S.S, Familles de service, Âmes indécises</li>
                 <li>Suivi & Interactions : Interactions, Rappels, Présences, Historique des présences, Progression spirituelle</li>
                 <li>Contenu & Communication : Gestion audio, Replay des enseignements, Gestion SMS, Modèles SMS</li>
                 <li>Outils & Configuration : Carte des âmes, Anniversaires, Départements, Paramètres</li>

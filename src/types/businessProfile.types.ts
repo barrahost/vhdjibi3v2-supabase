@@ -40,7 +40,7 @@ export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
 
 export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> = {
   shepherd: 'Peut promouvoir des âmes, gérer ses interactions',
-  department_leader: 'Peut gérer son département et ses serviteurs',
+  department_leader: 'Peut gérer son département et ses B.O.S.S',
   adn: 'Peut gérer les âmes, audios, statistiques',
   admin: 'Accès complet au système',
   family_leader: 'Peut voir les âmes de sa famille et les assigner à ses bergers',

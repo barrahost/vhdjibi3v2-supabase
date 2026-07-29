@@ -60,9 +60,9 @@ export interface Soul {
   updatedAt: Date;
   status: 'active' | 'inactive';
   photoURL?: string;
-  // Nouveaux champs pour la promotion en serviteur
-  isServant?: boolean; // Indique si l'âme est devenue serviteur
-  servantId?: string; // Lien vers l'enregistrement serviteur
+  // Nouveaux champs pour la promotion en B.O.S.S
+  isServant?: boolean; // Indique si l'âme est devenue B.O.S.S
+  servantId?: string; // Lien vers l'enregistrement B.O.S.S
   promotionToServantDate?: Date; // Date de promotion
   // Nouveaux champs ADN
   originSource?: 'culte' | 'evangelisation'; // Provenance de l'âme

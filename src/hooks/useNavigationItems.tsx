@@ -184,7 +184,7 @@ export function useNavigationItems(): NavItem[] {
       }
     }
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
-      children.push({ id: 'servants', label: 'Serviteurs', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
+      children.push({ id: 'servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
     }
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
       children.push({ id: 'interactions', label: 'Interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" /> });
@@ -228,7 +228,7 @@ export function useNavigationItems(): NavItem[] {
       children.push({ id: 'shepherd-families', label: 'Bergers & Familles', href: '/bergers', icon: <Users className="w-5 h-5" /> });
     }
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) && hasModule('servants')) {
-      children.push({ id: 'servants-admin', label: 'Serviteurs', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
+      children.push({ id: 'servants-admin', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
     }
 
     if (children.length > 0) {
@@ -244,7 +244,7 @@ export function useNavigationItems(): NavItem[] {
   // Family leader menu
   if (hasRole(ROLES.FAMILY_LEADER)) {
     const children: NavItem[] = [
-      { id: 'family-souls', label: 'Âmes de ma famille', href: '/ma-famille/ames', icon: <Heart className="w-5 h-5" /> },
+      { id: 'family-souls', label: 'Membres de ma famille', href: '/ma-famille/ames', icon: <Heart className="w-5 h-5" /> },
       { id: 'family-shepherds', label: 'Bergers de ma famille', href: '/ma-famille/bergers', icon: <Users className="w-5 h-5" /> },
       { id: 'family-progression', label: 'Progression de ma famille', href: '/ma-famille/progression', icon: <TrendingUp className="w-5 h-5" /> },
     ];

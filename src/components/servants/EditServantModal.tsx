@@ -92,7 +92,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
         }
       );
       
-      toast.success('Serviteur modifié avec succès');
+      toast.success('B.O.S.S modifié avec succès');
       onClose();
     } catch (error) {
       console.error('Error updating servant:', error);
@@ -106,7 +106,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Modifier un serviteur"
+      title="Modifier un B.O.S.S"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
         <div>
@@ -207,7 +207,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Statut du serviteur
+            Statut du B.O.S.S
           </label>
           <select
             value={formData.status}
@@ -218,7 +218,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
             <option value="inactive">Inactif</option>
           </select>
           <p className="mt-1 text-sm text-gray-500">
-            Un serviteur inactif n'apparaîtra plus dans les listes principales
+            Un B.O.S.S inactif n'apparaîtra plus dans les listes principales
           </p>
         </div>
 

@@ -6,7 +6,7 @@ import { getChurchId } from '../lib/churchId';
 
 export class SoulPromotionService {
   /**
-   * Promouvoir une âme au rang de serviteur
+   * Promouvoir une âme au rang de B.O.S.S
    */
   static async promoteToServant(soulId: string, servantData: ServantFormData): Promise<string> {
     try {
@@ -24,7 +24,7 @@ export class SoulPromotionService {
       const soulDataCurrent = soulRow as any;
 
       if (soulDataCurrent.is_servant) {
-        throw new Error('Cette âme est déjà promue au rang de serviteur');
+        throw new Error('Cette âme est déjà promue au rang de B.O.S.S');
       }
 
       const now = new Date().toISOString();
@@ -54,13 +54,13 @@ export class SoulPromotionService {
         .single();
 
       if (servantErr || !newServant) {
-        throw new Error('Erreur lors de la création du serviteur');
+        throw new Error('Erreur lors de la création du B.O.S.S');
       }
 
       const servantId = newServant.id;
 
       // Historique des départements : une âme ne "rejoint" un département
-      // qu'au moment de sa promotion en serviteur — on l'enregistre donc
+      // qu'au moment de sa promotion en B.O.S.S — on l'enregistre donc
       // automatiquement ici plutôt que via une saisie manuelle séparée.
       const currentProfile = soulDataCurrent.spiritual_profile || {};
       const currentDepartments: { name: string; startDate: string }[] = currentProfile.departments || [];
@@ -92,29 +92,29 @@ export class SoulPromotionService {
       }).eq('id', soulId);
 
       console.log('✅ [SoulPromotion] Promotion réussie:', { soulId, servantId });
-      toast.success(`${soulDataCurrent.full_name} a été promu(e) au rang de serviteur avec succès !`);
+      toast.success(`${soulDataCurrent.full_name} a été promu(e) au rang de B.O.S.S avec succès !`);
       return servantId;
 
     } catch (error) {
       console.error('Erreur lors de la promotion:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la promotion au rang de serviteur';
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la promotion au rang de B.O.S.S';
       toast.error(errorMessage);
       throw error;
     }
   }
 
   /**
-   * Vérifier si une âme peut être promue au rang de serviteur
+   * Vérifier si une âme peut être promue au rang de B.O.S.S
    */
   static canBePromoted(soul: Soul): { canPromote: boolean; reason?: string } {
     if (soul.isServant) {
-      return { canPromote: false, reason: 'Cette âme est déjà serviteur' };
+      return { canPromote: false, reason: 'Cette âme est déjà B.O.S.S' };
     }
     if (soul.status !== 'active') {
       return { canPromote: false, reason: 'Seules les âmes actives peuvent être promues' };
     }
     if (!soul.spiritualProfile?.isBornAgain) {
-      return { canPromote: false, reason: 'L\'âme doit être née de nouveau pour devenir serviteur' };
+      return { canPromote: false, reason: 'L\'âme doit être née de nouveau pour devenir B.O.S.S' };
     }
     return { canPromote: true };
   }

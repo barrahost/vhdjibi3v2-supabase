@@ -66,7 +66,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
     }
 
     if (!formData.email.trim()) {
-      toast.error('L\'email est requis pour les serviteurs');
+      toast.error('L\'email est requis pour les B.O.S.S');
       return;
     }
 
@@ -133,7 +133,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-primary">
           <UserPlus className="h-5 w-5" />
-          Promouvoir au rang de serviteur
+          Promouvoir au rang de B.O.S.S
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -227,7 +227,7 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
               disabled={loading}
               className="bg-primary hover:bg-primary/90"
             >
-              {loading ? 'Promotion en cours...' : 'Promouvoir au rang de serviteur'}
+              {loading ? 'Promotion en cours...' : 'Promouvoir au rang de B.O.S.S'}
             </Button>
           </div>
         </form>

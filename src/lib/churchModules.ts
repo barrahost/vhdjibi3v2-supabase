@@ -22,7 +22,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
   { key: 'birthdays',            label: 'Anniversaires',             description: 'Liste et rappels des anniversaires',     icon: '🎂',  category: 'pastoral' },
   // Administration
   { key: 'users',                label: 'Utilisateurs',              description: 'Gestion des membres et rôles',           icon: '👥',  category: 'administration' },
-  { key: 'servants',             label: 'Serviteurs',                description: 'Gestion des serviteurs',                 icon: '🤝',  category: 'administration' },
+  { key: 'servants',             label: 'B.O.S.S',                description: 'Gestion des B.O.S.S',                 icon: '🤝',  category: 'administration' },
   { key: 'departments',          label: 'Départements & Familles',   description: 'Gestion des départements et familles',   icon: '🏢',  category: 'administration' },
   // Communication
   { key: 'sms',                  label: 'SMS',                       description: 'Envoi de SMS et modèles',                icon: '📱',  category: 'communication' },

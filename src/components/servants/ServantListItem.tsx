@@ -19,20 +19,20 @@ interface ServantListItemProps {
 export default function ServantListItem({ servant, departmentName, departmentNames, onEdit, onConvert, variant = 'row' }: ServantListItemProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
-    if (await confirm('Êtes-vous sûr de vouloir supprimer ce serviteur ?')) {
+    if (await confirm('Êtes-vous sûr de vouloir supprimer ce B.O.S.S ?')) {
       try {
-        // Si c'est un responsable, vérifier s'il y a des serviteurs dans son département
+        // Si c'est un responsable, vérifier s'il y a des B.O.S.S dans son département
         if (servant.isHead) {
           // Mettre à jour le statut plutôt que de supprimer
           const { error: _updateErr } = await supabase.from('servants').update({
             status: 'inactive',
             updatedAt: new Date()
           });
-          toast.success('Serviteur désactivé avec succès');
+          toast.success('B.O.S.S désactivé avec succès');
         } else {
-          // Supprimer le serviteur
+          // Supprimer le B.O.S.S
           const { error: _deleteErr } = await supabase.from('servants').delete().eq('id', servant.id);
-          toast.success('Serviteur supprimé avec succès');
+          toast.success('B.O.S.S supprimé avec succès');
         }
       } catch (error) {
         console.error('Error deleting servant:', error);
@@ -48,7 +48,7 @@ export default function ServantListItem({ servant, departmentName, departmentNam
           ? 'bg-purple-100 text-purple-800'
           : 'bg-blue-100 text-blue-800'
       }`}>
-        {servant.isHead ? 'Responsable' : 'Serviteur'}
+        {servant.isHead ? 'Responsable' : 'B.O.S.S'}
       </span>
       {servant.sourceType === 'soul' || servant.originalSoulId ? (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">

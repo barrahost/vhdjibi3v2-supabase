@@ -43,8 +43,8 @@ export function CulteReportFields({ reportType, values: v, onChange, sonoSection
             <div><label className={labelCls}>Femmes</label><input type="number" min="0" onFocus={selectOnFocus} value={v.adultWomen} onChange={set('adultWomen')} className={inputCls} /></div>
             <div><label className={labelCls}>Garçons</label><input type="number" min="0" onFocus={selectOnFocus} value={v.childBoys} onChange={set('childBoys')} className={inputCls} /></div>
             <div><label className={labelCls}>Filles</label><input type="number" min="0" onFocus={selectOnFocus} value={v.childGirls} onChange={set('childGirls')} className={inputCls} /></div>
-            <div><label className={labelCls}>Serviteurs H.</label><input type="number" min="0" onFocus={selectOnFocus} value={v.servedMen} onChange={set('servedMen')} className={inputCls} /></div>
-            <div><label className={labelCls}>Serviteurs F.</label><input type="number" min="0" onFocus={selectOnFocus} value={v.servedWomen} onChange={set('servedWomen')} className={inputCls} /></div>
+            <div><label className={labelCls}>B.O.S.S H.</label><input type="number" min="0" onFocus={selectOnFocus} value={v.servedMen} onChange={set('servedMen')} className={inputCls} /></div>
+            <div><label className={labelCls}>B.O.S.S F.</label><input type="number" min="0" onFocus={selectOnFocus} value={v.servedWomen} onChange={set('servedWomen')} className={inputCls} /></div>
             <div><label className={labelCls}>Bloom</label><input type="number" min="0" onFocus={selectOnFocus} value={v.blooms} onChange={set('blooms')} className={inputCls} /></div>
           </div>
         </fieldset>

@@ -51,7 +51,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedDepartmentId]);
 
-  // Avertissement si le téléphone correspond à un serviteur existant (sera fusionné)
+  // Avertissement si le téléphone correspond à un B.O.S.S existant (sera fusionné)
   useEffect(() => {
     const phoneValidation = validatePhoneNumber(formData.phone);
     if (!phoneValidation.isValid || !phoneValidation.formattedNumber) {
@@ -137,11 +137,11 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         isHead: false
       });
 
-      toast.success('Serviteur ajouté avec succès');
+      toast.success('B.O.S.S ajouté avec succès');
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Error adding servant:', error);
-      toast.error(error?.message || 'Erreur lors de l\'ajout du serviteur');
+      toast.error(error?.message || 'Erreur lors de l\'ajout du B.O.S.S');
     } finally {
       setIsSubmitting(false);
     }
@@ -269,7 +269,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         disabled={isSubmitting}
         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00665C] disabled:opacity-50"
       >
-        {isSubmitting ? 'Ajout en cours...' : 'Ajouter le serviteur'}
+        {isSubmitting ? 'Ajout en cours...' : 'Ajouter le B.O.S.S'}
       </button>
     </form>
   );

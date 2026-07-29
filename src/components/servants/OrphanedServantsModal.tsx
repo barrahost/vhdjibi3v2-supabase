@@ -29,12 +29,12 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans, depart
   if (!isOpen) return null;
 
   const handleDeleteOne = async (id: string) => {
-    const _confirmed = await confirm('Supprimer définitivement ce serviteur orphelin ?');
+    const _confirmed = await confirm('Supprimer définitivement ce B.O.S.S orphelin ?');
     if (!_confirmed) return;
     try {
       setDeleting(id);
       const { error: _deleteErr } = await supabase.from('servants').delete().eq('id', id);
-      toast.success('Serviteur orphelin supprimé');
+      toast.success('B.O.S.S orphelin supprimé');
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la suppression');
@@ -44,12 +44,12 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans, depart
   };
 
   const handleDeleteAll = async () => {
-    if (!await confirm(`Supprimer définitivement les ${orphans.length} serviteur(s) orphelin(s) ?`)) return;
+    if (!await confirm(`Supprimer définitivement les ${orphans.length} B.O.S.S orphelin(s) ?`)) return;
     try {
       setDeletingAll(true);
       const ids = orphans.map(o => o.id);
       await supabase.from('servants').delete().in('id', ids);
-      toast.success(`${orphans.length} serviteur(s) orphelin(s) supprimé(s)`);
+      toast.success(`${orphans.length} B.O.S.S orphelin(s) supprimé(s)`);
       onClose();
     } catch (e) {
       console.error(e);
@@ -68,7 +68,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans, depart
     try {
       setAssigning(servantId);
       await ServantService.updateServant(servantId, { departmentIds: [deptId] });
-      toast.success('Serviteur réaffecté');
+      toast.success('B.O.S.S réaffecté');
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la réaffectation');
@@ -83,7 +83,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans, depart
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold">Serviteurs orphelins ({orphans.length})</h2>
+            <h2 className="text-lg font-semibold">B.O.S.S orphelins ({orphans.length})</h2>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
@@ -92,7 +92,7 @@ export default function OrphanedServantsModal({ isOpen, onClose, orphans, depart
 
         <div className="p-4 overflow-y-auto flex-1">
           <p className="text-sm text-gray-600 mb-4">
-            Ces serviteurs sont rattachés à un département qui n'existe plus. Réaffecte-les à un département existant, ou supprime-les.
+            Ces B.O.S.S sont rattachés à un département qui n'existe plus. Réaffecte-les à un département existant, ou supprime-les.
           </p>
 
           {orphans.length === 0 ? (

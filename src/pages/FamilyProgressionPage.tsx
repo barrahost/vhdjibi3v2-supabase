@@ -93,7 +93,7 @@ export default function FamilyProgressionPage() {
       <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Progression — Famille {familyName}</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard title="Total" value={stats.total} icon={Heart} trend="" trendLabel="âmes" iconClassName="text-[#00665C]" />
+        <StatCard title="Total" value={stats.total} icon={Heart} trend="" trendLabel="membres" iconClassName="text-[#00665C]" />
         <StatCard title="Nés de nouveau" value={stats.bornAgain} icon={TrendingUp} trend={stats.total ? `${Math.round(stats.bornAgain / stats.total * 100)}%` : '0%'} trendLabel="" iconClassName="text-green-600" />
         <StatCard title="Baptisés" value={stats.baptized} icon={Droplets} trend={stats.total ? `${Math.round(stats.baptized / stats.total * 100)}%` : '0%'} trendLabel="" iconClassName="text-blue-600" />
         <StatCard title="Académie" value={stats.academy} icon={BookOpen} trend={stats.total ? `${Math.round(stats.academy / stats.total * 100)}%` : '0%'} trendLabel="" iconClassName="text-purple-600" />
@@ -104,7 +104,7 @@ export default function FamilyProgressionPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Rechercher une âme..."
+          placeholder="Rechercher un membre..."
           value={searchTerm}
           onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
@@ -114,7 +114,7 @@ export default function FamilyProgressionPage() {
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-gray-500 bg-white border rounded-lg">
           <Users2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-          <p>{searchTerm ? 'Aucune âme ne correspond.' : 'Aucune âme dans cette famille.'}</p>
+          <p>{searchTerm ? 'Aucun membre ne correspond.' : 'Aucun membre dans cette famille.'}</p>
         </div>
       ) : (
         <div className="space-y-3">

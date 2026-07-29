@@ -253,7 +253,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
         isHead: canSetHead ? manualForm.isHead : false,
         sourceType: 'manual',
       });
-      toast.success('Serviteur créé avec succès');
+      toast.success('B.O.S.S créé avec succès');
       setManualForm({
         fullName: '',
         nickname: '',
@@ -273,7 +273,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Importer des serviteurs">
+    <Modal isOpen={isOpen} onClose={onClose} title="Importer des B.O.S.S">
       <div className="space-y-4 p-6 overflow-y-auto flex-1">
         {!fixedDepartmentId && (
           <div>
@@ -396,7 +396,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
                         )}
                         {row.alreadyServant && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 whitespace-nowrap">
-                            Déjà serviteur ici
+                            Déjà B.O.S.S ici
                           </span>
                         )}
                       </label>
@@ -411,7 +411,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
         {tab === 'manual' && (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Créez un nouveau serviteur qui n'existe ni dans la liste des âmes, ni dans celle des utilisateurs.
+              Créez un nouveau B.O.S.S qui n'existe ni dans la liste des âmes, ni dans celle des utilisateurs.
             </p>
 
             <div>
@@ -501,7 +501,7 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
               ) : (
                 <UserPlus className="w-4 h-4 mr-2" />
               )}
-              Créer le serviteur
+              Créer le B.O.S.S
             </Button>
           ) : (
             <Button

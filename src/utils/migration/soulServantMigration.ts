@@ -6,8 +6,8 @@ import { getChurchId } from '../../lib/churchId';
 
 export class SoulServantMigration {
   /**
-   * Migration script pour lier les âmes et serviteurs existants.
-   * Identifie les serviteurs qui ont des âmes correspondantes et crée les liens.
+   * Migration script pour lier les âmes et B.O.S.S existants.
+   * Identifie les B.O.S.S qui ont des âmes correspondantes et crée les liens.
    */
   static async linkExistingSoulsAndServants(): Promise<{
     linked: number;
@@ -38,7 +38,7 @@ export class SoulServantMigration {
         promotionToServantDate: row.promotion_to_servant_date ? new Date(row.promotion_to_servant_date) : undefined,
       })) as Soul[];
 
-      // Récupérer tous les serviteurs actifs
+      // Récupérer tous les B.O.S.S actifs
       const { data: servantsRows, error: servantsErr } = await supabase
         .from('servants')
         .select('*')
@@ -124,12 +124,12 @@ export class SoulServantMigration {
             .eq('id', soul.servant_id)
             .limit(1);
           if (!servantRows || servantRows.length === 0) {
-            brokenLinks.push(`Âme ${soul.full_name} (${soul.id}) référence un serviteur inexistant`);
+            brokenLinks.push(`Âme ${soul.full_name} (${soul.id}) référence un B.O.S.S inexistant`);
           } else {
             validLinks++;
           }
         } else {
-          brokenLinks.push(`Âme ${soul.full_name} (${soul.id}) marquée comme serviteur mais sans servantId`);
+          brokenLinks.push(`Âme ${soul.full_name} (${soul.id}) marquée comme B.O.S.S mais sans servantId`);
         }
       }
 

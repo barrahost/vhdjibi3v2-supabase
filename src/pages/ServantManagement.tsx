@@ -45,7 +45,7 @@ export default function ServantManagement() {
     const servantsToDelete = allServants.filter(s => selectedServantIds.includes(s.id));
     
     if (servantsToDelete.length === 0) {
-      toast.error('Aucun serviteur sélectionné');
+      toast.error('Aucun B.O.S.S sélectionné');
       return;
     }
 
@@ -59,7 +59,7 @@ export default function ServantManagement() {
       
       let message = '';
       if (result.deleted > 0) {
-        message += `${result.deleted} serviteur(s) supprimé(s)`;
+        message += `${result.deleted} B.O.S.S supprimé(s)`;
       }
       if (result.deactivated > 0) {
         if (message) message += ', ';
@@ -84,7 +84,10 @@ export default function ServantManagement() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-lg sm:text-2xl font-bold text-foreground">Gestion des Serviteurs</h1>
+        <div>
+          <h1 className="text-lg sm:text-2xl font-bold text-foreground">Gestion des B.O.S.S</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Bons Ouvriers au Service du Seigneur</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {selectedServantIds.length > 0 && canManageServants && (
             <Button
@@ -103,7 +106,7 @@ export default function ServantManagement() {
               className="flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
-              Importer des serviteurs
+              Importer des B.O.S.S
             </Button>
           )}
           {canManageServants && (
@@ -112,7 +115,7 @@ export default function ServantManagement() {
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              {showForm ? 'Masquer le formulaire' : 'Ajouter un serviteur'}
+              {showForm ? 'Masquer le formulaire' : 'Ajouter un B.O.S.S'}
             </Button>
           )}
         </div>
@@ -124,7 +127,7 @@ export default function ServantManagement() {
           {isAdmin && (
             <TabsTrigger value="all" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Tous les serviteurs
+              Tous les B.O.S.S
             </TabsTrigger>
           )}
           {canManageDepartmentServants && (
@@ -151,14 +154,14 @@ export default function ServantManagement() {
                 >
                   <option value="active">Actifs uniquement</option>
                   <option value="inactive">Inactifs uniquement</option>
-                  <option value="all">Tous les serviteurs</option>
+                  <option value="all">Tous les B.O.S.S</option>
                 </select>
               </div>
             </div>
             
             {showForm && (
               <div className="bg-card p-6 rounded-lg shadow-sm border">
-                <h2 className="text-lg font-semibold text-primary mb-4">Ajouter un serviteur</h2>
+                <h2 className="text-lg font-semibold text-primary mb-4">Ajouter un B.O.S.S</h2>
                 <ServantForm onSuccess={() => setShowForm(false)} />
               </div>
             )}

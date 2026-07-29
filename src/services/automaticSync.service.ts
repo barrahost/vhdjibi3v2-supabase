@@ -9,7 +9,7 @@ import { getChurchId } from '../lib/churchId';
  */
 export class AutomaticSyncService {
   /**
-   * Synchronise les profils après création d'un serviteur
+   * Synchronise les profils après création d'un B.O.S.S
    */
   static async syncOnServantCreation(
     servantData: {
@@ -66,7 +66,7 @@ export class AutomaticSyncService {
   }
 
   /**
-   * Synchronise les profils après modification d'un serviteur
+   * Synchronise les profils après modification d'un B.O.S.S
    */
   static async syncOnServantUpdate(
     oldData: { isHead: boolean; email?: string },
@@ -127,7 +127,7 @@ export class AutomaticSyncService {
   }
 
   /**
-   * Synchronise lors de la suppression d'un serviteur responsable
+   * Synchronise lors de la suppression d'un B.O.S.S responsable
    */
   static async syncOnServantDeletion(
     servantData: { fullName: string; email?: string; isHead: boolean }

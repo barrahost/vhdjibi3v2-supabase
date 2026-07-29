@@ -152,7 +152,7 @@ export function DepartmentActivityModal({ isOpen, onClose, onSaved, departmentId
             </div>
             <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
               {servants.length === 0 ? (
-                <p className="px-3 py-4 text-xs text-gray-400 text-center">Aucun serviteur dans ce département</p>
+                <p className="px-3 py-4 text-xs text-gray-400 text-center">Aucun B.O.S.S dans ce département</p>
               ) : (
                 servants.map((s) => {
                   const isPresent = presentIds.has(s.id);

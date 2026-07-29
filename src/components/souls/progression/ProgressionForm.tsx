@@ -80,7 +80,7 @@ export function ProgressionForm({ value, onChange, soul, onSoulUpdate }: Progres
         />
       </div>
 
-      {/* Section de promotion au rang de serviteur */}
+      {/* Section de promotion au rang de B.O.S.S */}
       {soul && canPromoteToServant && !soul.isServant && (
         <>
           <Separator className="my-6" />

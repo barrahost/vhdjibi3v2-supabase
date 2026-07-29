@@ -71,7 +71,7 @@ export class ShepherdPromotionService {
           is_head: true,
           updated_at: now,
         }).eq('id', servantRows[0].id);
-        console.log('🔄 [ShepherdPromotion] Mise à jour serviteur existant:', servantRows[0].id);
+        console.log('🔄 [ShepherdPromotion] Mise à jour B.O.S.S existant:', servantRows[0].id);
       } else {
         const newServant = {
           full_name: userRow.full_name,
@@ -87,7 +87,7 @@ export class ShepherdPromotionService {
           updated_at: now,
         };
         const { data: inserted } = await supabase.from('servants').insert(newServant).select('id').single();
-        console.log('➕ [ShepherdPromotion] Création nouveau serviteur:', inserted?.id);
+        console.log('➕ [ShepherdPromotion] Création nouveau B.O.S.S:', inserted?.id);
       }
 
       await supabase.from('users').update({

@@ -173,11 +173,11 @@ export default function FamilyLeaderDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
-          title="Total âmes"
+          title="Total membres"
           value={stats.total}
           icon={Heart}
           trend={`${stats.total}`}
-          trendLabel="âmes dans la famille"
+          trendLabel="membres dans la famille"
           iconClassName="text-[#00665C]"
         />
         <StatCard
@@ -218,7 +218,7 @@ export default function FamilyLeaderDashboard() {
                       </span>
                     )}
                   </div>
-                  <div className="w-16 text-sm text-gray-600 tabular-nums">{r.count} âme{r.count > 1 ? 's' : ''}</div>
+                  <div className="w-16 text-sm text-gray-600 tabular-nums">{r.count} membre{r.count > 1 ? 's' : ''}</div>
                   <div className="flex-1 h-2 bg-gray-100 rounded overflow-hidden">
                     <div
                       className="h-full bg-[#00665C] transition-all"
@@ -233,7 +233,7 @@ export default function FamilyLeaderDashboard() {
               <div className="px-4 py-3 flex items-center gap-3 bg-amber-50/40">
                 <div className="w-40 sm:w-56 truncate text-sm text-amber-800 italic">Non assignées</div>
                 <div className="w-16 text-sm text-amber-700 tabular-nums">
-                  {stats.unassigned} âme{stats.unassigned > 1 ? 's' : ''}
+                  {stats.unassigned} membre{stats.unassigned > 1 ? 's' : ''}
                 </div>
                 <div className="flex-1 h-2 bg-amber-100 rounded overflow-hidden">
                   <div
@@ -251,7 +251,7 @@ export default function FamilyLeaderDashboard() {
       {/* Liste des âmes */}
       <div id="famille-ames" className="bg-white border rounded-lg overflow-hidden scroll-mt-4">
         <div className="px-4 py-3 border-b bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="font-semibold text-gray-900">Âmes de la famille</h2>
+          <h2 className="font-semibold text-gray-900">Membres de la famille</h2>
           {souls.length > 0 && (
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -268,11 +268,11 @@ export default function FamilyLeaderDashboard() {
 
         {souls.length === 0 ? (
           <div className="p-6 text-center text-gray-500 text-sm">
-            Aucune âme assignée à cette famille pour le moment.
+            Aucun membre assigné à cette famille pour le moment.
           </div>
         ) : filteredSouls.length === 0 ? (
           <div className="p-6 text-center text-gray-500 text-sm">
-            Aucune âme ne correspond à « {search} ».
+            Aucun membre ne correspond à « {search} ».
           </div>
         ) : (
           <>

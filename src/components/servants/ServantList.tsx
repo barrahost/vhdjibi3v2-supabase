@@ -100,7 +100,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     }
   };
 
-  // Charger les serviteurs
+  // Charger les B.O.S.S
   useEffect(() => {
     const loadServants = async () => {
       let q = supabase.from('servants').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
@@ -114,7 +114,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
       const { data, error } = await q;
       if (error) {
         console.error('Error loading servants:', error);
-        toast.error('Erreur lors du chargement des serviteurs');
+        toast.error('Erreur lors du chargement des B.O.S.S');
         setLoading(false);
         return;
       }
@@ -151,7 +151,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   const validDeptIds = useMemo(() => new Set(departments.map(d => d.id)), [departments]);
   const departmentsLoaded = departments.length > 0;
 
-  // Orphelins = serviteurs sans aucun département valide
+  // Orphelins = B.O.S.S sans aucun département valide
   const orphanServants = useMemo(() => {
     if (!departmentsLoaded) return [];
     return servants.filter(s => !s.departmentIds?.some(id => validDeptIds.has(id)));
@@ -205,7 +205,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="text-gray-500">Chargement des serviteurs...</div>
+        <div className="text-gray-500">Chargement des B.O.S.S...</div>
       </div>
     );
   }
@@ -216,7 +216,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-300 bg-amber-50">
           <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
           <div className="flex-1 text-sm text-amber-900">
-            <strong>{orphanServants.length}</strong> serviteur{orphanServants.length > 1 ? 's sont liés' : ' est lié'} à des départements supprimés.
+            <strong>{orphanServants.length}</strong> B.O.S.S{orphanServants.length > 1 ? ' sont liés' : ' est lié'} à des départements supprimés.
           </div>
           <button
             onClick={() => setShowOrphanModal(true)}
@@ -231,7 +231,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher un serviteur..."
+            placeholder="Rechercher un B.O.S.S..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
@@ -271,7 +271,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
       <div className="lg:hidden space-y-3">
         {paginatedServants.length === 0 ? (
           <div className="text-center py-8 bg-white rounded-lg border text-gray-500">
-            Aucun serviteur trouvé
+            Aucun B.O.S.S trouvé
           </div>
         ) : (
           paginatedServants.map((servant) => (
@@ -342,7 +342,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
               {paginatedServants.length === 0 ? (
                 <tr>
                   <td colSpan={onSelectionChange ? 5 : 4} className="px-6 py-4 text-center text-gray-500">
-                    Aucun serviteur trouvé
+                    Aucun B.O.S.S trouvé
                   </td>
                 </tr>
               ) : (

@@ -296,7 +296,7 @@ function AppContent() {
             </PrivateRoute>
           } />
 
-          {/* Gestion des serviteurs */}
+          {/* Gestion des B.O.S.S */}
           <Route path="serviteurs" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SERVANTS, PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS]}>
               <ServantManagement />

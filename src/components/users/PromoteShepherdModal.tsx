@@ -121,7 +121,7 @@ export default function PromoteShepherdModal({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               <strong>Note :</strong> Cette action ajoutera le profil "Responsable de Département" 
-              à cet utilisateur, lui permettant de gérer les serviteurs de ce département.
+              à cet utilisateur, lui permettant de gérer les B.O.S.S de ce département.
             </p>
           </div>
 

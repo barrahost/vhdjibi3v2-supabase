@@ -93,7 +93,7 @@ export default function DepartmentLeaderDashboard() {
     }
   }, []);
 
-  // Récupérer les serviteurs du département
+  // Récupérer les B.O.S.S du département
   useEffect(() => {
     if (!department?.id) return;
 
@@ -178,14 +178,14 @@ export default function DepartmentLeaderDashboard() {
       <Card>
         <CardContent className="p-8 text-center">
           <div className="text-destructive">
-            Vous n'avez pas la permission de gérer les serviteurs de département.
+            Vous n'avez pas la permission de gérer les B.O.S.S de département.
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Serviteurs triés par taux de participation croissant (les moins actifs en tête)
+  // B.O.S.S triés par taux de participation croissant (les moins actifs en tête)
   const rateMap = new Map(participationRates.map((r) => [r.servantId, r]));
   const servantsWithRates = servants.map((s) => ({
     servant: s,
@@ -236,7 +236,7 @@ export default function DepartmentLeaderDashboard() {
               </span>
               <div className="min-w-0">
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{stats.totalServants}</p>
-                <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">Serviteurs</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">B.O.S.S</p>
               </div>
             </div>
           </CardContent>
@@ -307,7 +307,7 @@ export default function DepartmentLeaderDashboard() {
           {servants.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm">Aucun serviteur dans ce département</p>
+              <p className="text-sm">Aucun B.O.S.S dans ce département</p>
             </div>
           ) : totalActivities === 0 ? (
             <div className="text-center py-6">
@@ -362,11 +362,11 @@ export default function DepartmentLeaderDashboard() {
         </CardContent>
       </Card>
 
-      {/* Liste des serviteurs (gestion) */}
+      {/* Liste des B.O.S.S (gestion) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm sm:text-base">
-            <span>Serviteurs du département</span>
+            <span>B.O.S.S du département</span>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 onClick={() => setShowImportModal(true)}
@@ -392,7 +392,7 @@ export default function DepartmentLeaderDashboard() {
           {servants.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm">Aucun serviteur dans ce département</p>
+              <p className="text-sm">Aucun B.O.S.S dans ce département</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">

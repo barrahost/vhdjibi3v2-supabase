@@ -48,7 +48,7 @@ export default function FamilyShepherdsPage() {
         <div className="bg-white border rounded-lg p-8 text-center text-gray-500">
           <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
           <p>Aucun berger n'est encore rattaché à cette famille.</p>
-          <p className="text-sm mt-1">Les bergers apparaissent dès qu'une âme de la famille leur est assignée.</p>
+          <p className="text-sm mt-1">Les bergers apparaissent dès qu'un membre de la famille leur est assigné.</p>
         </div>
       ) : (
         <div className="bg-white border rounded-lg overflow-hidden">
@@ -68,7 +68,7 @@ export default function FamilyShepherdsPage() {
                   </div>
                   <div className="flex items-center gap-1.5 text-sm text-gray-600">
                     <Heart className="w-4 h-4 text-[#00665C]" />
-                    <span>{sh.soulCount} âme{sh.soulCount > 1 ? 's' : ''}</span>
+                    <span>{sh.soulCount} membre{sh.soulCount > 1 ? 's' : ''}</span>
                   </div>
                 </div>
               ))}

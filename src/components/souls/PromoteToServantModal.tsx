@@ -59,7 +59,7 @@ export default function PromoteToServantModal({ isOpen, onClose, soul, onSuccess
 
       if (soulErr) throw soulErr;
 
-      toast.success(`${soul.fullName} est maintenant serviteur`);
+      toast.success(`${soul.fullName} est maintenant B.O.S.S`);
       onSuccess?.();
       onClose();
     } catch (err: any) {
@@ -71,7 +71,7 @@ export default function PromoteToServantModal({ isOpen, onClose, soul, onSuccess
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Promouvoir en serviteur">
+    <Modal isOpen={isOpen} onClose={onClose} title="Promouvoir en B.O.S.S">
       <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
         <div className="bg-[#00665C]/5 border border-[#00665C]/20 rounded-lg p-4 space-y-1">
           <p className="text-sm font-semibold text-gray-900">{soul.fullName}</p>
@@ -110,7 +110,7 @@ export default function PromoteToServantModal({ isOpen, onClose, soul, onSuccess
         </div>
 
         <p className="text-xs text-gray-500">
-          Cette âme disparaîtra de la liste des âmes et apparaîtra dans Gestion des Serviteurs.
+          Cette âme disparaîtra de la liste des âmes et apparaîtra dans Gestion des B.O.S.S.
           Ses données de progression restent accessibles.
         </p>
 

@@ -135,7 +135,7 @@ export default function UserForm({ onSuccess }: UserFormProps) {
         photo: null
       });
 
-      // Si berger ou responsable de département → créer aussi un serviteur
+      // Si berger ou responsable de département → créer aussi un B.O.S.S
       const hasShepherdProfile = formData.businessProfiles.some(
         p => p.type === 'shepherd' || p.type === 'department_leader'
       );
@@ -152,10 +152,10 @@ export default function UserForm({ onSuccess }: UserFormProps) {
             isShepherd: true,
             shepherdId: docRef.id
           });
-          toast.success('Utilisateur et serviteur ajoutés avec succès. Un mot de passe par défaut a été attribué.');
+          toast.success('Utilisateur et B.O.S.S ajoutés avec succès. Un mot de passe par défaut a été attribué.');
         } catch (servantError) {
           console.error('Error creating servant entry:', servantError);
-          toast.error('Utilisateur ajouté, mais erreur lors de la création du serviteur correspondant.');
+          toast.error('Utilisateur ajouté, mais erreur lors de la création du B.O.S.S correspondant.');
         }
       } else {
         toast.success('Utilisateur ajouté avec succès. Un mot de passe par défaut a été attribué.');

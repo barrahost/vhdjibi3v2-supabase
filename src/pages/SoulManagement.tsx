@@ -364,7 +364,7 @@ export default function SoulManagement({ embedded = false }: SoulManagementProps
               <button
                 onClick={(e) => { e.stopPropagation(); setPromotingSoul(soul); }}
                 className="p-1 text-[#00665C] hover:bg-[#00665C]/10 rounded transition-colors"
-                title="Promouvoir en serviteur"
+                title="Promouvoir en B.O.S.S"
               >
                 <Shield className="w-4 h-4" />
               </button>

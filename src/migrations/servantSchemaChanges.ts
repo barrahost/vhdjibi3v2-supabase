@@ -56,7 +56,7 @@ export async function migrateToServantSchema() {
     return { success: true, stats: { shepherdsMigrated, shepherdsSkipped } };
   } catch (error) {
     console.error('Error migrating to servant schema:', error);
-    toast.error('Erreur lors de la migration du schéma des serviteurs');
+    toast.error('Erreur lors de la migration du schéma des B.O.S.S');
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

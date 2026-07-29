@@ -44,7 +44,7 @@ export default function BulkDeleteServantModal({
         <div className="flex items-start gap-2 mb-4 text-sm text-gray-600">
           <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
           <p>
-            Vous êtes sur le point de supprimer {servants.length} serviteur(s).
+            Vous êtes sur le point de supprimer {servants.length} B.O.S.S.
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export default function BulkDeleteServantModal({
           {regularServants.length > 0 && (
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold mb-2">
-                Serviteurs à supprimer ({regularServants.length})
+                B.O.S.S à supprimer ({regularServants.length})
               </h4>
               <div className="max-h-48 overflow-y-auto">
                 <ul className="space-y-1 text-sm">
@@ -87,7 +87,7 @@ export default function BulkDeleteServantModal({
           )}
 
           <p className="text-sm text-gray-500">
-            Cette action est irréversible pour les serviteurs supprimés.
+            Cette action est irréversible pour les B.O.S.S supprimés.
           </p>
         </div>
 

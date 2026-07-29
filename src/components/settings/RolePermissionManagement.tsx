@@ -47,7 +47,7 @@ const ROLE_INFO: Record<string, RoleInfo> = {
   [ROLES.DEPARTMENT_LEADER]: {
     role: ROLES.DEPARTMENT_LEADER,
     displayName: 'Responsable de Département',
-    description: 'Gestion de son département et de ses serviteurs',
+    description: 'Gestion de son département et de ses B.O.S.S',
     icon: Users,
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50'
@@ -78,7 +78,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   [PERMISSIONS.MANAGE_SHEPHERDS]: 'Gestion des bergers',
   [PERMISSIONS.MANAGE_DEPARTMENTS]: 'Gestion des départements',
   [PERMISSIONS.MANAGE_FAMILIES]: 'Gestion des familles de service',
-  [PERMISSIONS.MANAGE_SERVANTS]: 'Gestion des serviteurs',
+  [PERMISSIONS.MANAGE_SERVANTS]: 'Gestion des B.O.S.S',
   [PERMISSIONS.VIEW_STATS]: 'Visualisation des statistiques',
   [PERMISSIONS.EXPORT_DATA]: 'Export des données',
   [PERMISSIONS.MANAGE_SETTINGS]: 'Gestion des paramètres',
