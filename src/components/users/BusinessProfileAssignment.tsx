@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS, getProfileDepartmentIds } from '../../types/businessProfile.types';
-import { Star } from 'lucide-react';
+import { Star, ChevronDown, Check, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 
@@ -12,6 +12,8 @@ interface BusinessProfileAssignmentProps {
 
 export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMultiple = true }: BusinessProfileAssignmentProps) {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase
@@ -21,6 +23,18 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
       .order('name')
       .then(({ data }: { data: { id: string; name: string }[] | null }) => setDepartments(data || []));
   }, []);
+
+  // Fermer le menu au clic extérieur
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isOpen]);
 
   const toggleDepartment = (departmentId: string) => {
     const updated = selectedProfiles.map((p) => {
@@ -64,6 +78,7 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
         onChange(ensurePrimary([...selectedProfiles, newProfile]));
       } else {
         onChange([{ ...newProfile, isPrimary: true }]);
+        setIsOpen(false);
       }
     }
   };
@@ -76,118 +91,138 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
     onChange(updated);
   };
 
+  const selectedCount = selectedProfiles.length;
+
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-gray-600 mb-3">
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600">
         {allowMultiple
-          ? "Sélectionnez les profils métier pour cet utilisateur. Marquez celui qui sera utilisé par défaut à la connexion (Principal)."
-          : "Sélectionnez un profil métier pour cet utilisateur."
-        }
+          ? 'Sélectionnez les profils métier de cet utilisateur. Le profil « Principal » (★) détermine son tableau de bord d\'accueil — il a en permanence les accès de tous ses profils.'
+          : 'Sélectionnez un profil métier pour cet utilisateur.'}
+      </p>
+
+      {/* Liste déroulante multi-sélection */}
+      <div className="relative" ref={dropdownRef}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(v => !v)}
+          className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-md shadow-sm text-left text-sm flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C]"
+        >
+          <span className={selectedCount === 0 ? 'text-gray-400' : 'text-gray-900'}>
+            {selectedCount === 0
+              ? 'Sélectionner les profils métier...'
+              : `${selectedCount} profil${selectedCount > 1 ? 's' : ''} sélectionné${selectedCount > 1 ? 's' : ''}`}
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-72 overflow-y-auto">
+            {availableProfileTypes.map(profileType => {
+              const selected = isProfileSelected(profileType);
+              return (
+                <button
+                  key={profileType}
+                  type="button"
+                  onClick={() => toggleProfile(profileType)}
+                  className={`w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                    selected ? 'bg-[#00665C]/5' : ''
+                  }`}
+                >
+                  <span className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                    selected ? 'bg-[#00665C] border-[#00665C]' : 'border-gray-300'
+                  }`}>
+                    {selected && <Check className="w-3 h-3 text-white" />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-sm font-medium ${selected ? 'text-[#00665C]' : 'text-gray-700'}`}>
+                      {BUSINESS_PROFILE_LABELS[profileType]}
+                    </span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      {BUSINESS_PROFILE_DESCRIPTIONS[profileType]}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <div className="space-y-3 border border-gray-200 rounded-md p-4">
-        {availableProfileTypes.map(profileType => {
-          const selected = isProfileSelected(profileType);
-          const profile = selectedProfiles.find(p => p.type === profileType);
-          const isPrimary = !!profile?.isPrimary;
+      {/* Puces des profils sélectionnés : étoile = définir comme principal, croix = retirer */}
+      {selectedCount > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedProfiles.map(profile => {
+            const label = BUSINESS_PROFILE_LABELS[profile.type];
+            const isPrimary = !!profile.isPrimary;
+            return (
+              <span
+                key={profile.type}
+                className={`inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 text-xs font-semibold rounded-full border ${
+                  isPrimary
+                    ? 'bg-[#F2B636]/15 border-[#F2B636]/50 text-[#7a5a00]'
+                    : 'bg-gray-50 border-gray-200 text-gray-700'
+                }`}
+              >
+                {allowMultiple ? (
+                  <button
+                    type="button"
+                    onClick={() => setPrimary(profile.type)}
+                    title={isPrimary ? 'Profil principal' : 'Définir comme profil principal'}
+                    className="flex-shrink-0"
+                  >
+                    <Star className={`w-3.5 h-3.5 ${isPrimary ? 'fill-[#F2B636] text-[#F2B636]' : 'text-gray-300 hover:text-[#F2B636]'}`} />
+                  </button>
+                ) : null}
+                {label}
+                <button
+                  type="button"
+                  onClick={() => toggleProfile(profile.type)}
+                  title="Retirer ce profil"
+                  className="flex-shrink-0 p-0.5 rounded-full hover:bg-black/10"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
-          return (
-            <div key={profileType} className="flex items-start justify-between gap-3">
-              <div className="flex items-start flex-1">
-                <div className="flex items-center h-5">
+      {selectedCount === 0 && (
+        <p className="text-sm text-gray-500 italic">
+          Aucun profil sélectionné. L'utilisateur n'aura aucun accès au système.
+        </p>
+      )}
+
+      {/* Département(s) pour un responsable de département */}
+      {isProfileSelected('department_leader') && (
+        <div className="pl-3 border-l-2 border-gray-100">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Département(s) dirigé(s)
+          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Un responsable peut diriger plusieurs départements — cochez-en autant que nécessaire.
+          </p>
+          <div className="max-h-40 overflow-y-auto space-y-1.5 border border-gray-200 rounded-md p-2">
+            {departments.map((d) => {
+              const currentIds = getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader'));
+              return (
+                <label key={d.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                   <input
-                    id={`profile-${profileType}`}
                     type="checkbox"
-                    checked={selected}
-                    onChange={() => toggleProfile(profileType)}
+                    checked={currentIds.includes(d.id)}
+                    onChange={() => toggleDepartment(d.id)}
                     className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
                   />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor={`profile-${profileType}`} className="font-medium text-gray-700 flex items-center gap-2">
-                    {BUSINESS_PROFILE_LABELS[profileType]}
-                    {isPrimary && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F2B636]/20 text-[#7a5a00] text-xs font-medium">
-                        <Star className="w-3 h-3 fill-[#F2B636] text-[#F2B636]" />
-                        Principal
-                      </span>
-                    )}
-                  </label>
-                  <p className="text-gray-500 mt-1">
-                    {BUSINESS_PROFILE_DESCRIPTIONS[profileType]}
-                  </p>
-                </div>
-              </div>
-
-              {selected && allowMultiple && (
-                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer whitespace-nowrap pt-0.5">
-                  <input
-                    type="radio"
-                    name="primary-profile"
-                    checked={isPrimary}
-                    onChange={() => setPrimary(profileType)}
-                    className="h-4 w-4 text-[#00665C] border-gray-300 focus:ring-[#00665C]"
-                  />
-                  Principal
+                  {d.name}
                 </label>
-              )}
-            </div>
-          );
-        })}
-
-        {isProfileSelected('department_leader') && (
-          <div className="ml-7 pl-3 border-l-2 border-gray-100">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Département(s) dirigé(s)
-            </label>
-            <p className="text-xs text-gray-500 mb-2">
-              Un responsable peut diriger plusieurs départements — cochez-en autant que nécessaire.
-            </p>
-            <div className="max-h-40 overflow-y-auto space-y-1.5 border border-gray-200 rounded-md p-2">
-              {departments.map((d) => {
-                const currentIds = getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader'));
-                return (
-                  <label key={d.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={currentIds.includes(d.id)}
-                      onChange={() => toggleDepartment(d.id)}
-                      className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
-                    />
-                    {d.name}
-                  </label>
-                );
-              })}
-            </div>
-            {getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader')).length === 0 && (
-              <p className="mt-1 text-xs text-amber-600">
-                Sans département, cet utilisateur n'aura pas accès aux fonctions liées (ex : rapport de culte).
-              </p>
-            )}
+              );
+            })}
           </div>
-        )}
-
-        {selectedProfiles.length === 0 && (
-          <p className="text-sm text-gray-500 italic py-2">
-            Aucun profil sélectionné. L'utilisateur n'aura aucun accès au système.
-          </p>
-        )}
-      </div>
-
-      {selectedProfiles.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-          <div className="text-sm font-medium text-blue-800 mb-1">
-            Profils sélectionnés ({selectedProfiles.length}) :
-          </div>
-          <div className="text-sm text-blue-700">
-            {selectedProfiles.map(profile => {
-              const label = BUSINESS_PROFILE_LABELS[profile.type];
-              return profile.isPrimary ? `${label} ★` : label;
-            }).join(', ')}
-          </div>
-          {allowMultiple && selectedProfiles.length > 1 && (
-            <p className="text-xs text-blue-600 mt-2">
-              💡 Le profil marqué « Principal » sera celui actif lors de la connexion. L'utilisateur peut basculer ensuite.
+          {getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader')).length === 0 && (
+            <p className="mt-1 text-xs text-amber-600">
+              Sans département, cet utilisateur n'aura pas accès aux fonctions liées (ex : rapport de culte).
             </p>
           )}
         </div>
