@@ -156,7 +156,7 @@ export function useNavigationItems(): NavItem[] {
     children.push({ id: 'reminders', label: 'Rappels', href: '/rappels', icon: <Bell className="w-5 h-5" />, dataTour: 'nav-reminders' });
 
     if (children.length > 0) {
-      items.push({ id: 'monitoring', label: 'Suivi', icon: <FileText className="w-5 h-5" />, children });
+      items.push({ id: 'monitoring', label: 'Suivi berger', icon: <Heart className="w-5 h-5" />, children });
     }
   }
 
@@ -301,18 +301,22 @@ export function useNavigationItems(): NavItem[] {
     });
   }
 
-  // Evangelist menu
+  // Evangelist menu — groupé sous "Évangélisation" pour rester lisible en multi-casquettes
   if (hasRole(ROLES.EVANGELIST) && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
+    const children: NavItem[] = [];
+
     // Les admins/ADN ont déjà l'entrée "Âmes évangélisées" dans "Gestion des Âmes" : pas de doublon
     if (!isAdmin && !hasRole(ROLES.ADN)) {
-      items.push({ id: 'evangelized-souls', label: 'Âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
+      children.push({ id: 'evangelized-souls', label: 'Âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
     }
-    items.push({ id: 'evangelist-relances', label: 'À relancer', icon: <Clock className="w-5 h-5" />, href: '/evangelisation/relances' });
-    items.push({ id: 'evangelist-attendus', label: 'Attendus au culte', icon: <CalendarCheck className="w-5 h-5" />, href: '/evangelisation/attendus' });
+    children.push({ id: 'evangelist-relances', label: 'À relancer', icon: <Clock className="w-5 h-5" />, href: '/evangelisation/relances' });
+    children.push({ id: 'evangelist-attendus', label: 'Attendus au culte', icon: <CalendarCheck className="w-5 h-5" />, href: '/evangelisation/attendus' });
     // Les bergers/responsables de famille/admins ont déjà une entrée Interactions ailleurs
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS) && !hasRole(ROLES.SHEPHERD) && !hasRole(ROLES.FAMILY_LEADER) && !isAdmin) {
-      items.push({ id: 'evangelist-interactions', label: 'Mes interactions', icon: <MessageCircle className="w-5 h-5" />, href: '/interactions', dataTour: 'nav-interactions-evangelist' });
+      children.push({ id: 'evangelist-interactions', label: 'Mes interactions', icon: <MessageCircle className="w-5 h-5" />, href: '/interactions', dataTour: 'nav-interactions-evangelist' });
     }
+
+    items.push({ id: 'evangelization', label: 'Évangélisation', icon: <Megaphone className="w-5 h-5" />, children });
   }
 
   // Replay (not ADN)
