@@ -143,8 +143,8 @@ export function useNavigationItems(): NavItem[] {
 
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
       children.push(
-        { id: 'assigned-souls', label: 'Mes Âmes', href: '/assigned-souls', icon: <Heart className="w-5 h-5" />, dataTour: 'nav-assigned-souls' },
-        { id: 'interactions', label: 'Interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" />, dataTour: 'nav-interactions-shepherd' }
+        { id: 'assigned-souls', label: 'Mes âmes suivies', href: '/assigned-souls', icon: <Heart className="w-5 h-5" />, dataTour: 'nav-assigned-souls' },
+        { id: 'interactions', label: 'Mes interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" />, dataTour: 'nav-interactions-shepherd' }
       );
     }
     if (hasPermission(PERMISSIONS.MANAGE_ATTENDANCES)) {
@@ -213,7 +213,7 @@ export function useNavigationItems(): NavItem[] {
         ? alertCount('pending_evangelized')
         : 0;
       children.push(
-        { id: 'souls', label: 'Âmes', href: '/ames', icon: <Heart className="w-5 h-5" />, badge: alertCount('no_shepherd') + alertCount('undecided') + evangelizedBadge }
+        { id: 'souls', label: 'Toutes les âmes', href: '/ames', icon: <Heart className="w-5 h-5" />, badge: alertCount('no_shepherd') + alertCount('undecided') + evangelizedBadge }
       );
     } else if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
       children.push({ id: 'evangelized-souls-admin', label: 'Âmes évangélisées', href: '/ames-evangelisees', icon: <Megaphone className="w-5 h-5" />, badge: alertCount('pending_evangelized') });
@@ -244,14 +244,14 @@ export function useNavigationItems(): NavItem[] {
   // Family leader menu
   if (hasRole(ROLES.FAMILY_LEADER)) {
     const children: NavItem[] = [
-      { id: 'family-souls', label: 'Âmes', href: '/ma-famille/ames', icon: <Heart className="w-5 h-5" /> },
-      { id: 'family-shepherds', label: 'Bergers', href: '/ma-famille/bergers', icon: <Users className="w-5 h-5" /> },
-      { id: 'family-progression', label: 'Progression', href: '/ma-famille/progression', icon: <TrendingUp className="w-5 h-5" /> },
+      { id: 'family-souls', label: 'Âmes de ma famille', href: '/ma-famille/ames', icon: <Heart className="w-5 h-5" /> },
+      { id: 'family-shepherds', label: 'Bergers de ma famille', href: '/ma-famille/bergers', icon: <Users className="w-5 h-5" /> },
+      { id: 'family-progression', label: 'Progression de ma famille', href: '/ma-famille/progression', icon: <TrendingUp className="w-5 h-5" /> },
     ];
 
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
       children.push(
-        { id: 'family-interactions', label: 'Interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" /> },
+        { id: 'family-interactions', label: 'Interactions de ma famille', href: '/interactions', icon: <MessageCircle className="w-5 h-5" /> },
         { id: 'family-reminders', label: 'Rappels', href: '/rappels', icon: <Bell className="w-5 h-5" /> }
       );
     }
@@ -259,7 +259,7 @@ export function useNavigationItems(): NavItem[] {
       children.push({ id: 'family-sms', label: 'SMS', href: '/sms', icon: <MessageSquare className="w-5 h-5" /> });
     }
 
-    items.push({ id: 'family-management', label: 'Ma famille', icon: <UsersRound className="w-5 h-5" />, children });
+    items.push({ id: 'family-management', label: 'Ma famille de service', icon: <UsersRound className="w-5 h-5" />, children });
   }
 
   // Admin tracking & interactions
@@ -307,7 +307,7 @@ export function useNavigationItems(): NavItem[] {
 
     // Les admins/ADN ont déjà l'entrée "Âmes évangélisées" dans "Gestion des Âmes" : pas de doublon
     if (!isAdmin && !hasRole(ROLES.ADN)) {
-      children.push({ id: 'evangelized-souls', label: 'Âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
+      children.push({ id: 'evangelized-souls', label: 'Mes âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
     }
     children.push({ id: 'evangelist-relances', label: 'À relancer', icon: <Clock className="w-5 h-5" />, href: '/evangelisation/relances' });
     children.push({ id: 'evangelist-attendus', label: 'Attendus au culte', icon: <CalendarCheck className="w-5 h-5" />, href: '/evangelisation/attendus' });

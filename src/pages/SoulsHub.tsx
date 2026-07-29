@@ -103,7 +103,7 @@ export default function SoulsHub({ defaultTab = 'all' }: SoulsHubProps = {}) {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Âmes</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Toutes les âmes</h1>
         <div className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
           {availableTabs.map((key) => (
             <button

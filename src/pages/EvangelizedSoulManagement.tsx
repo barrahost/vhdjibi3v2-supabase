@@ -522,7 +522,7 @@ export default function EvangelizedSoulManagement({ embedded = false }: Evangeli
       <div className="hidden sm:flex sm:justify-between sm:items-center gap-3">
         {!embedded && (
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Megaphone className="w-7 h-7 text-[#00665C]" /> Âmes évangélisées
+            <Megaphone className="w-7 h-7 text-[#00665C]" /> {isAdmin || isADN ? 'Âmes évangélisées' : 'Mes âmes évangélisées'}
           </h1>
         )}
         <div className={`flex items-center gap-3 flex-wrap ${embedded ? 'ml-auto' : ''}`}>
@@ -583,7 +583,7 @@ export default function EvangelizedSoulManagement({ embedded = false }: Evangeli
         <div className="flex items-center justify-between gap-2">
           {!embedded && (
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-[#00665C]" /> Âmes évangélisées
+              <Megaphone className="w-5 h-5 text-[#00665C]" /> {isAdmin || isADN ? 'Âmes évangélisées' : 'Mes âmes évangélisées'}
             </h1>
           )}
           <div className={`flex items-center gap-2 ${embedded ? 'ml-auto' : ''}`}>
