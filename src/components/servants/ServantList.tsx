@@ -28,9 +28,11 @@ interface ServantListProps {
 }
 
 export default function ServantList({ statusFilter, selectedServantIds = [], onSelectionChange }: ServantListProps) {
-  const { user, activeRole } = useAuth();
+  const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const isAdmin = hasPermission('*') || hasPermission('MANAGE_SERVANTS');
+  // Vue restreinte responsable de département : dès qu'on détient ce profil sans être admin
+  const isDeptLeaderView = !isAdmin && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader');
   const [servants, setServants] = useState<Servant[]>([]);
   const [showOrphanModal, setShowOrphanModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -49,15 +51,15 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   });
   const { departments } = useDepartments();
 
-  // Auto-filter by department(s) if user is a department leader in that mode
+  // Auto-filter by department(s) if user is a department leader (non admin)
   useEffect(() => {
-    if (activeRole === 'department_leader' && user?.businessProfiles) {
+    if (isDeptLeaderView && user?.businessProfiles) {
       const deptLeaderProfile = user.businessProfiles.find((p: any) => p.type === 'department_leader');
       const ids = getProfileDepartmentIds(deptLeaderProfile);
       setLeaderDepartmentIds(ids);
       setSelectedDepartmentId(ids.length === 1 ? ids[0] : '');
     }
-  }, [activeRole, user?.businessProfiles]);
+  }, [isDeptLeaderView, user?.businessProfiles]);
 
   // Store servants data for bulk operations
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
       let q = supabase.from('servants').select('*').eq('church_id', getChurchId()).order('created_at', { ascending: false });
       if (selectedDepartmentId) {
         q = (q as any).contains('department_ids', [selectedDepartmentId]);
-      } else if (activeRole === 'department_leader' && leaderDepartmentIds.length > 1) {
+      } else if (isDeptLeaderView && leaderDepartmentIds.length > 1) {
         // No single department picked — leader sees servants across every department they head.
         q = (q as any).overlaps('department_ids', leaderDepartmentIds);
       }
@@ -241,12 +243,12 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
             value={selectedDepartmentId}
             onChange={(e) => setSelectedDepartmentId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
-            disabled={activeRole === 'department_leader' && leaderDepartmentIds.length <= 1}
+            disabled={isDeptLeaderView && leaderDepartmentIds.length <= 1}
           >
             <option value="">
-              {activeRole === 'department_leader' && leaderDepartmentIds.length > 1 ? 'Tous mes départements' : 'Tous les départements'}
+              {isDeptLeaderView && leaderDepartmentIds.length > 1 ? 'Tous mes départements' : 'Tous les départements'}
             </option>
-            {(activeRole === 'department_leader'
+            {(isDeptLeaderView
               ? departments.filter((d) => leaderDepartmentIds.includes(d.id))
               : departments
             ).map(department => (
@@ -255,7 +257,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
               </option>
             ))}
           </select>
-          {activeRole === 'department_leader' && (
+          {isDeptLeaderView && (
             <p className="text-xs text-muted-foreground mt-1">
               {leaderDepartmentIds.length > 1
                 ? 'Filtré par vos départements — choisissez-en un pour affiner'

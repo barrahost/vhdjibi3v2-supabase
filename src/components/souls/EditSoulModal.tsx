@@ -8,7 +8,7 @@ import { formatDateForInput } from '../../utils/dateUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { PhotoUpload } from '../ui/PhotoUpload';
 import { StorageService } from '../../services/storage.service';
-import { isShepherdUser } from '../../utils/roleHelpers';
+import { isShepherdUser, isAdminUser, isADNUser, isFamilyLeaderUser } from '../../utils/roleHelpers';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { PhoneInput } from '../ui/PhoneInput';
 import { LocationField } from './form/LocationField';
@@ -77,7 +77,7 @@ interface EditSoulModalProps {
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditSoulModalProps) {
-  const { user, userRole, activeRole } = useAuth();
+  const { user, userRole } = useAuth();
   const { families, loading: loadingFamilies } = useServiceFamilies(true);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -114,12 +114,13 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
     spiritual: {} as Soul['spiritualProfile'],
   });
 
-  // Rôle
-  const isAdnOnly = (activeRole === 'adn' || userRole === 'adn') && activeRole !== 'admin' && activeRole !== 'super_admin';
-  const canEditAdnFields = activeRole === 'admin' || activeRole === 'super_admin' || userRole === 'admin' || userRole === 'super_admin' || isAdnOnly;
+  // Rôle : toutes les casquettes détenues comptent (plus de bascule de profil)
+  const roleCheckUser = { role: userRole as string, businessProfiles: (user as any)?.businessProfiles };
+  const isAdminU = isAdminUser(roleCheckUser);
+  const isAdnOnly = isADNUser(roleCheckUser) && !isAdminU;
+  const canEditAdnFields = isAdminU || isAdnOnly;
   // Seuls les responsables de famille assignent un berger à une âme (+ admin/super_admin en secours)
-  const canAssignShepherd = activeRole === 'admin' || activeRole === 'super_admin' || userRole === 'admin' || userRole === 'super_admin'
-    || activeRole === 'family_leader' || userRole === 'family_leader';
+  const canAssignShepherd = isAdminU || isFamilyLeaderUser(roleCheckUser);
 
   const updateGeneral = (patch: Partial<typeof formData.general>) =>
     setFormData(prev => ({ ...prev, general: { ...prev.general, ...patch } }));

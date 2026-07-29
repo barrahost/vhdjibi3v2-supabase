@@ -5,6 +5,7 @@ import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { PhoneInput } from '../../components/ui/PhoneInput';
 import { useDepartments } from '../../hooks/useDepartments';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
 import { ServantService } from '../../services/servant.service';
 import { AlertTriangle } from 'lucide-react';
@@ -26,10 +27,13 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; deptNames: string[] } | null>(null);
   const { departments, loading: loadingDepartments } = useDepartments();
-  const { user, activeRole } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
 
-  // Quand on agit en responsable de département, on restreint le formulaire à SES département(s).
-  const lockedDepartmentIds = activeRole === 'department_leader'
+  // Responsable de département (non admin) : le formulaire est restreint à SES département(s).
+  const isDeptLeaderView = !(hasPermission('*') || hasPermission('MANAGE_SERVANTS'))
+    && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader');
+  const lockedDepartmentIds = isDeptLeaderView
     ? getProfileDepartmentIds(user?.businessProfiles?.find((p: any) => p.type === 'department_leader'))
     : [];
   const lockedDepartmentId = lockedDepartmentIds.length === 1 ? lockedDepartmentIds[0] : '';

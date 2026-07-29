@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../contexts/AuthContext';
-import { PERMISSIONS, ROLES } from '../constants/roles';
+import { isAdminUser, isADNUser } from '../utils/roleHelpers';
+import { PERMISSIONS } from '../constants/roles';
 import SoulManagement from './SoulManagement';
 import UndecidedSouls from './UndecidedSouls';
 import EvangelizedSoulManagement from './EvangelizedSoulManagement';
@@ -24,19 +25,20 @@ interface SoulsHubProps {
 
 export default function SoulsHub({ defaultTab = 'all' }: SoulsHubProps = {}) {
   const { hasPermission } = usePermissions();
-  const { activeRole, userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Le profil ADN n'a pas d'usage pour la liste "Évangélisées" (gestion en masse,
   // répartition...) — son seul besoin (rechercher une âme évangélisée en attente)
   // passe déjà par la recherche du bouton "Ajouter", pas par cet onglet.
-  const currentRole = activeRole || userRole;
+  const roleCheckUser = { role: userRole as string, businessProfiles: (user as any)?.businessProfiles };
+  const isAdnNotAdmin = isADNUser(roleCheckUser) && !isAdminUser(roleCheckUser);
   const availableTabs = useMemo(() => {
     const tabs: SoulTab[] = [];
     if (hasPermission(PERMISSIONS.MANAGE_SOULS)) tabs.push('all', 'undecided');
-    if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && currentRole !== ROLES.ADN) tabs.push('evangelized');
+    if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && !isAdnNotAdmin) tabs.push('evangelized');
     return tabs;
-  }, [hasPermission, currentRole]);
+  }, [hasPermission, isAdnNotAdmin]);
 
   const urlTab = searchParams.get('tab') as SoulTab | null;
   const resolveInitialTab = (): SoulTab => {

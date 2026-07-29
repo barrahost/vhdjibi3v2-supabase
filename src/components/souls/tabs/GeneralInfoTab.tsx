@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { useServiceFamilies } from '../../../hooks/useServiceFamilies';
 import { useAuth } from '../../../contexts/AuthContext';
+import { isAdminUser, isADNUser } from '../../../utils/roleHelpers';
 import { supabase } from '../../../lib/supabase';
 import { getChurchId } from '../../../lib/churchId';
 
@@ -52,16 +53,16 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
   const [shepherdName, setShepherdName] = useState<string | null>(null);
   const [shepherdRole, setShepherdRole] = useState<string | null>(null);
   const { families, loading: loadingFamilies } = useServiceFamilies(true);
-  const { activeRole, userRole } = useAuth();
+  const { user, userRole } = useAuth();
 
+  // Toutes les casquettes détenues comptent (plus de bascule de profil)
+  const roleCheckUser = { role: userRole as string, businessProfiles: (user as any)?.businessProfiles };
+  const isAdminU = isAdminUser(roleCheckUser);
   // Un ADN n'assigne pas le berger : il assigne une famille de service
-  const isAdnOnly = (activeRole === 'adn' || userRole === 'adn') && activeRole !== 'admin' && activeRole !== 'super_admin';
+  const isAdnOnly = isADNUser(roleCheckUser) && !isAdminU;
 
   // Seuls ADN, admin et super_admin peuvent modifier la provenance et la famille de service
-  const canEditAdnFields =
-    activeRole === 'admin' || activeRole === 'super_admin' ||
-    userRole === 'admin' || userRole === 'super_admin' ||
-    isAdnOnly;
+  const canEditAdnFields = isAdminU || isAdnOnly;
 
   // Charger le nom du berger si une âme est assignée
   useEffect(() => {

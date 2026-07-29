@@ -36,7 +36,7 @@ interface EvangelizedSoulManagementProps {
 
 export default function EvangelizedSoulManagement({ embedded = false }: EvangelizedSoulManagementProps = {}) {
   const { confirm, confirmModalProps } = useConfirmModal();
-  const { user, userRole, activeRole } = useAuth();
+  const { user, userRole } = useAuth();
   const [searchParams] = useSearchParams();
   const [souls, setSouls] = useState<EvangelizedSoul[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,11 +63,8 @@ export default function EvangelizedSoulManagement({ embedded = false }: Evangeli
   const [linkCopied, setLinkCopied] = useState(false);
   const publicLink = `${window.location.origin}/evangelisation`;
 
-  const activeProfileType = (activeRole || userRole) as string;
-  const activeBusinessProfiles = ((user as any)?.businessProfiles || []).filter(
-    (p: any) => p?.type === activeProfileType
-  );
-  const roleForCheck = { role: activeProfileType, businessProfiles: activeBusinessProfiles };
+  // Toutes les casquettes détenues comptent (plus de bascule de profil)
+  const roleForCheck = { role: userRole as string, businessProfiles: (user as any)?.businessProfiles };
   const isAdmin = isAdminUser(roleForCheck);
   const isADN = isADNUser(roleForCheck);
   const isEvangelist = isEvangelistUser(roleForCheck);

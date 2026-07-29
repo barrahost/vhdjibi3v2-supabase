@@ -6,10 +6,9 @@ import { DEFAULT_PASSWORDS } from '../constants/auth';
 import { RoleService } from '../services/auth/roleService';
 import type { Permission, Role, BaseRole } from '../types/permission.types';
 import { ROLE_PERMISSIONS } from '../constants/roles';
-import { PROFILE_PERMISSIONS, getProfilePermissions } from '../types/businessProfile.types';
+import { getAllProfilePermissions } from '../types/businessProfile.types';
 import type { BusinessProfileType } from '../types/businessProfile.types';
 import { validatePhoneNumber } from '../utils/phoneValidation';
-import toast from 'react-hot-toast';
 
 // Helper : churchId courant depuis le hostname (même logique que ChurchContext)
 function getCurrentChurchId(): string {
@@ -80,8 +79,6 @@ interface AuthState {
   permissions: Permission[];
   login: (phone: string, password: string) => Promise<any>;
   logout: () => void;
-  switchRole: (role: BaseRole | BusinessProfileType) => void;
-  switchToProfile: (profileType: BusinessProfileType) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -94,8 +91,6 @@ const AuthContext = createContext<AuthState>({
   permissions: [],
   login: async () => {},
   logout: () => {},
-  switchRole: () => {},
-  switchToProfile: async () => {},
 });
 
 // ---------------------------------------------------------------------------
@@ -113,8 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     permissions: [],
     login: async () => null,
     logout: () => {},
-    switchRole: () => {},
-    switchToProfile: async () => {},
   });
 
   // -------------------------------------------------------------------------
@@ -155,25 +148,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.businessProfiles && Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0) {
         availableRoles = userData.businessProfiles.map((p: any) => p.type);
 
-        const savedActiveProfile = localStorage.getItem('activeProfileType') as BusinessProfileType | null;
-        let chosenProfile: BusinessProfileType | null = null;
-
-        if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
-          chosenProfile = savedActiveProfile;
-        } else {
-          const primary = userData.businessProfiles.find((p: any) => p.isPrimary);
-          const active = userData.businessProfiles.find((p: any) => p.isActive);
-          chosenProfile = (primary?.type ?? active?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
-        }
+        // Plus de bascule de profil : tous les profils sont actifs en permanence
+        // et les permissions sont l'union de toutes les casquettes.
+        // activeRole devient le profil "principal" (dashboard d'accueil).
+        const primary = userData.businessProfiles.find((p: any) => p.isPrimary);
+        const primaryType = (primary?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
 
         userData.businessProfiles = userData.businessProfiles.map((p: any) => ({
           ...p,
-          isActive: p.type === chosenProfile,
+          isActive: true,
         }));
 
-        activePermissions = getProfilePermissions(chosenProfile) as Permission[];
-        activeRole = chosenProfile as BaseRole;
-        localStorage.setItem('activeProfileType', chosenProfile);
+        activePermissions = getAllProfilePermissions(userData.businessProfiles) as Permission[];
+        activeRole = primaryType as BaseRole;
+        localStorage.removeItem('activeProfileType');
         localStorage.setItem('user', JSON.stringify(userData));
       } else {
         if (userData.roles?.primary) {
@@ -207,18 +195,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getUserPermissions = (role: Role): Permission[] => {
     const permissions = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS];
     return Array.isArray(permissions) ? [...permissions] : [];
-  };
-
-  const getRoleLabel = (role: BaseRole | BusinessProfileType) => {
-    switch (role) {
-      case 'super_admin': return 'Super Admin';
-      case 'admin': return 'Administrateur';
-      case 'shepherd': return 'Berger(e)';
-      case 'adn': return 'ADN';
-      case 'department_leader': return 'Responsable Département';
-      case 'family_leader': return 'Responsable de Famille';
-      default: return 'Utilisateur';
-    }
   };
 
   // -------------------------------------------------------------------------
@@ -354,14 +330,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (error) console.warn('last_login_at non mis a jour:', error.message);
         });
 
-      // Determine permissions
+      // Determine permissions (union de tous les profils détenus)
       let permissions: Permission[] = [];
       if (userData.businessProfiles && userData.businessProfiles.length > 0) {
-        const activeProfileTypes = userData.businessProfiles
-          .filter((p: any) => p.isActive)
-          .map((p: any) => p.type as BusinessProfileType);
-        const chosenType = activeProfileTypes[0] ?? userData.businessProfiles[0].type;
-        permissions = getProfilePermissions(chosenType) as Permission[];
+        permissions = getAllProfilePermissions(userData.businessProfiles) as Permission[];
       } else {
         permissions = getUserPermissions(userData.role as Role);
       }
@@ -371,34 +343,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Build userToStore
       const userToStore: any = { ...userData };
 
-      // Determine available roles & activeRole
+      // Determine available roles & activeRole (profil principal, sans bascule)
       let availableRoles: BaseRole[] = [];
       let activeRole: BaseRole | null = null;
 
       if (userData.businessProfiles && Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0) {
         availableRoles = userData.businessProfiles.map((p: any) => p.type as BaseRole);
 
-        const savedActiveProfile = localStorage.getItem('activeProfileType') as BusinessProfileType | null;
         const primary = userData.businessProfiles.find((p: any) => p.isPrimary);
-        let chosenProfile: BusinessProfileType;
-
-        if (primary) {
-          chosenProfile = primary.type as BusinessProfileType;
-        } else if (savedActiveProfile && availableRoles.includes(savedActiveProfile as BaseRole)) {
-          chosenProfile = savedActiveProfile;
-        } else {
-          const activeProfiles = userData.businessProfiles.filter((p: any) => p.isActive);
-          chosenProfile = (activeProfiles[0]?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
-        }
+        const primaryType = (primary?.type ?? userData.businessProfiles[0]?.type) as BusinessProfileType;
 
         userToStore.businessProfiles = userData.businessProfiles.map((p: any) => ({
           ...p,
-          isActive: p.type === chosenProfile,
+          isActive: true,
         }));
 
-        permissions = getProfilePermissions(chosenProfile) as Permission[];
-        activeRole = chosenProfile as BaseRole;
-        localStorage.setItem('activeProfileType', chosenProfile);
+        activeRole = primaryType as BaseRole;
+        localStorage.removeItem('activeProfileType');
       } else {
         availableRoles = userData.roles && Array.isArray(userData.roles)
           ? (userData.roles as BaseRole[])
@@ -442,72 +403,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       permissions: [],
       login,
       logout,
-      switchRole,
-      switchToProfile,
     });
     navigate('/login');
   };
 
   // -------------------------------------------------------------------------
-  // switchToProfile()
-  // -------------------------------------------------------------------------
-  const switchToProfile = async (profileType: BusinessProfileType) => {
-    if (!state.user?.businessProfiles) return;
-
-    try {
-      const updatedProfiles = state.user.businessProfiles.map((p: any) => ({
-        ...p,
-        isActive: p.type === profileType,
-      }));
-
-      const newPermissions = getProfilePermissions(profileType) as Permission[];
-      const updatedUser = { ...state.user, businessProfiles: updatedProfiles };
-
-      setState(prev => ({
-        ...prev,
-        user: updatedUser,
-        permissions: newPermissions,
-        activeRole: profileType as BaseRole,
-      }));
-
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      localStorage.setItem('activeProfileType', profileType);
-
-      toast.success(`Profil basculé vers: ${getRoleLabel(profileType as BaseRole)}`);
-    } catch (error) {
-      console.error('Error switching profile:', error);
-      toast.error('Erreur lors du changement de profil');
-    }
-  };
-
-  // -------------------------------------------------------------------------
-  // switchRole()
-  // -------------------------------------------------------------------------
-  const switchRole = (newRole: BaseRole | BusinessProfileType) => {
-    if (state.user?.businessProfiles?.some((p: any) => p.type === newRole)) {
-      switchToProfile(newRole as BusinessProfileType);
-      return;
-    }
-
-    if (!state.availableRoles.includes(newRole as BaseRole)) return;
-
-    const newPermissions = getUserPermissions(newRole as Role);
-
-    setState(prev => ({
-      ...prev,
-      activeRole: newRole as BaseRole,
-      permissions: newPermissions,
-    }));
-
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    localStorage.setItem('user', JSON.stringify({ ...currentUser, activeRole: newRole }));
-
-    toast.success(`Basculé vers le rôle: ${getRoleLabel(newRole as BaseRole)}`);
-  };
-
-  // -------------------------------------------------------------------------
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, switchRole, switchToProfile }}>
+    <AuthContext.Provider value={{ ...state, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

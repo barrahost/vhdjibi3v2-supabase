@@ -6,6 +6,7 @@ import { PhotoUpload } from '../ui/PhotoUpload';
 import { StorageService } from '../../services/storage.service';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser, isADNUser } from '../../utils/roleHelpers';
 import { Input } from '../ui/input';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { PhoneInput } from '../ui/PhoneInput';
@@ -108,7 +109,7 @@ function StepIndicator({ step }: { step: number }) {
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function SoulForm({ onClose, initialFullName, eventId }: { onClose?: () => void; initialFullName?: string; eventId?: string | null }) {
   const navigate = useNavigate();
-  const { activeRole, userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const { families, loading: loadingFamilies } = useServiceFamilies(true);
   const { confirm, confirmModalProps } = useConfirmModal();
 
@@ -127,10 +128,11 @@ export default function SoulForm({ onClose, initialFullName, eventId }: { onClos
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const isAdnOnly = (activeRole === 'adn' || userRole === 'adn') && activeRole !== 'admin' && activeRole !== 'super_admin';
-  const canEditAdnFields =
-    activeRole === 'admin' || activeRole === 'super_admin' ||
-    userRole === 'admin' || userRole === 'super_admin' || isAdnOnly;
+  // Toutes les casquettes détenues comptent (plus de bascule de profil)
+  const roleCheckUser = { role: userRole as string, businessProfiles: (user as any)?.businessProfiles };
+  const isAdminU = isAdminUser(roleCheckUser);
+  const isAdnOnly = isADNUser(roleCheckUser) && !isAdminU;
+  const canEditAdnFields = isAdminU || isAdnOnly;
 
   useEffect(() => {
     SMSService.getTemplates('Bienvenue')

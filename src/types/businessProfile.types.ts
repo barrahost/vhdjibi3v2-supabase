@@ -94,3 +94,13 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
 export function getProfilePermissions(profileType: BusinessProfileType): string[] {
   return PROFILE_PERMISSIONS[profileType] || [];
 }
+
+// Union des permissions de TOUS les profils détenus : plus de bascule de profil,
+// l'utilisateur a en permanence les droits de toutes ses casquettes.
+export function getAllProfilePermissions(profiles: Pick<BusinessProfile, 'type'>[] | undefined | null): string[] {
+  const all = new Set<string>();
+  (profiles || []).forEach(p => {
+    (PROFILE_PERMISSIONS[p.type] || []).forEach(perm => all.add(perm));
+  });
+  return Array.from(all);
+}

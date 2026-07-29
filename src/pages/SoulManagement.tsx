@@ -23,6 +23,7 @@ import AdnCulteLinksBar from '../components/souls/AdnCulteLinksBar';
 import ImportToSoulModal from '../components/evangelizedSouls/ImportToSoulModal';
 import { EvangelizedSoul } from '../types/evangelized.types';
 import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser, isADNUser } from '../utils/roleHelpers';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
@@ -100,7 +101,7 @@ export default function SoulManagement({ embedded = false }: SoulManagementProps
   const [receivingEvangelizedSoul, setReceivingEvangelizedSoul] = useState<EvangelizedSoul | null>(null);
 
   const { hasPermission } = usePermissions();
-  const { userRole, activeRole } = useAuth();
+  const { user, userRole } = useAuth();
   const [searchParams] = useSearchParams();
 
   // Persist filters in sessionStorage
@@ -190,9 +191,9 @@ export default function SoulManagement({ embedded = false }: SoulManagementProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const canImport = ['adn', 'admin', 'super_admin'].includes(
-    (activeRole || userRole || '') as string
-  );
+  // Toutes les casquettes détenues comptent (plus de bascule de profil)
+  const canImport = isAdminUser({ role: userRole as string, businessProfiles: (user as any)?.businessProfiles })
+    || isADNUser({ role: userRole as string, businessProfiles: (user as any)?.businessProfiles });
   const canDelete = userRole === 'super_admin' || hasPermission(PERMISSIONS.MANAGE_SOULS);
   const canAssign = hasPermission(PERMISSIONS.MANAGE_SOULS);
 

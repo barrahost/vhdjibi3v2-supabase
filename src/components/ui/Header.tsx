@@ -87,12 +87,18 @@ export function Header() {
 
   if (!user) return null;
 
+  // Toutes les casquettes détenues comptent (plus de bascule de profil)
+  const heldRoles = new Set<string>([
+    ...(((user?.businessProfiles as any[]) || []).map((p: any) => p?.type).filter(Boolean)),
+    ...(userRole ? [userRole as string] : []),
+    ...(activeRole ? [activeRole as string] : []),
+  ]);
   const showNotificationBell =
-    (activeRole || userRole) === 'shepherd' ||
-    (userRole as any) === 'intern' ||
-    (activeRole || userRole) === 'admin' ||
-    (activeRole || userRole) === 'super_admin' ||
-    (activeRole || userRole) === 'adn';
+    heldRoles.has('shepherd') ||
+    heldRoles.has('intern') ||
+    heldRoles.has('admin') ||
+    heldRoles.has('super_admin') ||
+    heldRoles.has('adn');
 
   const Avatar = () => (
     <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center overflow-hidden flex-shrink-0">

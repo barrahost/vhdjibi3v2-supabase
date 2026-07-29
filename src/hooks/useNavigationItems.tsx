@@ -76,10 +76,17 @@ export interface NavItem {
 }
 
 export function useNavigationItems(): NavItem[] {
-  const { user, userRole, activeRole } = useAuth();
+  const { user, userRole, availableRoles } = useAuth();
   const { hasPermission } = usePermissions();
   const { hasModule } = useChurch();
   const { alerts } = useAdminNotifications();
+
+  // Plus de bascule de profil : le menu montre l'union de toutes les casquettes détenues.
+  const heldRoles = new Set<string>(availableRoles as string[]);
+  if (userRole) heldRoles.add(userRole as string);
+  const hasRole = (role: string) => heldRoles.has(role);
+  const onlyRole = (role: string) => heldRoles.size > 0 && Array.from(heldRoles).every(r => r === role);
+  const isAdmin = hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPER_ADMIN);
 
   const alertCount = (type: string) =>
     alerts.find(a => a.type === type)?.count ?? 0;
@@ -87,7 +94,7 @@ export function useNavigationItems(): NavItem[] {
   const [ledCulteReports, setLedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
 
   useEffect(() => {
-    if (activeRole !== ROLES.DEPARTMENT_LEADER || !user?.businessProfiles) {
+    if (!hasRole(ROLES.DEPARTMENT_LEADER) || !user?.businessProfiles) {
       setLedCulteReports([]);
       return;
     }
@@ -115,7 +122,8 @@ export function useNavigationItems(): NavItem[] {
     return () => {
       cancelled = true;
     };
-  }, [activeRole, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const items: NavItem[] = [
     {
@@ -128,7 +136,7 @@ export function useNavigationItems(): NavItem[] {
 
   // Shepherd menu
   if (
-    activeRole === ROLES.SHEPHERD &&
+    hasRole(ROLES.SHEPHERD) &&
     (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS) || hasPermission(PERMISSIONS.MANAGE_ATTENDANCES))
   ) {
     const children: NavItem[] = [];
@@ -152,9 +160,9 @@ export function useNavigationItems(): NavItem[] {
     }
   }
 
-  // Department leader menu
+  // Department leader menu (pas pour les admins : ils ont leur propre section rapports complète)
   if (
-    activeRole === ROLES.DEPARTMENT_LEADER &&
+    hasRole(ROLES.DEPARTMENT_LEADER) && !isAdmin &&
     (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS))
   ) {
     const children: NavItem[] = [];
@@ -195,22 +203,22 @@ export function useNavigationItems(): NavItem[] {
 
   // Souls management (ADN + admin, not family leaders)
   if (
-    activeRole !== ROLES.FAMILY_LEADER &&
+    (hasRole(ROLES.ADN) || isAdmin) &&
     (hasPermission(PERMISSIONS.MANAGE_SOULS) || hasPermission(PERMISSIONS.MANAGE_USERS))
   ) {
     const children: NavItem[] = [];
 
     if (hasPermission(PERMISSIONS.MANAGE_SOULS) && hasModule('souls')) {
-      const evangelizedBadge = (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && activeRole !== ROLES.ADN && hasModule('evangelization'))
+      const evangelizedBadge = (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && isAdmin && hasModule('evangelization'))
         ? alertCount('pending_evangelized')
         : 0;
       children.push(
         { id: 'souls', label: 'Âmes', href: '/ames', icon: <Heart className="w-5 h-5" />, badge: alertCount('no_shepherd') + alertCount('undecided') + evangelizedBadge }
       );
-    } else if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && hasModule('evangelization')) {
+    } else if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
       children.push({ id: 'evangelized-souls-admin', label: 'Âmes évangélisées', href: '/ames-evangelisees', icon: <Megaphone className="w-5 h-5" />, badge: alertCount('pending_evangelized') });
     }
-    if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && hasModule('evangelization')) {
+    if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
       children.push({ id: 'evangelized-signals', label: 'Signalements évangélistes', href: '/signalements-evangelistes', icon: <Megaphone className="w-5 h-5" /> });
     }
     if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasModule('users')) {
@@ -234,7 +242,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Family leader menu
-  if (activeRole === ROLES.FAMILY_LEADER) {
+  if (hasRole(ROLES.FAMILY_LEADER)) {
     const children: NavItem[] = [
       { id: 'family-souls', label: 'Âmes', href: '/ma-famille/ames', icon: <Heart className="w-5 h-5" /> },
       { id: 'family-shepherds', label: 'Bergers', href: '/ma-famille/bergers', icon: <Users className="w-5 h-5" /> },
@@ -277,10 +285,7 @@ export function useNavigationItems(): NavItem[] {
   // Statistics (admin only, not ADN)
   if (
     hasPermission(PERMISSIONS.VIEW_STATS) &&
-    activeRole !== ROLES.EVANGELIST &&
-    activeRole !== ROLES.SHEPHERD &&
-    activeRole !== ROLES.DEPARTMENT_LEADER &&
-    activeRole !== ROLES.ADN &&
+    isAdmin &&
     hasModule('statistics')
   ) {
     items.push({
@@ -297,22 +302,26 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Evangelist menu
-  if (activeRole === ROLES.EVANGELIST && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
-    items.push({ id: 'evangelized-souls', label: 'Âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
+  if (hasRole(ROLES.EVANGELIST) && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
+    // Les admins/ADN ont déjà l'entrée "Âmes évangélisées" dans "Gestion des Âmes" : pas de doublon
+    if (!isAdmin && !hasRole(ROLES.ADN)) {
+      items.push({ id: 'evangelized-souls', label: 'Âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
+    }
     items.push({ id: 'evangelist-relances', label: 'À relancer', icon: <Clock className="w-5 h-5" />, href: '/evangelisation/relances' });
     items.push({ id: 'evangelist-attendus', label: 'Attendus au culte', icon: <CalendarCheck className="w-5 h-5" />, href: '/evangelisation/attendus' });
-    if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
+    // Les bergers/responsables de famille/admins ont déjà une entrée Interactions ailleurs
+    if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS) && !hasRole(ROLES.SHEPHERD) && !hasRole(ROLES.FAMILY_LEADER) && !isAdmin) {
       items.push({ id: 'evangelist-interactions', label: 'Mes interactions', icon: <MessageCircle className="w-5 h-5" />, href: '/interactions', dataTour: 'nav-interactions-evangelist' });
     }
   }
 
   // Replay (not ADN)
-  if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && activeRole !== ROLES.ADN && hasModule('audio')) {
+  if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && !onlyRole(ROLES.ADN) && hasModule('audio')) {
     items.push({ id: 'replay-teachings-public', label: 'Replay des enseignements', icon: <Play className="w-5 h-5" />, href: '/replay' });
   }
 
   // Content & Communication (not ADN)
-  if ((hasPermission(PERMISSIONS.MANAGE_AUDIO) || hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) && activeRole !== ROLES.ADN) {
+  if ((hasPermission(PERMISSIONS.MANAGE_AUDIO) || hasPermission(PERMISSIONS.MANAGE_SMS_TEMPLATES)) && !onlyRole(ROLES.ADN)) {
     const children: NavItem[] = [];
 
     if (hasPermission(PERMISSIONS.MANAGE_AUDIO) && hasModule('audio')) {
@@ -331,7 +340,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Pastoral tools (not ADN)
-  if (hasPermission(PERMISSIONS.VIEW_STATS) && activeRole !== ROLES.ADN && (hasModule('soul_map') || hasModule('birthdays'))) {
+  if (hasPermission(PERMISSIONS.VIEW_STATS) && !onlyRole(ROLES.ADN) && (hasModule('soul_map') || hasModule('birthdays'))) {
     const children: NavItem[] = [];
 
     if (hasModule('soul_map')) {
@@ -367,7 +376,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Rapports de culte (admin / super_admin) : tableau de bord + une page par département + besoins
-  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && activeRole !== ROLES.DEPARTMENT_LEADER) {
+  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || !hasRole(ROLES.DEPARTMENT_LEADER))) {
     items.push({
       id: 'culte-reports',
       label: 'Rapports de culte',
@@ -404,7 +413,7 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)) {
       children.push({ id: 'settings', label: 'Paramètres', href: '/parametres', icon: <Settings className="w-5 h-5" /> });
     }
-    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && activeRole !== ROLES.DEPARTMENT_LEADER) {
+    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || !hasRole(ROLES.DEPARTMENT_LEADER))) {
       children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
       children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
       children.push({ id: 'recurring-schedule', label: 'Programme récurrent', href: '/parametres-programme-recurrent', icon: <CalendarRange className="w-5 h-5" /> });
