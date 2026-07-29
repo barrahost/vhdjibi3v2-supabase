@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirmModal } from '../hooks/useConfirmModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { Building2, Plus, Edit2, Trash2, Globe, Phone, Mail, MapPin, CheckCircle, XCircle, Puzzle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MODULE_DEFINITIONS, DEFAULT_MODULES, ChurchModules } from '../lib/churchModules';
@@ -442,12 +443,9 @@ const handleDelete = (church: Church) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                  <input
-                    type="tel"
+                  <PhoneInput
                     value={form.phone}
-                    onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+33 6 00 00 00 00"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]"
+                    onChange={(phone) => setForm(prev => ({ ...prev, phone }))}
                   />
                 </div>
                 <div>

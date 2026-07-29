@@ -30,6 +30,17 @@ export const GAVE_LIFE_OPTIONS: { value: GaveLifeToJesus; label: string }[] = [
 export const plannedServiceLabel = (v?: PlannedService | null): string =>
   PLANNED_SERVICE_OPTIONS.find((o) => o.value === v)?.label || '';
 
+/** Fait le lien entre le culte envisagé (formulaire d'evangelisation) et le type de
+ * rencontre du programme recurrent (culte_recurring_schedules), pour calculer la
+ * prochaine occurrence dans "Attendus au culte". */
+export const PLANNED_SERVICE_TO_MEETING_TYPE: Record<Exclude<PlannedService, 'undecided'>, string> = {
+  wednesday_evening: 'Rendez-Vous des Champions',
+  sunday_first: '1er Culte de Célébration & Contemplation',
+  sunday_second: '2e Culte de Célébration & Contemplation',
+};
+
+export type ServiceAttendance = 'pending' | 'came' | 'no_show';
+
 export const gaveLifeLabel = (v?: GaveLifeToJesus | null): string =>
   GAVE_LIFE_OPTIONS.find((o) => o.value === v)?.label || '';
 
@@ -60,4 +71,5 @@ export interface EvangelizedSoul {
   prayerTopics?: string | null;
   interviewerName?: string | null;
   serviceFamilyId?: string | null;
+  serviceAttendance?: ServiceAttendance | null;
 }

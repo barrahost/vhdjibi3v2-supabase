@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { PhotoUpload } from '../ui/PhotoUpload';
 import { LocationField } from '../souls/form/LocationField';
+import { PhoneInput } from '../ui/PhoneInput';
 import { BusinessProfileAssignment } from './BusinessProfileAssignment';
 import { StorageService } from '../../services/storage.service';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
@@ -271,23 +272,11 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Numéro de téléphone
           </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-              +225
-            </span>
-            <input
-              type="tel"
-              required
-              value={formData.phone}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                const truncated = value.slice(0, 10);
-                setFormData(prev => ({ ...prev, phone: truncated }));
-              }}
-              className="w-full pl-16 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              maxLength={10}
-            />
-          </div>
+          <PhoneInput
+            required
+            value={formData.phone}
+            onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+          />
         </div>
 
         <div>

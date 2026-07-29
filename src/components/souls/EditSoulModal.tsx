@@ -10,6 +10,7 @@ import { PhotoUpload } from '../ui/PhotoUpload';
 import { StorageService } from '../../services/storage.service';
 import { isShepherdUser } from '../../utils/roleHelpers';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
+import { PhoneInput } from '../ui/PhoneInput';
 import { LocationField } from './form/LocationField';
 import ShepherdSelect from './ShepherdSelect';
 import { ProgressionForm } from './progression/ProgressionForm';
@@ -32,11 +33,6 @@ const MARITAL_STATUSES = [
   { value: 'fiance', label: 'Fiancé(e)' },
   { value: 'seul', label: 'Célibataire' },
 ];
-const DECISIONS = [
-  { value: 'give_life', icon: Heart, label: 'Je veux donner ma vie à Jésus-Christ' },
-  { value: 'member', icon: UserCheck, label: "Je décide d'être membre" },
-  { value: 'undecided', icon: HelpCircle, label: "Indécis(e) pour l'instant" },
-] as const;
 const STEP_LABELS = ['Identité', 'Contact', 'Décision', 'Spirituel'];
 
 // ─── Indicateur de progression (4 étapes) ────────────────────────────────────
@@ -111,7 +107,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       isRegular: null as boolean | null,
       ageRange: '',
       maritalStatus: '',
-      decision: '' as '' | 'give_life' | 'member' | 'undecided',
+      wantsToGiveLife: false,
+      wantsToBecomeMember: false,
       prayerRequest: '',
     },
     spiritual: {} as Soul['spiritualProfile'],
@@ -166,7 +163,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           gender: soul.gender,
           fullName: soul.fullName,
           nickname: soul.nickname || '',
-          phone: soul.phone.replace('+225', ''),
+          phone: soul.phone,
           location: soul.location,
           isUndecided: soul.isUndecided || false,
           coordinates: soul.coordinates ?? null,
@@ -182,8 +179,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           isRegular: soul.isRegular ?? null,
           ageRange: soul.ageRange || '',
           maritalStatus: soul.maritalStatus || '',
-          decision: (soul.decision as '' | 'give_life' | 'member' | 'undecided')
-            || (soul.isUndecided ? 'undecided' : ''),
+          wantsToGiveLife: soul.wantsToGiveLife ?? (soul.decision === 'give_life'),
+          wantsToBecomeMember: soul.wantsToBecomeMember ?? (soul.decision === 'member'),
           prayerRequest: soul.prayerRequest || '',
         },
         spiritual: soul.spiritualProfile,
@@ -243,7 +240,8 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
         originSource: rawOrigin === '' ? undefined : rawOrigin,
         ageRange: (restGeneral.ageRange || undefined) as Soul['ageRange'],
         maritalStatus: (restGeneral.maritalStatus || undefined) as Soul['maritalStatus'],
-        decision: (restGeneral.decision || undefined) as Soul['decision'],
+        wantsToGiveLife: restGeneral.wantsToGiveLife,
+        wantsToBecomeMember: restGeneral.wantsToBecomeMember,
         spiritualProfile: formData.spiritual,
       };
 
@@ -389,20 +387,11 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Numéro de téléphone <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">+225</span>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.general.phone}
-                    onChange={e => {
-                      const v = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      updateGeneral({ phone: v });
-                    }}
-                    className="w-full h-12 pl-16 pr-4 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 transition-colors"
-                    maxLength={10}
-                  />
-                </div>
+                <PhoneInput
+                  required
+                  value={formData.general.phone}
+                  onChange={(phone) => updateGeneral({ phone })}
+                />
               </div>
 
               <LocationField
@@ -501,44 +490,69 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           {/* ── Étape 3 : Décision ─────────────────────────────────────── */}
           {step === 3 && (
             <>
-              {/* Cartes décision */}
+              {/* Décision — 2 questions independantes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Décision</label>
                 <div className="space-y-3">
-                  {DECISIONS.map(({ value, icon: Icon, label }) => {
-                    const selected = formData.general.decision === value;
+                  {([
+                    { key: 'wantsToGiveLife' as const, icon: Heart, label: 'Donner sa vie à Jésus-Christ' },
+                    { key: 'wantsToBecomeMember' as const, icon: UserCheck, label: 'Devenir membre' },
+                  ]).map(({ key, icon: Icon, label }) => {
+                    const value = formData.general[key];
                     return (
-                      <button
-                        type="button"
-                        key={value}
-                        onClick={() => updateGeneral({
-                          decision: value,
-                          isUndecided: value === 'undecided',
-                          shepherdId: value === 'undecided' ? undefined : formData.general.shepherdId,
-                        })}
-                        className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
-                          selected
-                            ? 'border-brand-700 bg-brand-50'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          selected ? 'bg-brand-700' : 'bg-gray-100'
-                        }`}>
-                          <Icon className={`w-4 h-4 ${selected ? 'text-white' : 'text-gray-400'}`} />
+                      <div key={key} className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 bg-white">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${value ? 'bg-brand-700' : 'bg-gray-100'}`}>
+                          <Icon className={`w-4 h-4 ${value ? 'text-white' : 'text-gray-400'}`} />
                         </div>
-                        <span className={`text-sm font-medium ${selected ? 'text-brand-700' : 'text-gray-700'}`}>
-                          {label}
-                        </span>
-                        {selected && <Check className="w-4 h-4 text-brand-700 ml-auto flex-shrink-0" />}
-                      </button>
+                        <span className="text-sm font-medium flex-1 text-gray-700">{label}</span>
+                        <div className="flex rounded-lg border border-gray-200 overflow-hidden flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateGeneral({ [key]: true, isUndecided: false } as any);
+                              // "Donner sa vie a Jesus" (decision) et "Ne(e) de nouveau" (profil spirituel,
+                              // suivi avec date) decrivent le meme evenement -- eviter 2 cases separees.
+                              if (key === 'wantsToGiveLife' && !formData.spiritual?.isBornAgain) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  spiritual: { ...prev.spiritual, isBornAgain: true, bornAgainDate: new Date() },
+                                }));
+                              }
+                            }}
+                            className={`px-3 py-1.5 text-xs font-semibold transition-colors ${value === true ? 'bg-brand-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            Oui
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const otherKey = key === 'wantsToGiveLife' ? 'wantsToBecomeMember' : 'wantsToGiveLife';
+                              const nextUndecided = formData.general[otherKey] !== true;
+                              updateGeneral({
+                                [key]: false,
+                                isUndecided: nextUndecided,
+                                shepherdId: nextUndecided ? undefined : formData.general.shepherdId,
+                              } as any);
+                            }}
+                            className={`px-3 py-1.5 text-xs font-semibold border-l border-gray-200 transition-colors ${value === false ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            Non
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
+                {formData.general.isUndecided && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
+                    <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    Considérée comme indécise pour l'instant (aucune des deux réponses n'est "oui").
+                  </p>
+                )}
               </div>
 
               {/* Berger — réservé aux responsables de famille (+ admin/super_admin) */}
-              {canAssignShepherd && formData.general.decision !== 'undecided' && (
+              {canAssignShepherd && !formData.general.isUndecided && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Berger(e) assigné(e)</label>
                   <ShepherdSelect
@@ -563,29 +577,6 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
                     <option value="">-- Sélectionner --</option>
                     {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
-                </div>
-              )}
-
-              {/* Provenance */}
-              {canEditAdnFields && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Provenance</label>
-                  <div className="flex gap-2">
-                    {[{ value: 'culte', label: 'Culte' }, { value: 'evangelisation', label: 'Évangélisation' }].map(opt => (
-                      <button
-                        type="button"
-                        key={opt.value}
-                        onClick={() => updateGeneral({ originSource: opt.value as 'culte' | 'evangelisation' })}
-                        className={`flex-1 h-11 rounded-xl border-2 text-sm font-medium transition-all ${
-                          formData.general.originSource === opt.value
-                            ? 'border-brand-700 bg-brand-50 text-brand-700'
-                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               )}
 

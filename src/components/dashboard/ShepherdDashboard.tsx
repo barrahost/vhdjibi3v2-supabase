@@ -230,21 +230,24 @@ export function ShepherdDashboard() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* En-tête + CTA */}
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wide">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 mt-0.5">Mon tableau de bord</h1>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-700 to-brand-900 px-4 py-4 sm:px-6 sm:py-6 shadow-sm">
+        <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="relative flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] sm:text-xs font-medium text-white/70 uppercase tracking-wide">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+            <h1 className="text-lg sm:text-2xl font-bold text-white mt-0.5">Mon tableau de bord</h1>
+          </div>
+          <button
+            onClick={() => { setSoulPickerSearch(''); setSoulPickerOpen(true); }}
+            disabled={souls.length === 0}
+            className="flex items-center gap-1.5 h-9 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm font-semibold bg-white text-brand-700 rounded-xl hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 shadow-sm"
+          >
+            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            + Interaction
+          </button>
         </div>
-        <button
-          onClick={() => { setSoulPickerSearch(''); setSoulPickerOpen(true); }}
-          disabled={souls.length === 0}
-          className="flex items-center gap-1.5 h-9 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm font-semibold bg-brand-700 text-white rounded-xl hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-        >
-          <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          + Interaction
-        </button>
       </div>
 
       {shepherdId && <PendingActionsWidget role="shepherd" shepherdId={shepherdId} />}

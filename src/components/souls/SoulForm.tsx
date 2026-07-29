@@ -8,6 +8,7 @@ import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../ui/input';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
+import { PhoneInput } from '../ui/PhoneInput';
 import { LocationField } from './form/LocationField';
 import {
   CheckCircle2, Plus, List, AlertTriangle,
@@ -26,7 +27,6 @@ interface LastAddedSoul {
   nickname?: string;
   phone?: string;
   serviceFamilyName?: string;
-  originSource?: 'culte' | 'evangelisation';
   smsSent: boolean;
 }
 
@@ -38,11 +38,6 @@ const MARITAL_STATUSES = [
   { value: 'fiance', label: 'Fiancé(e)' },
   { value: 'seul', label: 'Célibataire' },
 ];
-const DECISIONS = [
-  { value: 'give_life', icon: Heart, label: 'Donner ma vie à Jésus-Christ' },
-  { value: 'member', icon: UserCheck, label: "Devenir membre" },
-  { value: 'undecided', icon: HelpCircle, label: "Indécis(e) pour l'instant" },
-] as const;
 const STEP_LABELS = ['Identité', 'Contact', 'Décision'];
 
 const initialFormData = {
@@ -58,7 +53,6 @@ const initialFormData = {
     isUndecided: false,
     photo: null as File | null,
     status: 'active' as 'active' | 'inactive',
-    originSource: '' as '' | 'culte' | 'evangelisation',
     serviceFamilyId: undefined as string | undefined,
     email: '',
     profession: '',
@@ -66,7 +60,8 @@ const initialFormData = {
     isRegular: null as boolean | null,
     ageRange: '',
     maritalStatus: '',
-    decision: '' as '' | 'give_life' | 'member' | 'undecided',
+    wantsToGiveLife: false,
+    wantsToBecomeMember: false,
     prayerRequest: '',
   },
   spiritual: {
@@ -111,7 +106,7 @@ function StepIndicator({ step }: { step: number }) {
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
-export default function SoulForm({ onClose }: { onClose?: () => void }) {
+export default function SoulForm({ onClose, initialFullName, eventId }: { onClose?: () => void; initialFullName?: string; eventId?: string | null }) {
   const navigate = useNavigate();
   const { activeRole, userRole } = useAuth();
   const { families, loading: loadingFamilies } = useServiceFamilies(true);
@@ -119,7 +114,11 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [stepError, setStepError] = useState<string | null>(null);
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState(() =>
+    initialFullName
+      ? { ...initialFormData, general: { ...initialFormData.general, fullName: initialFullName } }
+      : initialFormData
+  );
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(true);
@@ -178,7 +177,6 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
     serviceFamilyName: formData.general.serviceFamilyId
       ? families.find(f => f.id === formData.general.serviceFamilyId)?.name
       : undefined,
-    originSource: (formData.general.originSource || undefined) as 'culte' | 'evangelisation' | undefined,
     smsSent,
   });
 
@@ -226,7 +224,6 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
 
     setIsSubmitting(true);
     try {
-      const effectiveOriginSource = formData.general.originSource || 'culte';
       const soulId = `soul_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const soulData = {
@@ -235,12 +232,12 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
         nickname: formData.general.nickname.trim() || null,
         gender: formData.general.gender,
         phone: formData.general.phone,
-        is_undecided: formData.general.decision === 'undecided',
+        is_undecided: formData.general.isUndecided,
         location: formData.general.location.trim(),
         coordinates: formData.general.coordinates,
         first_visit_date: new Date(formData.general.firstVisitDate).toISOString(),
         shepherd_id: formData.general.shepherdId || null,
-        origin_source: effectiveOriginSource,
+        origin_source: 'culte',
         service_family_id: formData.general.serviceFamilyId || null,
         spiritual_profile: formData.spiritual,
         status: 'active',
@@ -250,8 +247,10 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
         is_regular: formData.general.isRegular,
         age_range: formData.general.ageRange || null,
         marital_status: formData.general.maritalStatus || null,
-        decision: formData.general.decision || null,
+        wants_to_give_life: formData.general.wantsToGiveLife,
+        wants_to_become_member: formData.general.wantsToBecomeMember,
         prayer_request: formData.general.prayerRequest.trim() || null,
+        event_id: eventId || null,
       };
 
       const userStr = localStorage.getItem('user');
@@ -332,10 +331,6 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
               <Row label="Surnom" value={lastAddedSoul.nickname} />
               <Row label="Téléphone" value={lastAddedSoul.phone} />
               <Row label="Famille" value={lastAddedSoul.serviceFamilyName} />
-              <Row label="Provenance" value={
-                lastAddedSoul.originSource === 'culte' ? 'Culte' :
-                lastAddedSoul.originSource === 'evangelisation' ? 'Évangélisation' : undefined
-              } />
               <div className="flex items-baseline gap-2 py-2">
                 <dt className="text-xs font-medium text-gray-500 w-32 flex-shrink-0">SMS</dt>
                 <dd className="text-sm">
@@ -453,22 +448,12 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Numéro de téléphone <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">+225</span>
-                <input
-                  type="tel"
-                  required
-                  placeholder="0757000203"
-                  value={formData.general.phone}
-                  onChange={e => {
-                    const v = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    updateGeneral({ phone: v });
-                  }}
-                  className="w-full h-10 pl-16 pr-4 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 transition-colors"
-                  maxLength={10}
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-400">10 chiffres sans indicatif</p>
+              <PhoneInput
+                required
+                placeholder="0757000203"
+                value={formData.general.phone}
+                onChange={(phone) => updateGeneral({ phone })}
+              />
             </div>
 
             <LocationField
@@ -568,40 +553,67 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
         {/* ── Étape 3 : Décision & Suivi ─────────────────────────────────── */}
         {step === 3 && (
           <div className="space-y-3">
-            {/* Cartes décision */}
+            {/* Décision aujourd'hui — 2 questions independantes */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Ma décision aujourd'hui</label>
-              <div className="space-y-1.5">
-                {DECISIONS.map(({ value, icon: Icon, label }) => {
-                  const selected = formData.general.decision === value;
+              <div className="space-y-2">
+                {([
+                  { key: 'wantsToGiveLife' as const, icon: Heart, label: 'Donner ma vie à Jésus-Christ' },
+                  { key: 'wantsToBecomeMember' as const, icon: UserCheck, label: 'Devenir membre' },
+                ]).map(({ key, icon: Icon, label }) => {
+                  const value = formData.general[key];
                   return (
-                    <button
-                      type="button"
-                      key={value}
-                      onClick={() => updateGeneral({
-                        decision: value,
-                        isUndecided: value === 'undecided',
-                        shepherdId: value === 'undecided' ? undefined : formData.general.shepherdId,
-                      })}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 text-left transition-all ${
-                        selected
-                          ? 'border-brand-700 bg-brand-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        selected ? 'bg-brand-700' : 'bg-gray-100'
-                      }`}>
-                        <Icon className={`w-3.5 h-3.5 ${selected ? 'text-white' : 'text-gray-400'}`} />
+                    <div key={key} className="flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 border-gray-200 bg-white">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${value ? 'bg-brand-700' : 'bg-gray-100'}`}>
+                        <Icon className={`w-3.5 h-3.5 ${value ? 'text-white' : 'text-gray-400'}`} />
                       </div>
-                      <span className={`text-sm font-medium flex-1 ${selected ? 'text-brand-700' : 'text-gray-700'}`}>
-                        {label}
-                      </span>
-                      {selected && <Check className="w-3.5 h-3.5 text-brand-700 flex-shrink-0" />}
-                    </button>
+                      <span className="text-sm font-medium flex-1 text-gray-700">{label}</span>
+                      <div className="flex rounded-lg border border-gray-200 overflow-hidden flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateGeneral({ [key]: true, isUndecided: false } as any);
+                            // "Donner sa vie a Jesus" (intake) et "Ne(e) de nouveau" (profil spirituel,
+                            // suivi avec date) decrivent le meme evenement -- eviter 2 cases a cocher
+                            // separement qui pourraient finir desynchronisees.
+                            if (key === 'wantsToGiveLife' && !formData.spiritual.isBornAgain) {
+                              setFormData(prev => ({
+                                ...prev,
+                                spiritual: { ...prev.spiritual, isBornAgain: true, bornAgainDate: new Date() },
+                              }));
+                            }
+                          }}
+                          className={`px-3 py-1 text-xs font-semibold transition-colors ${value === true ? 'bg-brand-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          Oui
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const otherKey = key === 'wantsToGiveLife' ? 'wantsToBecomeMember' : 'wantsToGiveLife';
+                            const otherValue = formData.general[otherKey];
+                            const nextUndecided = otherValue !== true;
+                            updateGeneral({
+                              [key]: false,
+                              isUndecided: nextUndecided,
+                              shepherdId: nextUndecided ? undefined : formData.general.shepherdId,
+                            } as any);
+                          }}
+                          className={`px-3 py-1 text-xs font-semibold border-l border-gray-200 transition-colors ${value === false ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          Non
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
+              {formData.general.isUndecided && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600">
+                  <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Sera considérée comme indécise pour l'instant (aucune des deux réponses n'est "oui").
+                </p>
+              )}
             </div>
 
             {/* Famille de service */}
@@ -622,29 +634,6 @@ export default function SoulForm({ onClose }: { onClose?: () => void }) {
                 {isAdnOnly && (
                   <p className="mt-1 text-xs text-gray-500">Le responsable de famille assignera ensuite un berger.</p>
                 )}
-              </div>
-            )}
-
-            {/* Provenance */}
-            {canEditAdnFields && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Provenance</label>
-                <div className="flex gap-2">
-                  {[{ value: 'culte', label: 'Culte' }, { value: 'evangelisation', label: 'Évangélisation' }].map(opt => (
-                    <button
-                      type="button"
-                      key={opt.value}
-                      onClick={() => updateGeneral({ originSource: opt.value as 'culte' | 'evangelisation' })}
-                      className={`flex-1 h-10 rounded-xl border-2 text-sm font-medium transition-all ${
-                        formData.general.originSource === opt.value
-                          ? 'border-brand-700 bg-brand-50 text-brand-700'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
 

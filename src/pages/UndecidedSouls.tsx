@@ -12,7 +12,12 @@ import toast from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 10;
 
-export default function UndecidedSouls() {
+interface UndecidedSoulsProps {
+  /** Masque le titre de page quand affiché sous un onglet (ex: SoulsHub) */
+  embedded?: boolean;
+}
+
+export default function UndecidedSouls({ embedded = false }: UndecidedSoulsProps = {}) {
   const [souls, setSouls] = useState<Soul[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,6 +104,8 @@ export default function UndecidedSouls() {
           location: row.location || '',
           gender: row.gender || 'male',
           isUndecided: row.isUndecided ?? row.is_undecided ?? false,
+          wantsToGiveLife: row.wants_to_give_life ?? null,
+          wantsToBecomeMember: row.wants_to_become_member ?? null,
           shepherdId: row.shepherdId || row.shepherd_id,
           evangelistId: row.evangelistId || row.evangelist_id,
           status: row.status || 'active',
@@ -165,9 +172,11 @@ export default function UndecidedSouls() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Âmes Indécises</h1>
-      </div>
+      {!embedded && (
+        <div className="flex justify-between items-center">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Âmes Indécises</h1>
+        </div>
+      )}
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">

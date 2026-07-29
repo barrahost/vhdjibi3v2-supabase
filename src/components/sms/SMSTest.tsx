@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import { SMSService } from '../../services/sms.service';
+import { PhoneInput } from '../ui/PhoneInput';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -85,24 +86,12 @@ export function SMSTest() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Numéro de téléphone
           </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-              +225
-            </span>
-            <input
-              type="tel"
-              required
-              placeholder="0757000203"
-              value={phone}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                const truncated = value.slice(0, 10);
-                setPhone(truncated);
-              }}
-              className="w-full pl-16 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-              maxLength={10}
-            />
-          </div>
+          <PhoneInput
+            required
+            placeholder="0757000203"
+            value={phone}
+            onChange={setPhone}
+          />
         </div>
 
         <div>

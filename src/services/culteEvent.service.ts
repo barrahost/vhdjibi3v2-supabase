@@ -19,6 +19,7 @@ function mapSchedule(row: any): CulteRecurringSchedule {
     meetingTypeName: row.meeting_type_name,
     dayOfWeek: row.day_of_week,
     isActive: row.is_active,
+    startTime: row.start_time,
   };
 }
 
@@ -45,6 +46,17 @@ export const CulteEventService = {
       .from('culte_events')
       .upsert(rows, { onConflict: 'church_id,service_date,meeting_type_name', ignoreDuplicates: true });
     if (upsertErr) throw upsertErr;
+  },
+
+  /** Evenements du jour (deja generes par ensureRecurringEventsForDate) pour une date donnee. */
+  async getEventsForDate(serviceDate: string): Promise<CulteEvent[]> {
+    const { data, error } = await supabase
+      .from('culte_events')
+      .select('*')
+      .eq('church_id', getChurchId())
+      .eq('service_date', serviceDate);
+    if (error) throw error;
+    return (data ?? []).map(mapEvent);
   },
 
   async getRecentEvents(limitCount = 30): Promise<CulteEvent[]> {
@@ -86,20 +98,20 @@ export const RecurringScheduleService = {
     return (data ?? []).map(mapSchedule);
   },
 
-  async create(meetingTypeName: string, dayOfWeek: DayOfWeek): Promise<CulteRecurringSchedule> {
+  async create(meetingTypeName: string, dayOfWeek: DayOfWeek, startTime: string | null = null): Promise<CulteRecurringSchedule> {
     const { data, error } = await supabase
       .from('culte_recurring_schedules')
-      .insert({ church_id: getChurchId(), meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek })
+      .insert({ church_id: getChurchId(), meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, start_time: startTime })
       .select()
       .single();
     if (error) throw error;
     return mapSchedule(data);
   },
 
-  async update(id: string, meetingTypeName: string, dayOfWeek: DayOfWeek, isActive: boolean): Promise<void> {
+  async update(id: string, meetingTypeName: string, dayOfWeek: DayOfWeek, isActive: boolean, startTime: string | null = null): Promise<void> {
     const { error } = await supabase
       .from('culte_recurring_schedules')
-      .update({ meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, is_active: isActive })
+      .update({ meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, is_active: isActive, start_time: startTime })
       .eq('id', id);
     if (error) throw error;
   },

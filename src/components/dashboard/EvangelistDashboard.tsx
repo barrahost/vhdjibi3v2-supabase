@@ -281,16 +281,19 @@ export default function EvangelistDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">Mon tableau de bord</h1>
-        <button
-          onClick={() => navigate('/ames-evangelisees?add=1')}
-          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
-        >
-          <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
-          <span className="hidden sm:inline">Ajouter une âme évangélisée</span>
-          <span className="sm:hidden">Ajouter</span>
-        </button>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-700 to-brand-900 px-5 py-5 sm:px-6 sm:py-6 shadow-sm">
+        <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="relative flex items-center justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold text-white">Mon tableau de bord</h1>
+          <button
+            onClick={() => navigate('/ames-evangelisees?add=1')}
+            className="flex items-center px-4 py-2 text-sm font-semibold text-brand-700 bg-white hover:bg-white/90 rounded-md shadow-sm"
+          >
+            <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="hidden sm:inline">Ajouter une âme évangélisée</span>
+            <span className="sm:hidden">Ajouter</span>
+          </button>
+        </div>
       </div>
 
       {/* 4 KPI cards */}

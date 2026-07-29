@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface KPI { label: string; value: number | string; sub?: string; color: string; icon: React.ReactNode; href?: string; alert?: boolean; }
+interface KPI { label: string; value: number | string; sub?: string; color: { bg: string; icon: string }; icon: React.ReactNode; href?: string; alert?: boolean; }
 interface Alert { id: string; label: string; count: number; href: string; }
 interface RecentSoul { id: string; fullName: string; location: string; shepherdId?: string; createdAt: any; }
 interface RecentInteraction { id: string; type: string; date: Date; soulId: string; }
@@ -59,7 +59,7 @@ export function AdminDashboard() {
             label: 'Âmes actives',
             value: souls.length,
             sub: `${noShepherd} sans berger`,
-            color: 'text-[#00665C]',
+            color: { bg: 'bg-brand-50', icon: 'text-brand-700' },
             icon: <Heart className="w-5 h-5" />,
             href: '/ames',
             alert: noShepherd > 0
@@ -68,7 +68,7 @@ export function AdminDashboard() {
             label: 'Âmes évangélisées en suivi',
             value: pendingEvang,
             sub: 'pas encore reçues',
-            color: 'text-amber-600',
+            color: { bg: 'bg-amber-100', icon: 'text-amber-600' },
             icon: <Megaphone className="w-5 h-5" />,
             href: '/ames-evangelisees'
           },
@@ -76,7 +76,7 @@ export function AdminDashboard() {
             label: 'Interactions cette semaine',
             value: weekInteractions,
             sub: `${totalInteractions} au total`,
-            color: 'text-blue-600',
+            color: { bg: 'bg-blue-100', icon: 'text-blue-600' },
             icon: <MessageCircle className="w-5 h-5" />,
             href: '/interactions'
           },
@@ -84,7 +84,7 @@ export function AdminDashboard() {
             label: 'Âmes indécises',
             value: undecided,
             sub: 'à recontacter',
-            color: undecided > 0 ? 'text-red-600' : 'text-gray-400',
+            color: undecided > 0 ? { bg: 'bg-red-100', icon: 'text-red-600' } : { bg: 'bg-gray-100', icon: 'text-gray-400' },
             icon: <UserX className="w-5 h-5" />,
             href: '/ames-indecises',
             alert: undecided > 0
@@ -138,30 +138,34 @@ export function AdminDashboard() {
     <div className="space-y-6">
 
       {/* En-tête */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-          <h1 className="text-2xl font-bold text-gray-900 mt-0.5">Tableau de bord</h1>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {alerts.length > 0 && (
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-700 to-brand-900 px-5 py-5 sm:px-6 sm:py-6 shadow-sm">
+        <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="absolute right-16 bottom-0 w-24 h-24 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-medium text-white/70 uppercase tracking-wide">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+            <h1 className="text-2xl font-bold text-white mt-0.5">Tableau de bord</h1>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {alerts.length > 0 && (
+              <button
+                onClick={() => navigate('/ames?filter=unassigned')}
+                className="flex items-center gap-2 h-11 px-4 text-sm font-semibold bg-amber-400 text-brand-900 rounded-xl hover:bg-amber-300 transition-colors shadow-sm"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                {alerts.length} action{alerts.length > 1 ? 's' : ''} requise{alerts.length > 1 ? 's' : ''}
+              </button>
+            )}
             <button
-              onClick={() => navigate('/ames?filter=unassigned')}
-              className="flex items-center gap-2 h-11 px-4 text-sm font-medium bg-brand-700 text-white rounded-xl hover:bg-brand-800 transition-colors"
+              onClick={() => navigate('/statistiques')}
+              className="flex items-center gap-2 h-11 px-4 text-sm font-medium text-white bg-white/10 border border-white/30 rounded-xl hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
-              <AlertTriangle className="w-4 h-4" />
-              {alerts.length} action{alerts.length > 1 ? 's' : ''} requise{alerts.length > 1 ? 's' : ''}
+              <BarChart2 className="w-4 h-4" />
+              Statistiques
             </button>
-          )}
-          <button
-            onClick={() => navigate('/statistiques')}
-            className="flex items-center gap-2 h-11 px-4 text-sm font-medium text-brand-700 border border-brand-700 rounded-xl hover:bg-brand-50 transition-colors"
-          >
-            <BarChart2 className="w-4 h-4" />
-            Statistiques
-          </button>
+          </div>
         </div>
       </div>
 
@@ -171,13 +175,15 @@ export function AdminDashboard() {
           <button
             key={kpi.label}
             onClick={() => kpi.href && navigate(kpi.href)}
-            className="bg-white border border-gray-100 rounded-2xl p-4 text-left hover:shadow-md transition-shadow"
+            className="bg-white border border-gray-100 rounded-2xl p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all"
           >
-            <span className={`inline-flex ${kpi.color} mb-2`}>{kpi.icon}</span>
+            <span className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2 ${kpi.color.bg}`}>
+              <span className={kpi.color.icon}>{kpi.icon}</span>
+            </span>
             <p className="text-3xl font-bold text-gray-900">{kpi.value}</p>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mt-1 leading-tight">{kpi.label}</p>
             {kpi.sub && (
-              <p className={`text-xs mt-1 ${kpi.alert ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>{kpi.sub}</p>
+              <p className={`text-xs mt-1 ${kpi.alert ? 'text-amber-600 font-semibold' : 'text-gray-400'}`}>{kpi.sub}</p>
             )}
           </button>
         ))}

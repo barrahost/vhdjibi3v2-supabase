@@ -183,6 +183,8 @@ export default function AssignedSouls() {
             phone: row.phone || '',
             location: row.location || '',
             isUndecided: row.is_undecided ?? row.isUndecided ?? false,
+            wantsToGiveLife: row.wants_to_give_life ?? null,
+            wantsToBecomeMember: row.wants_to_become_member ?? null,
             coordinates: row.coordinates || null,
             firstVisitDate: row.first_visit_date ? new Date(row.first_visit_date) : (row.firstVisitDate ? new Date(row.firstVisitDate) : new Date()),
             shepherdId: row.shepherd_id || row.shepherdId,

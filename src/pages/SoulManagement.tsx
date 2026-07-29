@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
-import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck, Shield } from 'lucide-react';
+import { Plus, FileSpreadsheet, Search, Pencil, Trash2, User as UserIcon, Upload, RotateCcw, UserCheck, Shield, MoreVertical } from 'lucide-react';
 import ImportSoulsModal from '../components/souls/ImportSoulsModal';
 import { exportData } from '../utils/exportUtils';
 import SoulForm from '../components/souls/SoulForm';
@@ -19,6 +19,7 @@ import PromoteToServantModal from '../components/souls/PromoteToServantModal';
 import ShepherdFilter from '../components/souls/filters/ShepherdFilter';
 import AssignToShepherdModal from '../components/souls/AssignToShepherdModal';
 import PickEvangelizedSoulModal from '../components/evangelizedSouls/PickEvangelizedSoulModal';
+import AdnCulteLinksBar from '../components/souls/AdnCulteLinksBar';
 import ImportToSoulModal from '../components/evangelizedSouls/ImportToSoulModal';
 import { EvangelizedSoul } from '../types/evangelized.types';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,7 +67,12 @@ function loadPersistedFilters(): PersistedFilters {
   }
 }
 
-export default function SoulManagement() {
+interface SoulManagementProps {
+  /** Masque le titre de page quand affiché sous un onglet (ex: SoulsHub) */
+  embedded?: boolean;
+}
+
+export default function SoulManagement({ embedded = false }: SoulManagementProps = {}) {
   const initialFilters = loadPersistedFilters();
   const { confirm, confirmModalProps } = useConfirmModal();
   const [showForm, setShowForm] = useState(false);
@@ -88,6 +94,9 @@ export default function SoulManagement() {
   const [selectedSoulIds, setSelectedSoulIds] = useState<string[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showPickEvangelizedModal, setShowPickEvangelizedModal] = useState(false);
+  const [newSoulInitialName, setNewSoulInitialName] = useState('');
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const [selectedCulteEvent, setSelectedCulteEvent] = useState<{ id: string; label: string } | null>(null);
   const [receivingEvangelizedSoul, setReceivingEvangelizedSoul] = useState<EvangelizedSoul | null>(null);
 
   const { hasPermission } = usePermissions();
@@ -491,6 +500,8 @@ export default function SoulManagement() {
           ageRange: row.age_range ?? undefined,
           maritalStatus: row.marital_status ?? undefined,
           decision: row.decision ?? undefined,
+          wantsToGiveLife: row.wants_to_give_life ?? null,
+          wantsToBecomeMember: row.wants_to_become_member ?? null,
           prayerRequest: row.prayer_request ?? undefined,
         } as Soul));
       setSouls(soulsData);
@@ -571,58 +582,80 @@ export default function SoulManagement() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Gestion des Ames</h1>
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-          {/* Ligne 1 mobile : actions secondaires */}
-          <div className="flex items-center gap-1.5">
-            {hasPermission(PERMISSIONS.EXPORT_DATA) && (
+        {!embedded && <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Gestion des Ames</h1>}
+        <div className={`flex items-center gap-1.5 ${embedded ? 'sm:ml-auto' : ''}`}>
+          <button
+            onClick={() => { setSelectedCulteEvent(null); canImport ? setShowPickEvangelizedModal(true) : setShowForm(true); }}
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
+          >
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+            Ajouter
+          </button>
+
+          {/* Actions avancées (Export/Import) — repliées par défaut */}
+          {(hasPermission(PERMISSIONS.EXPORT_DATA) || canImport) && (
+            <div className="relative">
               <button
-                onClick={() => exportData({ data: sortedSouls, type: 'souls', format: 'xlsx' })}
-                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md"
+                onClick={() => setShowMoreActions(v => !v)}
+                className="p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+                title="Plus d'actions"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-                Export
+                <MoreVertical className="w-4 h-4" />
               </button>
-            )}
-            {canImport && (
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-[#00665C] bg-white border border-[#00665C] hover:bg-[#00665C]/10 rounded-md"
-              >
-                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-                Importer
-              </button>
-            )}
-          </div>
-          {/* Ligne 2 mobile : actions primaires */}
-          <div className="flex items-center gap-1.5">
-            {canImport && (
-              <button
-                onClick={() => setShowPickEvangelizedModal(true)}
-                className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#F2B636] hover:bg-[#F2B636]/90 rounded-md"
-              >
-                <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-                <span className="sm:hidden">Recevoir évangélisée</span>
-                <span className="hidden sm:inline">Recevoir une ame evangelisee</span>
-              </button>
-            )}
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md"
-            >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-              Ajouter
-            </button>
-          </div>
+              {showMoreActions && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMoreActions(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border z-20 py-1">
+                    {hasPermission(PERMISSIONS.EXPORT_DATA) && (
+                      <button
+                        onClick={() => { exportData({ data: sortedSouls, type: 'souls', format: 'xlsx' }); setShowMoreActions(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-[#00665C]" /> Exporter Excel
+                      </button>
+                    )}
+                    {canImport && (
+                      <button
+                        onClick={() => { setShowImportModal(true); setShowMoreActions(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Upload className="w-4 h-4 text-[#00665C]" /> Importer Excel
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
+      {canImport && (
+        <AdnCulteLinksBar
+          onSelect={(eventId, label) => {
+            setSelectedCulteEvent({ id: eventId, label });
+            setShowPickEvangelizedModal(true);
+          }}
+        />
+      )}
+
+      {selectedCulteEvent && (
+        <div className="flex items-center justify-between gap-2 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 text-sm text-brand-700">
+          <span>Ajout rattaché à : <strong>{selectedCulteEvent.label}</strong></span>
+          <button onClick={() => setSelectedCulteEvent(null)} className="text-xs font-medium hover:underline">Retirer</button>
+        </div>
+      )}
+
       <Modal
         isOpen={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => { setShowForm(false); setNewSoulInitialName(''); setSelectedCulteEvent(null); }}
         title="Ajouter une âme"
       >
-        <SoulForm onClose={() => setShowForm(false)} />
+        <SoulForm
+          onClose={() => { setShowForm(false); setNewSoulInitialName(''); setSelectedCulteEvent(null); }}
+          initialFullName={newSoulInitialName}
+          eventId={selectedCulteEvent?.id ?? null}
+        />
       </Modal>
 
       <div className="space-y-4">
@@ -814,14 +847,17 @@ export default function SoulManagement() {
         isOpen={showPickEvangelizedModal}
         onClose={() => setShowPickEvangelizedModal(false)}
         onSelect={(soul) => setReceivingEvangelizedSoul(soul)}
+        onCreateNew={(name) => { setNewSoulInitialName(name); setShowForm(true); }}
+        showEmergencyWarning={!selectedCulteEvent}
       />
 
       {receivingEvangelizedSoul && (
         <ImportToSoulModal
           soul={receivingEvangelizedSoul}
           isOpen={!!receivingEvangelizedSoul}
-          onClose={() => setReceivingEvangelizedSoul(null)}
-          onImported={() => setReceivingEvangelizedSoul(null)}
+          onClose={() => { setReceivingEvangelizedSoul(null); setSelectedCulteEvent(null); }}
+          onImported={() => { setReceivingEvangelizedSoul(null); setSelectedCulteEvent(null); }}
+          eventId={selectedCulteEvent?.id ?? null}
         />
       )}
 

@@ -55,7 +55,7 @@ export function StatCard({
             <span className="font-semibold text-brand-700">{trend}</span>{' '}{trendLabel}
           </p>
         </div>
-        <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 ${iconClassName}`}>
+        <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconClassName} ${iconClassName.replace(/^text-/, 'bg-')}/10`}>
           <Icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
         </div>
       </div>

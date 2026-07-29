@@ -60,6 +60,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   const [newEventMeetingType, setNewEventMeetingType] = useState('');
   const [isCustomMeetingType, setIsCustomMeetingType] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [adnPrefillCount, setAdnPrefillCount] = useState<number | null>(null);
 
   const steps: Step[] = useMemo(() => {
     const dataSteps: Step[] = reportType === 'sono'
@@ -77,7 +78,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   const resetState = () => {
     setValues(blankFormValues());
     setNotes(''); setNeedsNotes(''); setSelectedEventId(''); setStepIndex(0); setShowCreateEvent(false);
-    setNewEventMeetingType(''); setIsCustomMeetingType(false);
+    setNewEventMeetingType(''); setIsCustomMeetingType(false); setAdnPrefillCount(null);
   };
 
   const loadEvents = async () => {
@@ -110,6 +111,34 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   const handleFieldChange = <K extends keyof CulteReportFormValues>(key: K, value: CulteReportFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
+
+  // ADN uniquement : pre-remplit les compteurs a partir des ames deja rattachees a ce culte
+  // (recues via les liens 1er/2e Culte) -- evite au responsable de tout ressaisir. Reste modifiable.
+  useEffect(() => {
+    if (reportType !== 'adn' || !selectedEventId) {
+      setAdnPrefillCount(null);
+      return;
+    }
+    let cancelled = false;
+    CulteReportService.getAdnCountsForEvent(selectedEventId)
+      .then((counts) => {
+        if (cancelled) return;
+        setAdnPrefillCount(counts.soulCount);
+        setValues((prev) => ({
+          ...prev,
+          newVisitorMen: String(counts.newVisitors.men),
+          newVisitorWomen: String(counts.newVisitors.women),
+          undecided: String(counts.visitorDecisions.undecided),
+          wantsToJoinMen: String(counts.visitorDecisions.wantsToJoin.men),
+          wantsToJoinWomen: String(counts.visitorDecisions.wantsToJoin.women),
+          wantsLifeMen: String(counts.visitorDecisions.wantsToGiveLifeToJesus.men),
+          wantsLifeWomen: String(counts.visitorDecisions.wantsToGiveLifeToJesus.women),
+        }));
+      })
+      .catch((error) => console.error('Error pre-filling ADN counts:', error));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportType, selectedEventId]);
 
   const handleCreateEvent = async () => {
     if (!newEventMeetingType.trim()) {
@@ -308,7 +337,14 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
         )}
 
         {currentStep.key === 'data' && (
-          <CulteReportFields reportType={reportType} values={values} onChange={handleFieldChange} />
+          <>
+            {reportType === 'adn' && adnPrefillCount !== null && (
+              <p className="text-xs bg-brand-50 text-brand-700 border border-brand-200 rounded-md px-3 py-2">
+                Pré-rempli à partir de {adnPrefillCount} âme{adnPrefillCount > 1 ? 's' : ''} déjà enregistrée{adnPrefillCount > 1 ? 's' : ''} pour ce culte — vérifiez avant de soumettre.
+              </p>
+            )}
+            <CulteReportFields reportType={reportType} values={values} onChange={handleFieldChange} />
+          </>
         )}
         {currentStep.key === 'data-before' && (
           <CulteReportFields reportType={reportType} values={values} onChange={handleFieldChange} sonoSection="before" />

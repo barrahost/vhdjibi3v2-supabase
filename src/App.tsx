@@ -8,7 +8,6 @@ import { useChurch } from './contexts/ChurchContext';
 import ChurchNotFound from './pages/ChurchNotFound';
 import { ChurchProvider } from './contexts/ChurchContext';
 import { useAuth } from './contexts/AuthContext';
-import UndecidedSouls from './pages/UndecidedSouls';
 import { UserProfileProvider } from './contexts/UserProfileContext';
 
 import { CookieBanner } from './components/gdpr/CookieBanner';
@@ -26,8 +25,10 @@ const FamilyShepherdsPage = lazy(() => import('./pages/FamilyShepherdsPage'));
 const FamilyProgressionPage = lazy(() => import('./pages/FamilyProgressionPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const SoulManagement = lazy(() => import('./pages/SoulManagement'));
-const EvangelizedSoulManagement = lazy(() => import('./pages/EvangelizedSoulManagement'));
+const SoulsHub = lazy(() => import('./pages/SoulsHub'));
+const EvangelistRelances = lazy(() => import('./pages/EvangelistRelances'));
+const EvangelistAttendus = lazy(() => import('./pages/EvangelistAttendus'));
+const EvangelizedSignals = lazy(() => import('./pages/EvangelizedSignals'));
 const InteractionsManagement = lazy(() => import('./pages/InteractionsManagement'));
 const AssignedSouls = lazy(() => import('./pages/AssignedSouls'));
 const AttendanceManagement = lazy(() => import('./pages/AttendanceManagement'));
@@ -173,14 +174,14 @@ function AppContent() {
           <Route path="/ma-famille/progression" element={<FamilyProgressionPage />} />
           <Route path="/ames-indecises" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
-              <UndecidedSouls />
+              <SoulsHub defaultTab="undecided" />
             </PrivateRoute>
           } />
-          
+
           {/* English route for undecided souls */}
           <Route path="/undecided-souls" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
-              <UndecidedSouls />
+              <SoulsHub defaultTab="undecided" />
             </PrivateRoute>
           } />
           
@@ -194,26 +195,43 @@ function AppContent() {
           {/* Gestion des âmes */}
           <Route path="ames" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
-              <SoulManagement />
+              <SoulsHub defaultTab="all" />
             </PrivateRoute>
           } />
 
           {/* English route for backwards compatibility with dashboard links */}
           <Route path="souls" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
-              <SoulManagement />
+              <SoulsHub defaultTab="all" />
             </PrivateRoute>
           } />
 
           {/* Gestion des âmes évangélisées (profil Évangéliste) */}
           <Route path="ames-evangelisees" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
-              <EvangelizedSoulManagement />
+              <SoulsHub defaultTab="evangelized" />
             </PrivateRoute>
           } />
           <Route path="evangelized-souls" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
-              <EvangelizedSoulManagement />
+              <SoulsHub defaultTab="evangelized" />
+            </PrivateRoute>
+          } />
+
+          {/* Suivi Évangéliste : relances prioritaires + pointage des attendus au culte */}
+          <Route path="evangelisation/relances" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+              <EvangelistRelances />
+            </PrivateRoute>
+          } />
+          <Route path="evangelisation/attendus" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+              <EvangelistAttendus />
+            </PrivateRoute>
+          } />
+          <Route path="signalements-evangelistes" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+              <EvangelizedSignals />
             </PrivateRoute>
           } />
 

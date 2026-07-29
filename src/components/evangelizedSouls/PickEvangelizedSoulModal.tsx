@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { EvangelizedSoul } from '../../types/evangelized.types';
-import { Search, UserCheck } from 'lucide-react';
+import { Search, UserCheck, UserPlus, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 
@@ -9,9 +9,15 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (soul: EvangelizedSoul) => void;
+  /** Appelé quand aucune âme évangélisée ne correspond — crée une âme "de zéro" avec le nom déjà tapé. */
+  onCreateNew?: (searchTerm: string) => void;
+  /** Affiche un avertissement — utilisé quand la modale est ouverte via le bouton "Ajouter"
+   * classique plutôt qu'un lien de culte (1er/2e Culte), pour rappeler que ce chemin est
+   * réservé aux oublis/cas exceptionnels. */
+  showEmergencyWarning?: boolean;
 }
 
-export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect }: Props) {
+export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect, onCreateNew, showEmergencyWarning }: Props) {
   const [souls, setSouls] = useState<EvangelizedSoul[]>([]);
   const [filtered, setFiltered] = useState<EvangelizedSoul[]>([]);
   const [search, setSearch] = useState('');
@@ -74,12 +80,27 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect }: 
     onClose();
   };
 
+  const handleCreateNew = () => {
+    onCreateNew?.(search.trim());
+    onClose();
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Choisir une âme évangélisée à recevoir">
+    <Modal isOpen={isOpen} onClose={onClose} title="Ajouter une âme">
       <div className="p-4 space-y-4">
+        {showEmergencyWarning && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <p>
+              Ce bouton est réservé aux <strong>oublis</strong> (âme non enregistrée lors d'un culte précédent).
+              Si un lien de culte est disponible aujourd'hui, utilise-le plutôt en haut de page — cela évite
+              au responsable ADN de ressaisir ces données pour son rapport.
+            </p>
+          </div>
+        )}
         <p className="text-sm text-gray-600">
-          Sélectionnez l'âme évangélisée qui vient de faire sa première visite au culte.
-          Seules les âmes <strong>pas encore reçues</strong> sont affichées.
+          Vérifiez d'abord si cette personne est une âme évangélisée <strong>pas encore reçue</strong> —
+          si c'est le cas, sélectionnez-la ci-dessous. Sinon, créez une nouvelle âme.
         </p>
 
         {/* Recherche */}
@@ -127,7 +148,17 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect }: 
           )}
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-3">
+          {onCreateNew ? (
+            <button
+              type="button"
+              onClick={handleCreateNew}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#00665C] bg-[#00665C]/5 border border-[#00665C] rounded-md hover:bg-[#00665C]/10"
+            >
+              <UserPlus className="w-4 h-4" />
+              Aucune correspondance, créer une nouvelle âme
+            </button>
+          ) : <span />}
           <button
             type="button"
             onClick={onClose}

@@ -29,7 +29,12 @@ import { useConfirmModal } from '../hooks/useConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 
-export default function EvangelizedSoulManagement() {
+interface EvangelizedSoulManagementProps {
+  /** Masque le titre de page quand affiché sous un onglet (ex: SoulsHub) */
+  embedded?: boolean;
+}
+
+export default function EvangelizedSoulManagement({ embedded = false }: EvangelizedSoulManagementProps = {}) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const { user, userRole, activeRole } = useAuth();
   const [searchParams] = useSearchParams();
@@ -518,10 +523,12 @@ export default function EvangelizedSoulManagement() {
     <div className="space-y-4 sm:space-y-6">
       {/* Header — desktop layout */}
       <div className="hidden sm:flex sm:justify-between sm:items-center gap-3">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Megaphone className="w-7 h-7 text-[#00665C]" /> Âmes évangélisées
-        </h1>
-        <div className="flex items-center gap-3 flex-wrap">
+        {!embedded && (
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Megaphone className="w-7 h-7 text-[#00665C]" /> Âmes évangélisées
+          </h1>
+        )}
+        <div className={`flex items-center gap-3 flex-wrap ${embedded ? 'ml-auto' : ''}`}>
           {isAdmin && unassignedCount > 0 && (
             <button onClick={() => setShowDistributeModal(true)}
               className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 font-medium text-amber-700 hover:bg-amber-50 border border-amber-400 rounded-md">
@@ -535,12 +542,34 @@ export default function EvangelizedSoulManagement() {
               {linkCopied ? 'Copié !' : 'Copier le lien'}
             </button>
           )}
-          <button onClick={handleExport}
-            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 font-medium text-[#00665C] hover:bg-[#00665C]/10 border border-[#00665C] rounded-md">
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1 sm:w-4 sm:h-4 sm:mr-1.5" /> Export Excel
-          </button>
-          <DownloadTemplateButton />
-          {canCreateEvangelized && <ImportEvangelizedSoulsFromExcel />}
+          <div className="relative">
+            <button
+              onClick={() => setShowMobileActions(v => !v)}
+              className="p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+              title="Plus d'actions"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+            {showMobileActions && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMobileActions(false)} />
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border z-20 py-1">
+                  <button onClick={() => { handleExport(); setShowMobileActions(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                    <FileSpreadsheet className="w-4 h-4 text-[#00665C]" /> Exporter Excel
+                  </button>
+                  <div className="px-2 py-1" onClick={() => setShowMobileActions(false)}>
+                    <DownloadTemplateButton />
+                  </div>
+                  {canCreateEvangelized && (
+                    <div className="px-2 py-1" onClick={() => setShowMobileActions(false)}>
+                      <ImportEvangelizedSoulsFromExcel />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           {canCreateEvangelized && (
             <button onClick={() => setShowForm(!showForm)}
               data-tour="btn-add-evangelized-soul"
@@ -555,10 +584,12 @@ export default function EvangelizedSoulManagement() {
       {/* Header — mobile layout */}
       <div className="sm:hidden">
         <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Megaphone className="w-5 h-5 text-[#00665C]" /> Âmes évangélisées
-          </h1>
-          <div className="flex items-center gap-2">
+          {!embedded && (
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-[#00665C]" /> Âmes évangélisées
+            </h1>
+          )}
+          <div className={`flex items-center gap-2 ${embedded ? 'ml-auto' : ''}`}>
             {canCreateEvangelized && (
               <button onClick={() => setShowForm(!showForm)}
                 data-tour="btn-add-evangelized-soul"

@@ -67,6 +67,7 @@ export interface Soul {
   // Nouveaux champs ADN
   originSource?: 'culte' | 'evangelisation'; // Provenance de l'âme
   serviceFamilyId?: string; // Famille de service assignée par ADN
+  eventId?: string | null; // Culte precis (culte_events) auquel cette ame a ete rattachee a la reception
   // Champs carte de bienvenue Vases d'Honneur
   email?: string;
   profession?: string;
@@ -74,7 +75,9 @@ export interface Soul {
   isRegular?: boolean | null; // Régulier (Oui/Non)
   ageRange?: AgeRange; // Tranche d'âge
   maritalStatus?: MaritalStatus; // Situation matrimoniale
-  decision?: SoulDecision; // Ma décision aujourd'hui (3 états)
+  decision?: SoulDecision; // Ancien champ (3 états, un seul choix) -- conserve pour l'historique
+  wantsToGiveLife?: boolean | null; // Donner sa vie a Jesus-Christ (independant de wantsToBecomeMember)
+  wantsToBecomeMember?: boolean | null; // Devenir membre (independant de wantsToGiveLife)
   prayerRequest?: string; // Observations ou besoin de prière
 }
 

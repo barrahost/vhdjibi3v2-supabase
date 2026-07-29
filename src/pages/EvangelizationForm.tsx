@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { Megaphone, Loader2, CheckCircle2, Plus, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Megaphone, Loader2, CheckCircle2, Plus, Check, ChevronLeft, ChevronRight, LogIn, UserCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
+import { useAuth } from '../contexts/AuthContext';
 import { GenderRadioGroup } from '../components/ui/GenderRadioGroup';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { useServiceFamilies } from '../hooks/useServiceFamilies';
 import {
   GAVE_LIFE_OPTIONS, WILL_JOIN_VH_OPTIONS, PLANNED_SERVICE_OPTIONS,
@@ -13,6 +15,7 @@ import {
 } from '../types/evangelized.types';
 
 type PageState = 'ready' | 'submitting' | 'done';
+type AccessMode = 'choice' | 'login' | 'guest' | 'authenticated';
 const STEP_LABELS = ['Identité & contact', 'Décision', 'Compléments'];
 
 const initial = {
@@ -62,12 +65,38 @@ function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
 export default function EvangelizationForm() {
   const { loading: churchLoading } = useChurch();
   const { families } = useServiceFamilies(true);
+  const { user, login } = useAuth();
   const [pageState, setPageState] = useState<PageState>('ready');
   const [data, setData] = useState(initial);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [stepError, setStepError] = useState<string | null>(null);
   const [navLocked, setNavLocked] = useState(false);
   const navLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Acces : deja connecte (session existante) -> direct ; sinon on demande de choisir
+  // entre se connecter (serviteur/evangeliste) et continuer en invite (sans compte).
+  const [accessMode, setAccessMode] = useState<AccessMode>(user ? 'authenticated' : 'choice');
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  const handleLogin = async () => {
+    if (!loginPhone.trim() || !loginPassword.trim()) {
+      setLoginError('Numéro et mot de passe requis.');
+      return;
+    }
+    setLoggingIn(true);
+    setLoginError(null);
+    try {
+      await login(loginPhone.trim(), loginPassword);
+      setAccessMode('authenticated');
+    } catch (err: any) {
+      setLoginError(err?.message === 'User not found' ? 'Compte introuvable.' : 'Numéro ou mot de passe incorrect.');
+    } finally {
+      setLoggingIn(false);
+    }
+  };
 
   const canAssignFamily = data.willJoinVH === 'yes' && data.plannedService !== '' && data.plannedService !== 'undecided';
 
@@ -109,8 +138,9 @@ export default function EvangelizationForm() {
         p_will_join_vh: data.willJoinVH,
         p_planned_service: data.plannedService,
         p_prayer_topics: data.prayerTopics.trim(),
-        p_interviewer_name: data.interviewerName.trim(),
+        p_interviewer_name: accessMode === 'authenticated' && user ? user.fullName : data.interviewerName.trim(),
         p_service_family_id: canAssignFamily ? data.serviceFamilyId : '',
+        p_evangelist_id: accessMode === 'authenticated' && user ? user.id : null,
       });
       if (error) throw new Error(error.message);
       setPageState('done');
@@ -157,6 +187,88 @@ export default function EvangelizationForm() {
     );
   }
 
+  if (accessMode === 'choice' || accessMode === 'login') {
+    return (
+      <>
+        <Toaster position="top-center" />
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+          <div className="bg-[#00665C] text-white px-4 pt-10 pb-8">
+            <div className="max-w-lg mx-auto">
+              <p className="text-xs text-white/60 mb-1 uppercase tracking-wide">
+                Vases d'Honneur — Assemblée Grâce Confondante (AGC)
+              </p>
+              <h1 className="text-xl font-bold flex items-center gap-2">
+                <Megaphone className="w-5 h-5" />
+                Fiche d'évangélisation
+              </h1>
+              <p className="text-sm text-white/80 mt-1.5 leading-snug">
+                À remplir juste après l'entretien avec l'âme rencontrée.
+              </p>
+            </div>
+          </div>
+          <div className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
+            {accessMode === 'choice' && (
+              <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+                <p className="text-sm text-gray-600">
+                  Es-tu serviteur / évangéliste avec un compte sur l'application ?
+                </p>
+                <button
+                  onClick={() => setAccessMode('login')}
+                  className="w-full flex items-center justify-center gap-2 h-12 bg-[#00665C] text-white font-semibold rounded-xl hover:bg-[#00665C]/90 transition-colors text-sm"
+                >
+                  <LogIn className="w-4 h-4" /> Se connecter
+                </button>
+                <button
+                  onClick={() => setAccessMode('guest')}
+                  className="w-full flex items-center justify-center gap-2 h-12 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm"
+                >
+                  Continuer en invité (sans compte)
+                </button>
+              </div>
+            )}
+            {accessMode === 'login' && (
+              <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de téléphone</label>
+                  <PhoneInput
+                    value={loginPhone}
+                    onChange={setLoginPhone}
+                    placeholder="0757000203"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+                    className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                  />
+                </div>
+                {loginError && <p className="text-xs text-red-500">{loginError}</p>}
+                <button
+                  onClick={handleLogin}
+                  disabled={loggingIn}
+                  className="w-full flex items-center justify-center gap-2 h-12 bg-[#00665C] text-white font-semibold rounded-xl hover:bg-[#00665C]/90 disabled:opacity-50 transition-colors text-sm"
+                >
+                  {loggingIn && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loggingIn ? 'Connexion...' : 'Se connecter'}
+                </button>
+                <button
+                  onClick={() => { setAccessMode('choice'); setLoginError(null); }}
+                  className="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-700"
+                >
+                  Retour
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Toaster position="top-center" />
@@ -173,6 +285,11 @@ export default function EvangelizationForm() {
             <p className="text-sm text-white/80 mt-1.5 leading-snug">
               À remplir juste après l'entretien avec l'âme rencontrée.
             </p>
+            {accessMode === 'authenticated' && user && (
+              <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold bg-white/15 px-2.5 py-1 rounded-full">
+                <UserCircle2 className="w-3.5 h-3.5" /> Connecté en tant que {user.fullName}
+              </p>
+            )}
             <StepIndicator step={step} />
           </div>
         </div>
@@ -212,12 +329,10 @@ export default function EvangelizationForm() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Numéro de téléphone</label>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={data.phone}
-                  onChange={e => setData(d => ({ ...d, phone: e.target.value }))}
+                  onChange={(phone) => setData(d => ({ ...d, phone }))}
                   placeholder="0757000203"
-                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
                 />
               </div>
 
@@ -334,16 +449,25 @@ export default function EvangelizationForm() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Personne ayant conduit l'entretien</label>
-                <input
-                  type="text"
-                  value={data.interviewerName}
-                  onChange={e => setData(d => ({ ...d, interviewerName: e.target.value }))}
-                  placeholder="Ton nom (optionnel)"
-                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
-                />
-              </div>
+              {accessMode === 'authenticated' && user ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Personne ayant conduit l'entretien</label>
+                  <div className="w-full h-12 px-3 flex items-center border border-gray-100 bg-gray-50 rounded-xl text-sm text-gray-500">
+                    {user.fullName} <span className="ml-1.5 text-xs text-gray-400">(connecté)</span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Personne ayant conduit l'entretien</label>
+                  <input
+                    type="text"
+                    value={data.interviewerName}
+                    onChange={e => setData(d => ({ ...d, interviewerName: e.target.value }))}
+                    placeholder="Ton nom (optionnel)"
+                    className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                  />
+                </div>
+              )}
             </div>
           )}
 

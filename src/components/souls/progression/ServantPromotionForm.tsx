@@ -7,6 +7,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
+import { PhoneInput } from '../../ui/PhoneInput';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Checkbox } from '../../ui/checkbox';
 import { UserPlus, AlertCircle } from 'lucide-react';
@@ -159,12 +160,10 @@ export default function ServantPromotionForm({ soul, onSuccess }: ServantPromoti
 
             <div>
               <Label htmlFor="phone">Téléphone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
+              <PhoneInput
                 required
+                value={formData.phone}
+                onChange={(phone) => handleInputChange('phone', phone)}
               />
             </div>
 

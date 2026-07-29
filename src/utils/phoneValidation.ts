@@ -1,41 +1,36 @@
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
+import { DEFAULT_PHONE_COUNTRY } from '../components/ui/PhoneInput';
+
 export interface PhoneValidationResult {
   isValid: boolean;
-  formattedNumber?: string;
+  formattedNumber?: string; // Format international complet, ex: +2250700075363
   error?: string;
-  cleanNumber?: string; // Ajout de cette propriété pour retourner le numéro à 10 chiffres
+  cleanNumber?: string; // Numero national sans indicatif, ex: 0700075363
 }
 
-export function validatePhoneNumber(phone: string): PhoneValidationResult {
+/** Valide un numero pour n'importe quel pays. Si le numero ne precise pas d'indicatif
+ * (pas de '+'), on suppose la Cote d'Ivoire par defaut -- retro-compatible avec tous
+ * les numeros existants saisis avant l'introduction du selecteur de pays. */
+export function validatePhoneNumber(phone: string, defaultCountry: CountryCode = DEFAULT_PHONE_COUNTRY): PhoneValidationResult {
   try {
-    // Supprimer tous les caractères non numériques
-    let cleaned = phone.replace(/\D/g, '');
-
-    // Si le numéro nettoyé commence par '225' et a une longueur de 13 chiffres,
-    // cela signifie qu'il inclut déjà le code pays. On le retire pour la validation.
-    if (cleaned.startsWith('225') && cleaned.length === 13) {
-      cleaned = cleaned.substring(3); // Retire les 3 premiers chiffres ('225')
+    if (!phone || !phone.trim()) {
+      return { isValid: false, error: 'Le numéro est obligatoire' };
     }
 
-    // Vérifier que nous avons exactement 10 chiffres
-    if (cleaned.length !== 10) {
-      return {
-        isValid: false,
-        error: 'Le numéro doit contenir exactement 10 chiffres'
-      };
+    const parsed = parsePhoneNumberFromString(phone, defaultCountry);
+    if (!parsed || !parsed.isValid()) {
+      return { isValid: false, error: 'Numéro de téléphone invalide' };
     }
-
-    // Format final : +225XXXXXXXXXX
-    const formattedNumber = `+225${cleaned}`;
 
     return {
       isValid: true,
-      formattedNumber,
-      cleanNumber: cleaned // Retourne le numéro à 10 chiffres sans préfixe
+      formattedNumber: parsed.number, // E.164, ex: +2250700075363
+      cleanNumber: parsed.nationalNumber, // Sans indicatif, ex: 0700075363 (format national)
     };
   } catch (error) {
     return {
       isValid: false,
-      error: 'Format de numéro invalide'
+      error: 'Format de numéro invalide',
     };
   }
 }
@@ -43,9 +38,9 @@ export function validatePhoneNumber(phone: string): PhoneValidationResult {
 // Numéro international au format 225XXXXXXXXXX (sans +), ou null si invalide.
 function toInternational(phone?: string | null): string | null {
   if (!phone) return null;
-  const { isValid, cleanNumber } = validatePhoneNumber(phone);
-  if (!isValid || !cleanNumber) return null;
-  return `225${cleanNumber}`;
+  const { isValid, formattedNumber } = validatePhoneNumber(phone);
+  if (!isValid || !formattedNumber) return null;
+  return formattedNumber.replace(/^\+/, '');
 }
 
 // Lien d'appel direct (tel:) ou null si le numéro est invalide.

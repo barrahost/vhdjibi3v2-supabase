@@ -220,4 +220,6 @@ export interface CulteRecurringSchedule {
   meetingTypeName: string;
   dayOfWeek: DayOfWeek;
   isActive: boolean;
+  /** Heure de debut (HH:MM:SS), optionnelle -- utilisee pour les liens de reception d'ames ADN. */
+  startTime: string | null;
 }

@@ -214,13 +214,16 @@ export default function DepartmentLeaderDashboard() {
       )}
 
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-[#00665C]/10 to-[#00665C]/5 p-4 sm:p-6 rounded-xl border border-[#00665C]/10">
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900 mb-1">
-          {department.name}
-        </h1>
-        <p className="text-sm text-gray-500">
-          {department.description || 'Tableau de bord responsable de département'}
-        </p>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-700 to-brand-900 px-4 py-4 sm:px-6 sm:py-6 shadow-sm">
+        <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="relative">
+          <h1 className="text-lg sm:text-2xl font-bold text-white mb-1">
+            {department.name}
+          </h1>
+          <p className="text-sm text-white/70">
+            {department.description || 'Tableau de bord responsable de département'}
+          </p>
+        </div>
       </div>
 
       {/* Statistiques */}
@@ -228,7 +231,9 @@ export default function DepartmentLeaderDashboard() {
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <Users className="h-6 w-6 sm:h-7 sm:w-7 text-[#00665C] flex-shrink-0" />
+              <span className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-brand-700" />
+              </span>
               <div className="min-w-0">
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{stats.totalServants}</p>
                 <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">Serviteurs</p>
@@ -240,7 +245,9 @@ export default function DepartmentLeaderDashboard() {
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <UserCheck className="h-6 w-6 sm:h-7 sm:w-7 text-green-600 flex-shrink-0" />
+              <span className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                <UserCheck className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+              </span>
               <div className="min-w-0">
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{stats.activeServants}</p>
                 <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">Actifs</p>
@@ -252,7 +259,9 @@ export default function DepartmentLeaderDashboard() {
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <CalendarDays className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 flex-shrink-0" />
+              <span className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </span>
               <div className="min-w-0">
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{totalActivities}</p>
                 <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">Activités</p>
@@ -264,7 +273,9 @@ export default function DepartmentLeaderDashboard() {
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <Crown className="h-6 w-6 sm:h-7 sm:w-7 text-purple-600 flex-shrink-0" />
+              <span className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+              </span>
               <div className="min-w-0">
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{stats.shepherds}</p>
                 <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">Bergers</p>

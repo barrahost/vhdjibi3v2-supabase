@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
+import { PhoneInput } from '../ui/PhoneInput';
 import { CheckCircle2, Plus, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -174,13 +175,7 @@ export default function EvangelizedSoulForm({ onCreated }: EvangelizedSoulFormPr
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-          <input
-            type="tel"
-            value={data.phone}
-            onChange={(e) => setData({ ...data, phone: e.target.value })}
-            placeholder="+225..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
-          />
+          <PhoneInput value={data.phone} onChange={(phone) => setData({ ...data, phone })} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Lieu d'habitation *</label>

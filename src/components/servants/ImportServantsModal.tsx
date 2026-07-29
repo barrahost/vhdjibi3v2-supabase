@@ -7,6 +7,7 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { ServantService } from '../../services/servant.service';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../ui/GenderRadioGroup';
+import { PhoneInput } from '../ui/PhoneInput';
 import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -448,20 +449,11 @@ export function ImportServantsModal({ isOpen, onClose, fixedDepartmentId, onImpo
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Numéro de téléphone <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">+225</span>
-                <input
-                  type="tel"
-                  placeholder="0757000203"
-                  value={manualForm.phone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setManualForm(prev => ({ ...prev, phone: value }));
-                  }}
-                  className="w-full pl-16 pr-4 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
-                  maxLength={10}
-                />
-              </div>
+              <PhoneInput
+                placeholder="0757000203"
+                value={manualForm.phone}
+                onChange={(phone) => setManualForm(prev => ({ ...prev, phone }))}
+              />
             </div>
 
             <div>

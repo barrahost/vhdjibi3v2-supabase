@@ -50,6 +50,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [newEventMeetingType, setNewEventMeetingType] = useState('');
   const [isCustomMeetingType, setIsCustomMeetingType] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [adnPrefillCount, setAdnPrefillCount] = useState<number | null>(null);
 
   const loadEvents = async () => {
     setLoadingEvents(true);
@@ -85,6 +86,33 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const handleFieldChange = <K extends keyof CulteReportFormValues>(key: K, value: CulteReportFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
+
+  // ADN uniquement : pre-remplit les compteurs a partir des ames deja rattachees a ce culte.
+  useEffect(() => {
+    if (reportType !== 'adn' || !selectedEventId) {
+      setAdnPrefillCount(null);
+      return;
+    }
+    let cancelled = false;
+    CulteReportService.getAdnCountsForEvent(selectedEventId)
+      .then((counts) => {
+        if (cancelled) return;
+        setAdnPrefillCount(counts.soulCount);
+        setValues((prev) => ({
+          ...prev,
+          newVisitorMen: String(counts.newVisitors.men),
+          newVisitorWomen: String(counts.newVisitors.women),
+          undecided: String(counts.visitorDecisions.undecided),
+          wantsToJoinMen: String(counts.visitorDecisions.wantsToJoin.men),
+          wantsToJoinWomen: String(counts.visitorDecisions.wantsToJoin.women),
+          wantsLifeMen: String(counts.visitorDecisions.wantsToGiveLifeToJesus.men),
+          wantsLifeWomen: String(counts.visitorDecisions.wantsToGiveLifeToJesus.women),
+        }));
+      })
+      .catch((error) => console.error('Error pre-filling ADN counts:', error));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportType, selectedEventId]);
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,6 +280,11 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
         </div>
       )}
 
+      {reportType === 'adn' && adnPrefillCount !== null && (
+        <p className="text-xs bg-[#00665C]/5 text-[#00665C] border border-[#00665C]/20 rounded-md px-3 py-2">
+          Pré-rempli à partir de {adnPrefillCount} âme{adnPrefillCount > 1 ? 's' : ''} déjà enregistrée{adnPrefillCount > 1 ? 's' : ''} pour ce culte — vérifiez avant de soumettre.
+        </p>
+      )}
       <CulteReportFields reportType={reportType} values={values} onChange={handleFieldChange} />
 
       <div>

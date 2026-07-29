@@ -9,6 +9,7 @@ import { PrayerRequestService, PRAYER_CATEGORIES, PrayerCategory } from '../serv
 import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
 import { validatePhoneNumber } from '../utils/phoneValidation';
+import { PhoneInput } from '../components/ui/PhoneInput';
 
 type PageState = 'ready' | 'submitting' | 'done';
 
@@ -264,12 +265,10 @@ export default function PrayerRequestForm() {
                   placeholder="Ton nom et prénoms"
                   className="w-full h-12 px-3 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
                 />
-                <input
-                  type="tel"
+                <PhoneInput
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
+                  onChange={setPhone}
                   placeholder="Ton numéro de téléphone"
-                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
                 />
                 {phone.trim().length > 0 && phoneCheck && !phoneCheck.isValid && (
                   <p className="text-xs text-red-500">{phoneCheck.error}</p>

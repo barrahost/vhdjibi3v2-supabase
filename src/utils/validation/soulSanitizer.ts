@@ -60,8 +60,14 @@ export function sanitizeSoulData(data: Partial<Soul>): Record<string, any> {
   }
   if (data.decision !== undefined) {
     sanitized.decision = data.decision || null;
-    // Garder is_undecided synchronisé avec la décision
-    sanitized.is_undecided = data.decision === 'undecided';
+  }
+  if (data.wantsToGiveLife !== undefined || data.wantsToBecomeMember !== undefined) {
+    const wantsToGiveLife = data.wantsToGiveLife === true;
+    const wantsToBecomeMember = data.wantsToBecomeMember === true;
+    sanitized.wants_to_give_life = wantsToGiveLife;
+    sanitized.wants_to_become_member = wantsToBecomeMember;
+    // Indecis(e) = n'a repondu "oui" a aucune des 2 questions
+    sanitized.is_undecided = !wantsToGiveLife && !wantsToBecomeMember;
   }
   if (data.prayerRequest !== undefined) {
     sanitized.prayer_request = data.prayerRequest?.trim() || null;

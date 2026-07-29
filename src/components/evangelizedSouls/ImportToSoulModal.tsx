@@ -5,7 +5,8 @@ import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { SMSTemplate } from '../../types/sms.types';
 import { SMSService } from '../../services/sms.service';
 import { EvangelizedSoul } from '../../types/evangelized.types';
-import { Info } from 'lucide-react';
+import { Info, Heart, UserCheck, HelpCircle } from 'lucide-react';
+import { PhoneInput } from '../ui/PhoneInput';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -15,9 +16,11 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onImported?: () => void;
+  /** Culte precis (culte_events) auquel rattacher cette ame, si reçue via un lien ADN. */
+  eventId?: string | null;
 }
 
-export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }: Props) {
+export default function ImportToSoulModal({ soul, isOpen, onClose, onImported, eventId }: Props) {
   const { families } = useServiceFamilies(true);
   const [submitting, setSubmitting] = useState(false);
   const [templates, setTemplates] = useState<SMSTemplate[]>([]);
@@ -33,7 +36,8 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
     firstVisitDate: new Date().toISOString().split('T')[0],
     shepherdId: undefined as string | undefined,
     serviceFamilyId: undefined as string | undefined,
-    isUndecided: false,
+    wantsToGiveLife: false,
+    wantsToBecomeMember: false,
   });
 
   useEffect(() => {
@@ -47,7 +51,8 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
       firstVisitDate: new Date().toISOString().split('T')[0],
       shepherdId: undefined,
       serviceFamilyId: undefined,
-      isUndecided: false,
+      wantsToGiveLife: false,
+      wantsToBecomeMember: false,
     });
     setSelectedTemplate('');
   }, [soul, isOpen]);
@@ -85,7 +90,9 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
         nickname: data.nickname.trim() || null,
         gender: data.gender,
         phone: data.phone.trim(),
-        is_undecided: data.isUndecided,
+        is_undecided: !data.wantsToGiveLife && !data.wantsToBecomeMember,
+        wants_to_give_life: data.wantsToGiveLife,
+        wants_to_become_member: data.wantsToBecomeMember,
         location: data.location.trim(),
         coordinates: null,
         first_visit_date: new Date(data.firstVisitDate).toISOString(),
@@ -104,6 +111,7 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
         status: 'active',
         created_by: user.id,
         photo_url: soul.photoURL || null,
+        event_id: eventId || null,
       };
 
       const { data: insertedSoul, error: insertErr } = await supabase
@@ -209,9 +217,7 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-              <input type="tel" value={data.phone}
-                onChange={(e) => setData({ ...data, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
+              <PhoneInput value={data.phone} onChange={(phone) => setData({ ...data, phone })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Lieu d'habitation *</label>
@@ -252,15 +258,48 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported }:
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={data.isUndecided}
-              onChange={(e) => setData({ ...data, isUndecided: e.target.checked })}
-              className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
-            />
-            Marquer comme indécis(e)
-          </label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Décision de cette âme</label>
+            <div className="space-y-2">
+              {([
+                { key: 'wantsToGiveLife' as const, icon: Heart, label: 'Donner sa vie à Jésus-Christ' },
+                { key: 'wantsToBecomeMember' as const, icon: UserCheck, label: 'Devenir membre' },
+              ]).map(({ key, icon: Icon, label }) => {
+                const value = data[key];
+                return (
+                  <div key={key} className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-gray-300 bg-white">
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${value ? 'text-[#00665C]' : 'text-gray-300'}`} />
+                    <span className="text-sm text-gray-700 flex-1">{label}</span>
+                    <div className="flex rounded-md border border-gray-200 overflow-hidden flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setData({ ...data, [key]: true })}
+                        className={`px-3 py-1 text-xs font-semibold transition-colors ${value === true ? 'bg-[#00665C] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      >
+                        Oui
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setData({ ...data, [key]: false })}
+                        className={`px-3 py-1 text-xs font-semibold border-l border-gray-200 transition-colors ${value === false ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      >
+                        Non
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {!data.wantsToGiveLife && !data.wantsToBecomeMember && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-amber-600">
+                <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                Sera considérée comme indécise pour l'instant.
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              Utilisé pour pré-remplir le rapport ADN du culte (nouveaux visiteurs, décisions).
+            </p>
+          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}

@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   MessageCircle,
   TrendingUp,
-  AlertTriangle,
   Heart,
   Bell,
   CalendarCheck,
@@ -35,6 +34,7 @@ import {
   BookOpen,
   Radio,
   Wheat,
+  Clock,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -201,13 +201,17 @@ export function useNavigationItems(): NavItem[] {
     const children: NavItem[] = [];
 
     if (hasPermission(PERMISSIONS.MANAGE_SOULS) && hasModule('souls')) {
+      const evangelizedBadge = (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && activeRole !== ROLES.ADN && hasModule('evangelization'))
+        ? alertCount('pending_evangelized')
+        : 0;
       children.push(
-        { id: 'souls', label: 'Âmes', href: '/ames', icon: <Heart className="w-5 h-5" />, badge: alertCount('no_shepherd') },
-        { id: 'undecided-souls', label: 'Âmes indécises', href: '/ames-indecises', icon: <AlertTriangle className="w-5 h-5" />, badge: alertCount('undecided') }
+        { id: 'souls', label: 'Âmes', href: '/ames', icon: <Heart className="w-5 h-5" />, badge: alertCount('no_shepherd') + alertCount('undecided') + evangelizedBadge }
       );
+    } else if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && hasModule('evangelization')) {
+      children.push({ id: 'evangelized-souls-admin', label: 'Âmes évangélisées', href: '/ames-evangelisees', icon: <Megaphone className="w-5 h-5" />, badge: alertCount('pending_evangelized') });
     }
     if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && activeRole !== ROLES.EVANGELIST && hasModule('evangelization')) {
-      children.push({ id: 'evangelized-souls-admin', label: 'Âmes évangélisées', href: '/ames-evangelisees', icon: <Megaphone className="w-5 h-5" />, badge: alertCount('pending_evangelized') });
+      children.push({ id: 'evangelized-signals', label: 'Signalements évangélistes', href: '/signalements-evangelistes', icon: <Megaphone className="w-5 h-5" /> });
     }
     if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasModule('users')) {
       children.push({ id: 'users', label: 'Utilisateurs', href: '/users', icon: <UserCog className="w-5 h-5" /> });
@@ -295,6 +299,8 @@ export function useNavigationItems(): NavItem[] {
   // Evangelist menu
   if (activeRole === ROLES.EVANGELIST && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
     items.push({ id: 'evangelized-souls', label: 'Âmes évangélisées', icon: <Megaphone className="w-5 h-5" />, href: '/ames-evangelisees', dataTour: 'nav-evangelized-souls' });
+    items.push({ id: 'evangelist-relances', label: 'À relancer', icon: <Clock className="w-5 h-5" />, href: '/evangelisation/relances' });
+    items.push({ id: 'evangelist-attendus', label: 'Attendus au culte', icon: <CalendarCheck className="w-5 h-5" />, href: '/evangelisation/attendus' });
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
       items.push({ id: 'evangelist-interactions', label: 'Mes interactions', icon: <MessageCircle className="w-5 h-5" />, href: '/interactions', dataTour: 'nav-interactions-evangelist' });
     }

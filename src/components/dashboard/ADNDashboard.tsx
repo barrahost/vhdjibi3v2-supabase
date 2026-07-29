@@ -157,20 +157,23 @@ export function ADNDashboard() {
   return (
     <div className="space-y-6">
       {/* En-tête + CTA */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-          <h1 className="text-2xl font-bold text-gray-900 mt-0.5">Tableau de bord ADN</h1>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-700 to-brand-900 px-5 py-5 sm:px-6 sm:py-6 shadow-sm">
+        <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-medium text-white/70 uppercase tracking-wide">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+            <h1 className="text-2xl font-bold text-white mt-0.5">Tableau de bord ADN</h1>
+          </div>
+          <button
+            onClick={() => navigate('/ames')}
+            className="flex items-center gap-2 h-12 px-5 text-sm font-semibold bg-white text-brand-700 rounded-xl hover:bg-white/90 transition-colors self-start sm:self-auto shadow-sm"
+          >
+            <User className="w-4 h-4" />
+            Gérer les âmes
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/ames')}
-          className="flex items-center gap-2 h-12 px-5 text-sm font-semibold bg-brand-700 text-white rounded-xl hover:bg-brand-800 transition-colors self-start sm:self-auto"
-        >
-          <User className="w-4 h-4" />
-          Gérer les âmes
-        </button>
       </div>
 
       <PendingActionsWidget role="adn" />

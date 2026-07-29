@@ -160,9 +160,12 @@ export default function FamilyLeaderDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Famille : {family.name}</h1>
-        {family.description && <p className="text-sm text-gray-500 mt-1">{family.description}</p>}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-700 to-brand-900 px-5 py-5 sm:px-6 sm:py-6 shadow-sm">
+        <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+        <div className="relative">
+          <h1 className="text-2xl font-bold text-white">Famille : {family.name}</h1>
+          {family.description && <p className="text-sm text-white/70 mt-1">{family.description}</p>}
+        </div>
       </div>
 
       <PendingActionsWidget role="family_leader" familyId={family.id} />

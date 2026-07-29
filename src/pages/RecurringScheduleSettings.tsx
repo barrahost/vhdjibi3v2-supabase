@@ -13,6 +13,7 @@ export default function RecurringScheduleSettings() {
   const [loading, setLoading] = useState(true);
   const [meetingTypeName, setMeetingTypeName] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>(0);
+  const [startTime, setStartTime] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +33,7 @@ export default function RecurringScheduleSettings() {
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => { setMeetingTypeName(''); setDayOfWeek(0); setIsActive(true); setEditingId(null); };
+  const resetForm = () => { setMeetingTypeName(''); setDayOfWeek(0); setStartTime(''); setIsActive(true); setEditingId(null); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,10 +44,10 @@ export default function RecurringScheduleSettings() {
     setIsSubmitting(true);
     try {
       if (editingId) {
-        await RecurringScheduleService.update(editingId, meetingTypeName, dayOfWeek, isActive);
+        await RecurringScheduleService.update(editingId, meetingTypeName, dayOfWeek, isActive, startTime || null);
         toast.success('Programme modifié');
       } else {
-        await RecurringScheduleService.create(meetingTypeName, dayOfWeek);
+        await RecurringScheduleService.create(meetingTypeName, dayOfWeek, startTime || null);
         toast.success('Programme ajouté');
       }
       resetForm();
@@ -59,7 +60,7 @@ export default function RecurringScheduleSettings() {
   };
 
   const handleEdit = (item: CulteRecurringSchedule) => {
-    setEditingId(item.id); setMeetingTypeName(item.meetingTypeName); setDayOfWeek(item.dayOfWeek); setIsActive(item.isActive);
+    setEditingId(item.id); setMeetingTypeName(item.meetingTypeName); setDayOfWeek(item.dayOfWeek); setStartTime(item.startTime || ''); setIsActive(item.isActive);
   };
 
   const handleDelete = async (id: string) => {
@@ -98,6 +99,11 @@ export default function RecurringScheduleSettings() {
               {DAY_OPTIONS.map((d) => <option key={d} value={d}>{DAY_OF_WEEK_LABELS[d]}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Heure de début (optionnel)</label>
+            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
+            <p className="mt-1 text-xs text-gray-400">Utilisée pour les liens de réception d'âmes ADN (disponibles 30 min après ce début).</p>
+          </div>
         </div>
         {editingId && (
           <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -129,6 +135,7 @@ export default function RecurringScheduleSettings() {
                 <p className="font-medium text-gray-900">{item.meetingTypeName}</p>
                 <p className="text-sm text-gray-500">
                   {DAY_OF_WEEK_LABELS[item.dayOfWeek]}
+                  {item.startTime && <span className="ml-1">· {item.startTime.slice(0, 5)}</span>}
                   {!item.isActive && <span className="ml-2 text-amber-600">(inactif)</span>}
                 </p>
               </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Cake, User } from 'lucide-react';
+import { PhoneInput } from '../ui/PhoneInput';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -173,24 +174,12 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Numéro de téléphone *
         </label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-            +225
-          </span>
-          <input
-            type="tel"
-            required
-            value={formData.phone}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '');
-              const truncated = value.slice(0, 10);
-              setFormData(prev => ({ ...prev, phone: truncated }));
-            }}
-            className="pl-16 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
-            placeholder="0757000203"
-            maxLength={10}
-          />
-        </div>
+        <PhoneInput
+          required
+          value={formData.phone}
+          onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+          placeholder="0757000203"
+        />
       </div>
 
       <div className="flex justify-end space-x-3">

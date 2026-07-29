@@ -146,6 +146,58 @@ export const CulteReportService = {
     return (data ?? []).map(mapReport);
   },
 
+  /** Parmi ces culte_events, lesquels ont deja un rapport soumis pour ce type ? -- utilise pour
+   * fermer les liens de reception d'ames ADN une fois le rapport ADN du culte soumis. */
+  async getReportedEventIds(reportType: CulteReportType, eventIds: string[]): Promise<Set<string>> {
+    if (eventIds.length === 0) return new Set();
+    const { data, error } = await supabase
+      .from('culte_reports')
+      .select('event_id')
+      .eq('church_id', getChurchId())
+      .eq('report_type', reportType)
+      .in('event_id', eventIds);
+    if (error) throw error;
+    return new Set((data ?? []).map((r: any) => r.event_id).filter(Boolean));
+  },
+
+  /** Agrege les ames deja rattachees a ce culte (event_id) en comptes ADN prets a pre-remplir
+   * le rapport -- evite au responsable ADN de ressaisir ce qu'il a deja enregistre le jour meme. */
+  async getAdnCountsForEvent(eventId: string): Promise<AdnReportData & { soulCount: number }> {
+    const { data, error } = await supabase
+      .from('souls')
+      .select('gender, is_undecided, wants_to_give_life, wants_to_become_member')
+      .eq('church_id', getChurchId())
+      .eq('event_id', eventId);
+    if (error) throw error;
+
+    const souls = data ?? [];
+    const count = (pred: (s: any) => boolean) => souls.filter(pred).length;
+
+    const newVisitors = {
+      men: count((s) => s.gender === 'male'),
+      women: count((s) => s.gender === 'female'),
+    };
+    const undecided = count((s) => s.is_undecided);
+    // Independantes : une ame peut compter dans les 2 categories a la fois.
+    const wantsToJoin = {
+      men: count((s) => s.gender === 'male' && s.wants_to_become_member === true),
+      women: count((s) => s.gender === 'female' && s.wants_to_become_member === true),
+    };
+    const wantsToGiveLifeToJesus = {
+      men: count((s) => s.gender === 'male' && s.wants_to_give_life === true),
+      women: count((s) => s.gender === 'female' && s.wants_to_give_life === true),
+    };
+
+    return {
+      newVisitors,
+      visitorDecisions: { undecided, wantsToJoin, wantsToGiveLifeToJesus },
+      totalNewVisitors: newVisitors.men + newVisitors.women,
+      totalWantsToJoin: wantsToJoin.men + wantsToJoin.women,
+      totalWantsToGiveLifeToJesus: wantsToGiveLifeToJesus.men + wantsToGiveLifeToJesus.women,
+      soulCount: souls.length,
+    };
+  },
+
   async listMeetingTypes(): Promise<CulteReportMeetingType[]> {
     const { data, error } = await supabase
       .from('culte_report_meeting_types')
