@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChurch } from '../contexts/ChurchContext';
-import UserSelect from '../components/auth/UserSelect';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/ui/Logo';
-import { Eye, EyeOff, FileText, Loader2, AlertCircle, Building2, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, FileText, Loader2, AlertCircle, Building2, ShieldCheck, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ChangelogModal } from '../components/ui/ChangelogModal';
-import { UserType } from '../types/user.types';
+
+const SUPPORT_PHONE = '+225 07 57 00 02 03';
+const SUPPORT_PHONE_HREF = 'tel:+2250757000203';
 
 const VERSES = [
   { text: "L'Éternel est mon berger, je ne manquerai de rien.", ref: "Psaume 23:1" },
@@ -27,7 +28,6 @@ function isSuperAdminDomain(): boolean {
 export default function Login() {
   const [password, setPassword] = useState('');
   const [selectedPhone, setSelectedPhone] = useState('');
-  const [userType, setUserType] = useState<UserType>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,9 +46,8 @@ export default function Login() {
     }
   }, [user, navigate, superAdmin]);
 
-  const handlePhoneChange = (phone: string, type: UserType) => {
-    setSelectedPhone(phone);
-    setUserType(type);
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedPhone(e.target.value);
     setError('');
   };
 
@@ -230,12 +229,22 @@ export default function Login() {
 
               <div>
                 <label className="block text-base font-medium text-gray-700 mb-2">
-                  Sélectionner un utilisateur
+                  Numéro de téléphone
                 </label>
-                <UserSelect
-                  value={selectedPhone}
-                  onChange={handlePhoneChange}
-                />
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={selectedPhone}
+                    onChange={handlePhoneChange}
+                    placeholder="07 57 00 02 03"
+                    autoComplete="tel"
+                    required
+                    className={`appearance-none block w-full pl-12 pr-4 py-3 border rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#00665C] focus:border-[#00665C] text-base transition-colors ${
+                      error ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                    }`}
+                  />
+                </div>
               </div>
 
               <div>
@@ -288,7 +297,11 @@ export default function Login() {
               </div>
 
               <p className="text-center text-xs text-gray-400">
-                Problème de connexion ? Contactez votre administrateur.
+                Problème de connexion ? Contactez l'administrateur au{' '}
+                <a href={SUPPORT_PHONE_HREF} className="text-[#00665C] hover:underline">
+                  {SUPPORT_PHONE}
+                </a>
+                .
               </p>
             </form>
           </div>
