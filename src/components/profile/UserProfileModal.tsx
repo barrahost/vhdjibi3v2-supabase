@@ -8,8 +8,20 @@ import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
  
 import { formatDate } from '../../utils/dateUtils';
+import { BUSINESS_PROFILE_LABELS, BusinessProfileType } from '../../types/businessProfile.types';
+import { Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import SelfPasswordResetModal from './SelfPasswordResetModal';
+
+/* Couleur accent par profil métier (cohérent avec le reste de l'appli) */
+const PROFILE_BADGE_COLORS: Record<BusinessProfileType, string> = {
+  admin:             'bg-red-50 text-red-700 border-red-200',
+  adn:               'bg-purple-50 text-purple-700 border-purple-200',
+  shepherd:          'bg-[#00665C]/10 text-[#00665C] border-[#00665C]/20',
+  department_leader: 'bg-blue-50 text-blue-700 border-blue-200',
+  family_leader:     'bg-orange-50 text-orange-700 border-orange-200',
+  evangelist:        'bg-[#F2B636]/10 text-[#7a5a00] border-[#F2B636]/30',
+};
 
 interface UserData {
   id: string;
@@ -459,11 +471,28 @@ export function UserProfileModal() {
                   {userData.fullName}
                 </h2>
               )}
-              <div className="mt-1 flex items-center space-x-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
-                  <Shield className="w-3 h-3 mr-1" />
-                  {getRoleLabel()}
-                </span>
+              <div className="mt-1.5 flex items-center flex-wrap gap-1.5">
+                {(user as any)?.businessProfiles?.length > 0 ? (
+                  // Toutes les casquettes de l'utilisateur, principal (★) en premier
+                  [...(user as any).businessProfiles]
+                    .sort((a: any, b: any) => Number(!!b.isPrimary) - Number(!!a.isPrimary))
+                    .map((p: any) => (
+                      <span
+                        key={p.type}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                          PROFILE_BADGE_COLORS[p.type as BusinessProfileType] ?? 'bg-gray-100 text-gray-700 border-gray-200'
+                        }`}
+                      >
+                        {p.isPrimary && <Star className="w-3 h-3 fill-current" />}
+                        {BUSINESS_PROFILE_LABELS[p.type as BusinessProfileType] ?? p.type}
+                      </span>
+                    ))
+                ) : (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
+                    <Shield className="w-3 h-3 mr-1" />
+                    {getRoleLabel()}
+                  </span>
+                )}
               </div>
             </div>
           </div>

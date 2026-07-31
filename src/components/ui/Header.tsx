@@ -5,7 +5,6 @@ import { getPageTitle } from '../../utils/pageTitle';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
-import { ProfileSwitcher } from './ProfileSwitcher';
 import { ChurchSelector } from './ChurchSelector';
 import { Logo } from './Logo';
 import toast from 'react-hot-toast';
@@ -122,7 +121,6 @@ export function Header() {
         <Logo className="h-11 w-auto" />
         <div className="flex items-center gap-2">
           <ChurchSelector />
-          <ProfileSwitcher />
           {showNotificationBell && <NotificationBell />}
           <button
             onClick={openProfileModal}
@@ -146,7 +144,6 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ProfileSwitcher />
           {showNotificationBell && <NotificationBell />}
 
           <button
