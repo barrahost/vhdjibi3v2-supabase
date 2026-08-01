@@ -8,13 +8,15 @@ const AT_API_URL      = 'https://api.africastalking.com/version1/messaging';
 const ORANGE_TOKEN_URL = 'https://api.orange.com/oauth/v3/token';
 const ORANGE_SMS_BASE  = 'https://api.orange.com/smsmessaging/v1/outbound';
 const ORANGE_MAX_TPS   = 5; // limite Orange : 5 SMS/seconde
+const LETEXTO_SEND_URL = 'https://apis.letexto.com/v1/messages/send';
+const LETEXTO_MAX_TPS  = 5; // prudence : throttle les envois en boucle
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type Provider = 'africastalking' | 'orange';
+type Provider = 'africastalking' | 'orange' | 'letexto';
 
 interface AfricasTalkingConfig {
   apiKey: string;
@@ -29,10 +31,16 @@ interface OrangeConfig {
   senderName: string;   // nom d'expéditeur approuvé, ex: AGCDJIBI3
 }
 
+interface LeTextoConfig {
+  apiKey: string;   // clé API générée depuis l'application LeTexto (section API développeur)
+  senderId: string; // nom d'expéditeur (sender), max 11 caractères
+}
+
 interface SMSConfig {
   provider: Provider;
   africastalking: AfricasTalkingConfig;
   orange: OrangeConfig;
+  letexto: LeTextoConfig;
 }
 
 interface SendSMSRequest {
@@ -57,6 +65,10 @@ async function loadSMSConfig(): Promise<SMSConfig> {
       clientSecret: Deno.env.get('ORANGE_CLIENT_SECRET') || '',
       senderNumber: Deno.env.get('ORANGE_SENDER_NUMBER') || '',
       senderName:   Deno.env.get('ORANGE_SENDER_NAME') || '',
+    },
+    letexto: {
+      apiKey:   Deno.env.get('LETEXTO_API_KEY') || '',
+      senderId: Deno.env.get('LETEXTO_SENDER_ID') || '',
     },
   };
 
@@ -87,6 +99,10 @@ async function loadSMSConfig(): Promise<SMSConfig> {
         clientSecret: cfg.orange?.clientSecret || fallback.orange.clientSecret,
         senderNumber: cfg.orange?.senderNumber || fallback.orange.senderNumber,
         senderName:   cfg.orange?.senderName   || fallback.orange.senderName,
+      },
+      letexto: {
+        apiKey:   cfg.letexto?.apiKey   || fallback.letexto.apiKey,
+        senderId: cfg.letexto?.senderId || fallback.letexto.senderId,
       },
     };
   } catch {
@@ -246,6 +262,56 @@ async function sendViaOrange(
   return { Recipients: results };
 }
 
+// ============================================================
+// LeTexto (Arolitec) — un appel par destinataire, Bearer token
+// Doc : https://apis.letexto.com/v1/messages/send
+// ============================================================
+async function sendViaLeTexto(
+  cfg: LeTextoConfig,
+  formattedPhones: string[],
+  message: string
+): Promise<any> {
+  if (!cfg.apiKey) throw new Error('Configuration LeTexto manquante (apiKey)');
+  if (!cfg.senderId) throw new Error('Configuration LeTexto manquante (senderId)');
+  if (cfg.senderId.length > 11) throw new Error('LeTexto : le sender doit faire 11 caractères maximum');
+
+  const results: any[] = [];
+
+  for (let i = 0; i < formattedPhones.length; i++) {
+    // LeTexto attend le format international SANS le "+" (ex: 2250585743342)
+    const phone = formattedPhones[i].replace(/^\+/, '');
+    try {
+      const response = await fetchWithRetry(LETEXTO_SEND_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cfg.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from:    cfg.senderId,
+          to:      phone,
+          content: message,
+        }),
+      });
+      results.push({ phone, status: 'Success', data: await response.json() });
+    } catch (error: any) {
+      console.warn(`LeTexto SMS failed for ${phone}:`, error.message);
+      results.push({ phone, status: 'Failed', error: error.message });
+    }
+
+    if (i < formattedPhones.length - 1) {
+      await new Promise(r => setTimeout(r, 1000 / LETEXTO_MAX_TPS));
+    }
+  }
+
+  const failed = results.filter(r => r.status !== 'Success');
+  if (failed.length > 0 && failed.length === results.length) {
+    throw new Error(`LeTexto : tous les envois ont échoué (${failed[0].error})`);
+  }
+
+  return { Recipients: results };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -270,6 +336,8 @@ serve(async (req) => {
 
     const result = cfg.provider === 'orange'
       ? await sendViaOrange(cfg.orange, formattedPhones, finalMessage)
+      : cfg.provider === 'letexto'
+      ? await sendViaLeTexto(cfg.letexto, formattedPhones, finalMessage)
       : await sendViaAfricasTalking(cfg.africastalking, formattedPhones, finalMessage, scheduleTime);
 
     return new Response(

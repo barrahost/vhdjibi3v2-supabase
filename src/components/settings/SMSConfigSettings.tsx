@@ -5,7 +5,7 @@ import { Save, MessageSquare, Key, DollarSign, Eye, EyeOff, CheckCircle } from '
 import toast from 'react-hot-toast';
 import { useSMSStatus } from '../../hooks/useSMSStatus';
 
-type Provider = 'africastalking' | 'orange';
+type Provider = 'africastalking' | 'orange' | 'letexto';
 
 interface AfricasTalkingConfig {
   apiKey: string;
@@ -20,12 +20,18 @@ interface OrangeConfig {
   senderName: string;
 }
 
+interface LeTextoConfig {
+  apiKey: string;
+  senderId: string;
+}
+
 interface SMSConfig {
   provider: Provider;
   smsCostXOF: number;
   lowCreditThreshold: number;
   africastalking: AfricasTalkingConfig;
   orange: OrangeConfig;
+  letexto: LeTextoConfig;
 }
 
 const DEFAULTS: SMSConfig = {
@@ -34,6 +40,7 @@ const DEFAULTS: SMSConfig = {
   lowCreditThreshold: 10,
   africastalking: { apiKey: '', username: 'vhdjibi3', senderId: '' },
   orange: { clientId: '', clientSecret: '', senderNumber: '', senderName: '' },
+  letexto: { apiKey: '', senderId: '' },
 };
 
 // Migre l'ancien format plat ({ apiKey, username, senderId, ... }) vers le format imbriqué actuel.
@@ -52,6 +59,10 @@ function normalizeConfig(raw: Record<string, any>): SMSConfig {
       clientSecret: raw.orange?.clientSecret ?? DEFAULTS.orange.clientSecret,
       senderNumber: raw.orange?.senderNumber ?? DEFAULTS.orange.senderNumber,
       senderName:   raw.orange?.senderName   ?? DEFAULTS.orange.senderName,
+    },
+    letexto: {
+      apiKey:   raw.letexto?.apiKey   ?? DEFAULTS.letexto.apiKey,
+      senderId: raw.letexto?.senderId ?? DEFAULTS.letexto.senderId,
     },
   };
 }
@@ -115,11 +126,11 @@ export default function SMSConfigSettings() {
       const { data, error } = await supabase.functions.invoke('check-sms-balance');
       if (error || data?.error) throw new Error(error?.message || data?.error);
       setTestOk(true);
-      toast.success("Connexion Africa's Talking réussie");
+      toast.success('Connexion au fournisseur SMS réussie');
       refresh();
     } catch {
       setTestOk(false);
-      toast.error('Impossible de joindre Africa\'s Talking — vérifiez vos identifiants');
+      toast.error('Impossible de joindre le fournisseur SMS — vérifiez vos identifiants');
     } finally {
       setTesting(false);
     }
@@ -143,6 +154,7 @@ export default function SMSConfigSettings() {
   }
 
   const isOrange = config.provider === 'orange';
+  const isLeTexto = config.provider === 'letexto';
 
   return (
     <div className="space-y-6">
@@ -151,12 +163,12 @@ export default function SMSConfigSettings() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-base font-semibold text-gray-900 mb-1">Fournisseur SMS</h3>
         <p className="text-sm text-gray-500 mb-4">Le fournisseur actif est utilisé pour tous les envois de l'application.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button
             type="button"
             onClick={() => setConfig(c => ({ ...c, provider: 'africastalking' }))}
             className={`text-left p-4 rounded-xl border-2 transition-colors ${
-              !isOrange ? 'border-[#00665C] bg-[#00665C]/5' : 'border-gray-200 bg-white hover:border-gray-300'
+              !isOrange && !isLeTexto ? 'border-[#00665C] bg-[#00665C]/5' : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
             <p className="font-semibold text-gray-900">Africa's Talking</p>
@@ -172,6 +184,16 @@ export default function SMSConfigSettings() {
             <p className="font-semibold text-gray-900">Orange Côte d'Ivoire</p>
             <p className="text-xs text-gray-500 mt-1">Le moins cher, paiement Orange Money / Airtime uniquement.</p>
           </button>
+          <button
+            type="button"
+            onClick={() => setConfig(c => ({ ...c, provider: 'letexto' }))}
+            className={`text-left p-4 rounded-xl border-2 transition-colors ${
+              isLeTexto ? 'border-[#00665C] bg-[#00665C]/5' : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <p className="font-semibold text-gray-900">LeTexto (Arolitec)</p>
+            <p className="text-xs text-gray-500 mt-1">Fournisseur ivoirien, solde consultable via API.</p>
+          </button>
         </div>
       </div>
 
@@ -185,7 +207,7 @@ export default function SMSConfigSettings() {
             <div>
               <h3 className="text-base font-semibold text-gray-900">Statut du service</h3>
               <p className="text-sm text-gray-500">
-                {isOrange ? "Orange — Côte d'Ivoire" : "Africa's Talking — Côte d'Ivoire"}
+                {isOrange ? "Orange — Côte d'Ivoire" : isLeTexto ? "LeTexto (Arolitec) — Côte d'Ivoire" : "Africa's Talking — Côte d'Ivoire"}
               </p>
             </div>
           </div>
@@ -227,7 +249,7 @@ export default function SMSConfigSettings() {
       </div>
 
       {/* Identifiants — Africa's Talking */}
-      {!isOrange && (
+      {!isOrange && !isLeTexto && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 bg-amber-50 rounded-lg">
@@ -401,6 +423,85 @@ export default function SMSConfigSettings() {
           <p className="mt-5 text-xs text-gray-400">
             Pas de test de connexion automatique pour Orange — le premier envoi réel validera la config.
           </p>
+        </div>
+      )}
+
+      {/* Identifiants — LeTexto */}
+      {isLeTexto && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 bg-teal-50 rounded-lg">
+              <Key className="w-5 h-5 text-teal-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Identifiants LeTexto</h3>
+              <p className="text-sm text-gray-500">Depuis ton application LeTexto, section « API développeur »</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Clé API <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={config.letexto.apiKey}
+                  onChange={e => setConfig(c => ({ ...c, letexto: { ...c.letexto, apiKey: e.target.value } }))}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none font-mono"
+                  placeholder="••••••••••••••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Nom d'expéditeur (Sender) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={config.letexto.senderId}
+                onChange={e => setConfig(c => ({ ...c, letexto: { ...c.letexto, senderId: e.target.value } }))}
+                maxLength={11}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                placeholder="Ex: VHAGC (max 11 car.)"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Doit correspondre à un sender créé et approuvé dans ton compte LeTexto.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={handleTest}
+              disabled={testing || !config.letexto.apiKey}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#00665C] text-[#00665C] rounded-lg hover:bg-[#00665C]/5 disabled:opacity-50 transition-colors"
+            >
+              {testing ? 'Test en cours...' : 'Tester la connexion'}
+            </button>
+            {testOk === true && (
+              <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                <CheckCircle className="w-4 h-4" /> Connexion réussie
+              </span>
+            )}
+            {testOk === false && (
+              <span className="text-sm text-red-600 font-medium">
+                ✗ Connexion échouée — vérifiez vos identifiants
+              </span>
+            )}
+            <p className="text-xs text-gray-400">
+              Pense à sauvegarder la configuration avant de tester.
+            </p>
+          </div>
         </div>
       )}
 
