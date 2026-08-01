@@ -15,13 +15,18 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function Settings() {
-  const { userRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const { user, userRole } = useAuth();
+  const isSuperAdmin = userRole === 'super_admin';
+  // Un admin d'église peut gérer la config SMS (crédit, fournisseur) sans accéder au reste
+  const isChurchAdmin = userRole === 'admin'
+    || !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'admin');
+  const visibleTabs = isSuperAdmin ? TABS : TABS.filter(t => t.id === 'sms');
+  const [activeTab, setActiveTab] = useState<Tab>(isSuperAdmin ? 'general' : 'sms');
 
-  if (userRole !== 'super_admin') {
+  if (!isSuperAdmin && !isChurchAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-500">Accès réservé au super administrateur.</p>
+        <p className="text-gray-500">Accès réservé aux administrateurs.</p>
       </div>
     );
   }
@@ -36,7 +41,7 @@ export default function Settings() {
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex space-x-1 overflow-x-auto">
-          {TABS.map(tab => (
+          {visibleTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -54,10 +59,10 @@ export default function Settings() {
 
       {/* Contenu */}
       <div>
-        {activeTab === 'general'           && <GeneralSettings />}
+        {activeTab === 'general'           && isSuperAdmin && <GeneralSettings />}
         {activeTab === 'sms'               && <SMSConfigSettings />}
-        {activeTab === 'roles-permissions' && <RolePermissionManagement />}
-        {activeTab === 'user-menus'        && <UserMenuManagement />}
+        {activeTab === 'roles-permissions' && isSuperAdmin && <RolePermissionManagement />}
+        {activeTab === 'user-menus'        && isSuperAdmin && <UserMenuManagement />}
       </div>
     </div>
   );
