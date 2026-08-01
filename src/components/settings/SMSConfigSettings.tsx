@@ -34,6 +34,20 @@ interface ShepherdRemindersConfig {
   message: string;
 }
 
+interface FamilyLeaderRemindersConfig {
+  enabled: boolean;
+  dayOfWeek: number;
+  hour: number;
+  escalationDays: number;
+  cooldownDays: number;
+  unassignedMessage: string;
+  escalationMessage: string;
+  recapEnabled: boolean;
+  recapDayOfWeek: number;
+  recapHour: number;
+  recapMessage: string;
+}
+
 interface SMSConfig {
   provider: Provider;
   smsCostXOF: number;
@@ -42,11 +56,21 @@ interface SMSConfig {
   orange: OrangeConfig;
   letexto: LeTextoConfig;
   shepherdReminders: ShepherdRemindersConfig;
+  familyLeaderReminders: FamilyLeaderRemindersConfig;
 }
 
 const DEFAULT_REMINDER_MESSAGE =
   "Bergerie AGC : [surnom], tu as [nombre] ame(s) sans interaction depuis 5+ jours. " +
   "Merci de les contacter et d'enregistrer l'interaction dans l'appli.";
+const DEFAULT_FL_UNASSIGNED_MESSAGE =
+  "Bergerie AGC : [surnom], [nombre] ame(s) de ta famille n'ont pas encore de berger. " +
+  "Merci de les assigner dans l'appli.";
+const DEFAULT_FL_ESCALATION_MESSAGE =
+  "Bergerie AGC : [surnom], [nombre] berger(s) de ta famille ont des ames sans suivi " +
+  "depuis 14+ jours. Un echange avec eux serait utile.";
+const DEFAULT_FL_RECAP_MESSAGE =
+  "Bergerie AGC : [surnom], ta famille a accueilli [nombre] nouvelle(s) ame(s) cette semaine. " +
+  "Pense a organiser leur accueil !";
 
 const DEFAULTS: SMSConfig = {
   provider: 'africastalking',
@@ -62,6 +86,19 @@ const DEFAULTS: SMSConfig = {
     thresholdDays: 5,
     cooldownDays: 7,
     message: DEFAULT_REMINDER_MESSAGE,
+  },
+  familyLeaderReminders: {
+    enabled: false,
+    dayOfWeek: 2,
+    hour: 8,
+    escalationDays: 14,
+    cooldownDays: 7,
+    unassignedMessage: DEFAULT_FL_UNASSIGNED_MESSAGE,
+    escalationMessage: DEFAULT_FL_ESCALATION_MESSAGE,
+    recapEnabled: false,
+    recapDayOfWeek: 1,
+    recapHour: 18,
+    recapMessage: DEFAULT_FL_RECAP_MESSAGE,
   },
 };
 
@@ -93,6 +130,19 @@ function normalizeConfig(raw: Record<string, any>): SMSConfig {
       thresholdDays: raw.shepherdReminders?.thresholdDays ?? DEFAULTS.shepherdReminders.thresholdDays,
       cooldownDays:  raw.shepherdReminders?.cooldownDays ?? DEFAULTS.shepherdReminders.cooldownDays,
       message:       raw.shepherdReminders?.message ?? DEFAULTS.shepherdReminders.message,
+    },
+    familyLeaderReminders: {
+      enabled:           raw.familyLeaderReminders?.enabled ?? DEFAULTS.familyLeaderReminders.enabled,
+      dayOfWeek:         raw.familyLeaderReminders?.dayOfWeek ?? DEFAULTS.familyLeaderReminders.dayOfWeek,
+      hour:              raw.familyLeaderReminders?.hour ?? DEFAULTS.familyLeaderReminders.hour,
+      escalationDays:    raw.familyLeaderReminders?.escalationDays ?? DEFAULTS.familyLeaderReminders.escalationDays,
+      cooldownDays:      raw.familyLeaderReminders?.cooldownDays ?? DEFAULTS.familyLeaderReminders.cooldownDays,
+      unassignedMessage: raw.familyLeaderReminders?.unassignedMessage ?? DEFAULTS.familyLeaderReminders.unassignedMessage,
+      escalationMessage: raw.familyLeaderReminders?.escalationMessage ?? DEFAULTS.familyLeaderReminders.escalationMessage,
+      recapEnabled:      raw.familyLeaderReminders?.recapEnabled ?? DEFAULTS.familyLeaderReminders.recapEnabled,
+      recapDayOfWeek:    raw.familyLeaderReminders?.recapDayOfWeek ?? DEFAULTS.familyLeaderReminders.recapDayOfWeek,
+      recapHour:         raw.familyLeaderReminders?.recapHour ?? DEFAULTS.familyLeaderReminders.recapHour,
+      recapMessage:      raw.familyLeaderReminders?.recapMessage ?? DEFAULTS.familyLeaderReminders.recapMessage,
     },
   };
 }
@@ -637,6 +687,171 @@ export default function SMSConfigSettings() {
                 </span>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Rappels automatiques aux chefs de famille */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <MessageSquare className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Rappels automatiques aux chefs de famille</h3>
+              <p className="text-sm text-gray-500">
+                Âmes sans berger, bergers en retard durable, et récap des nouvelles âmes
+              </p>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={config.familyLeaderReminders.enabled}
+              onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, enabled: e.target.checked } }))}
+              className="h-4 w-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm font-medium text-gray-700">Activer</span>
+          </label>
+        </div>
+
+        {config.familyLeaderReminders.enabled && (
+          <div className="space-y-6">
+            {/* Alertes hebdomadaires */}
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-gray-700">Alertes (âmes sans berger + escalade bergers)</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Jour d'envoi</label>
+                  <select
+                    value={config.familyLeaderReminders.dayOfWeek}
+                    onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, dayOfWeek: parseInt(e.target.value) } }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                  >
+                    {DAYS_OF_WEEK.map(d => (
+                      <option key={d.value} value={d.value}>{d.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Heure</label>
+                  <select
+                    value={config.familyLeaderReminders.hour}
+                    onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, hour: parseInt(e.target.value) } }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}h</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Escalade (jours)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={config.familyLeaderReminders.escalationDays}
+                    onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, escalationDays: parseInt(e.target.value) || 14 } }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Retard d'un berger avant escalade</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Anti-relance (jours)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={config.familyLeaderReminders.cooldownDays}
+                    onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, cooldownDays: parseInt(e.target.value) || 7 } }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message « âmes sans berger »</label>
+                <textarea
+                  value={config.familyLeaderReminders.unassignedMessage}
+                  onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, unassignedMessage: e.target.value } }))}
+                  rows={2}
+                  maxLength={160}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500 text-right">{config.familyLeaderReminders.unassignedMessage.length}/160</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message « escalade bergers »</label>
+                <textarea
+                  value={config.familyLeaderReminders.escalationMessage}
+                  onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, escalationMessage: e.target.value } }))}
+                  rows={2}
+                  maxLength={160}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500 text-right">{config.familyLeaderReminders.escalationMessage.length}/160</p>
+              </div>
+            </div>
+
+            {/* Récap des nouvelles âmes — créneau séparé */}
+            <div className="pt-4 border-t border-gray-100 space-y-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-semibold text-gray-700">Récap hebdo des nouvelles âmes de la famille</span>
+                <input
+                  type="checkbox"
+                  checked={config.familyLeaderReminders.recapEnabled}
+                  onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, recapEnabled: e.target.checked } }))}
+                  className="h-4 w-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                />
+              </label>
+
+              {config.familyLeaderReminders.recapEnabled && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Jour d'envoi</label>
+                      <select
+                        value={config.familyLeaderReminders.recapDayOfWeek}
+                        onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, recapDayOfWeek: parseInt(e.target.value) } }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                      >
+                        {DAYS_OF_WEEK.map(d => (
+                          <option key={d.value} value={d.value}>{d.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Heure</label>
+                      <select
+                        value={config.familyLeaderReminders.recapHour}
+                        onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, recapHour: parseInt(e.target.value) } }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                      >
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <option key={h} value={h}>{String(h).padStart(2, '0')}h</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Message du récap</label>
+                    <textarea
+                      value={config.familyLeaderReminders.recapMessage}
+                      onChange={e => setConfig(c => ({ ...c, familyLeaderReminders: { ...c.familyLeaderReminders, recapMessage: e.target.value } }))}
+                      rows={2}
+                      maxLength={160}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                    />
+                    <p className="mt-1 text-xs text-gray-500 text-right">{config.familyLeaderReminders.recapMessage.length}/160</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-400">
+              Variables : <code className="bg-gray-100 px-1 rounded">[surnom]</code> = prénom du chef de famille,{' '}
+              <code className="bg-gray-100 px-1 rounded">[nombre]</code> = nombre concerné. Le récap n'est envoyé que s'il y a au moins une nouvelle âme.
+            </p>
           </div>
         )}
       </div>
