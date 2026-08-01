@@ -284,6 +284,7 @@ export default function UserList({ filter, statusFilter, selectedUserIds = [], o
           role: r.role,
           businessProfiles: r.business_profiles || [],
           status: r.status,
+          defaultRoute: r.default_route || '',
           createdAt: r.created_at ? new Date(r.created_at) : new Date(),
           fromAdminsCollection: false,
           ...r,

@@ -70,7 +70,8 @@ export default function Login() {
         return;
       }
       toast.success('Connexion réussie');
-      navigate(superAdmin ? '/churches' : '/');
+      // Page d'accueil par défaut de l'utilisateur (ex: rapport de son département)
+      navigate(superAdmin ? '/churches' : (loggedUser?.defaultRoute || '/'));
     } catch {
       setError('Identifiant ou mot de passe incorrect. Vérifiez vos informations et réessayez.');
     } finally {

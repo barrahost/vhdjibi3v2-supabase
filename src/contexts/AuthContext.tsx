@@ -41,6 +41,7 @@ function mapUserRow(row: any) {
     roles: row.roles,
     businessProfiles: row.business_profiles,
     activeProfiles: row.active_profiles,
+    defaultRoute: row.default_route || null,
     additionalMenus: row.additional_menus || [],
     location: row.location,
     coordinates: row.coordinates,

@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChurch } from '../../contexts/ChurchContext';
 import { Header } from './Header';
@@ -16,6 +17,19 @@ import { ImpersonationBanner } from './ImpersonationBanner';
 export default function Layout() {
   const { user } = useAuth();
   const { church } = useChurch();
+  const navigate = useNavigate();
+
+  // Page d'accueil par défaut : à l'arrivée dans l'appli (ouverture/reconnexion) sur "/",
+  // rediriger vers la page configurée pour l'utilisateur. Une seule fois par chargement —
+  // il peut ensuite revenir au tableau de bord via le menu sans être re-redirigé.
+  const didDefaultRedirect = useRef(false);
+  useEffect(() => {
+    if (!didDefaultRedirect.current && user?.defaultRoute && window.location.pathname === '/') {
+      didDefaultRedirect.current = true;
+      navigate(user.defaultRoute, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   if (!user) return null;
 

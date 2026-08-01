@@ -4,6 +4,7 @@ import { PhotoUpload } from '../ui/PhotoUpload';
 import { LocationField } from '../souls/form/LocationField';
 import { PhoneInput } from '../ui/PhoneInput';
 import { BusinessProfileAssignment } from './BusinessProfileAssignment';
+import { DEFAULT_ROUTE_OPTIONS } from '../../constants/defaultRoutes';
 import { StorageService } from '../../services/storage.service';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { User } from '../../types/user.types';
@@ -28,6 +29,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
     email: '',
     businessProfiles: [] as BusinessProfile[],
     status: 'active' as 'active' | 'inactive',
+    defaultRoute: '',
     location: '',
     coordinates: null as { latitude: number; longitude: number; } | null,
     useGeolocation: false,
@@ -62,6 +64,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         email: user.email || '',
         businessProfiles,
         status: user.status || 'active',
+        defaultRoute: (user as any).defaultRoute || '',
         location: user.location || '',
         coordinates: user.coordinates || null,
         useGeolocation: !!user.coordinates,
@@ -185,6 +188,7 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
         business_profiles: formData.businessProfiles,
         role: primaryRole,
         status: formData.status,
+        default_route: formData.defaultRoute || null,
         location: formData.location?.trim() || null,
         coordinates: formData.useGeolocation ? formData.coordinates : null,
         updated_at: new Date().toISOString(),
@@ -314,6 +318,24 @@ export default function EditUserModal({ user, isOpen, onClose }: EditUserModalPr
             <option value="active">Actif</option>
             <option value="inactive">Inactif</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Page d'accueil par défaut
+          </label>
+          <select
+            value={formData.defaultRoute}
+            onChange={(e) => setFormData(prev => ({ ...prev, defaultRoute: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          >
+            {DEFAULT_ROUTE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            À la connexion, cet utilisateur arrivera directement sur cette page au lieu du tableau de bord.
+          </p>
         </div>
 
         <div className="flex justify-end space-x-3 pt-6">
