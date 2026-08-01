@@ -7,6 +7,8 @@
 //  - shepherdReminders     : bergers avec âmes sans interaction depuis X jours
 //  - familyLeaderReminders : chefs de famille — âmes sans berger + bergers en
 //    retard durable (escalade), et sur un créneau séparé, récap des nouvelles âmes
+//  - leaveRequestSms       : pasteurs — relance hebdo des demandes de congé
+//    restées sans réponse (défaut : dimanche 8h)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -70,6 +72,37 @@ const DEFAULT_EV_RELANCE_MESSAGE =
 const DEFAULT_EV_ATTENDUS_MESSAGE =
   "Bergerie AGC : [surnom], [nombre] de tes contacts sont attendus au culte de demain. " +
   "Appelle-les ce soir et accueille-les a l'entree !";
+
+// Relance des demandes de congé sans réponse, envoyée aux pasteurs
+interface LeaveReminderConfig {
+  reminderEnabled: boolean;
+  reminderDayOfWeek: number; // défaut 0 = dimanche
+  reminderHour: number;      // défaut 8h
+  reminderMessage: string;   // [nombre]
+}
+
+const DEFAULT_LEAVE_REMINDER_MESSAGE =
+  "Bergerie AGC : [nombre] demande(s) de conge attendent ta reponse. " +
+  "Merci de les traiter dans l'appli.";
+
+function normalizeLeaveReminderConfig(raw: any): LeaveReminderConfig {
+  return {
+    reminderEnabled:   raw?.reminderEnabled === true,
+    reminderDayOfWeek: Number.isInteger(raw?.reminderDayOfWeek) ? raw.reminderDayOfWeek : 0,
+    reminderHour:      Number.isInteger(raw?.reminderHour) ? raw.reminderHour : 8,
+    reminderMessage:   (raw?.reminderMessage || '').trim() || DEFAULT_LEAVE_REMINDER_MESSAGE,
+  };
+}
+
+// Un utilisateur est "pasteur" quel que soit l'endroit où le rôle est stocké :
+// colonne role (texte), roles jsonb {primary, secondary} ou business_profiles.
+function isPasteur(u: any): boolean {
+  if (u.role === 'pasteur') return true;
+  if (u.roles?.primary === 'pasteur') return true;
+  if (Array.isArray(u.roles?.secondary) && u.roles.secondary.includes('pasteur')) return true;
+  if (Array.isArray(u.business_profiles) && u.business_profiles.some((p: any) => p?.type === 'pasteur')) return true;
+  return false;
+}
 
 // Culte envisage (formulaire d'evangelisation) -> type de rencontre du programme recurrent
 const PLANNED_SERVICE_TO_MEETING_TYPE: Record<string, string> = {
@@ -167,6 +200,7 @@ serve(async (req) => {
     const shepherdCfg = normalizeShepherdConfig(settingsRow?.value?.shepherdReminders);
     const flCfg = normalizeFamilyLeaderConfig(settingsRow?.value?.familyLeaderReminders);
     const evCfg = normalizeEvangelistConfig(settingsRow?.value?.evangelistReminders);
+    const lrCfg = normalizeLeaveReminderConfig(settingsRow?.value?.leaveRequestSms);
     const churchId = settingsRow?.church_id || 'bergerie';
 
     // force=true (test manuel) ignore les créneaux jour/heure
@@ -186,8 +220,9 @@ serve(async (req) => {
     // Attendus : la bonne heure suffit ici ; le "est-ce la veille d'un culte ?"
     // est verifie dans le bloc via le programme recurrent.
     const evAttendusMaybe = evCfg.enabled && evCfg.attendusEnabled && (force || now.getUTCHours() === evCfg.attendusHour);
+    const leaveSlot = lrCfg.reminderEnabled && slotMatches(lrCfg.reminderDayOfWeek, lrCfg.reminderHour);
 
-    if (!shepherdSlot && !flAlertSlot && !flRecapSlot && !evRelanceSlot && !evAttendusMaybe) {
+    if (!shepherdSlot && !flAlertSlot && !flRecapSlot && !evRelanceSlot && !evAttendusMaybe && !leaveSlot) {
       return json({ skipped: 'outside schedule or disabled' });
     }
 
@@ -479,6 +514,60 @@ serve(async (req) => {
       }
 
       summary.evangelists = { sent: results.filter(r => r.status === 'sent').length, results };
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // BLOC 6 — Relance aux pasteurs : demandes de congé sans réponse
+    // ════════════════════════════════════════════════════════════════════
+    if (leaveSlot) {
+      const results: any[] = [];
+
+      const { count: pendingCount, error: pendingErr } = await supabase
+        .from('leave_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('church_id', churchId)
+        .eq('status', 'pending');
+      if (pendingErr) throw pendingErr;
+
+      if ((pendingCount || 0) > 0) {
+        const { data: users, error: usersErr } = await supabase
+          .from('users')
+          .select('id, full_name, nickname, phone, role, roles, business_profiles')
+          .eq('church_id', churchId)
+          .eq('status', 'active');
+        if (usersErr) throw usersErr;
+        const pasteurs = (users || []).filter((u: any) => isPasteur(u));
+
+        // Anti-doublon : au plus une relance par pasteur et par jour (protège
+        // des doubles executions du cron et des tests manuels force=true)
+        const dayCutoff = new Date(now.getTime() - 20 * 3600 * 1000).toISOString();
+        const { data: recentLogs } = await supabase
+          .from('leave_reminder_log')
+          .select('pasteur_id')
+          .eq('church_id', churchId)
+          .gte('sent_at', dayCutoff);
+        const alreadySent = new Set((recentLogs || []).map((r: any) => r.pasteur_id));
+
+        for (const p of pasteurs) {
+          if (alreadySent.has(p.id)) { results.push({ pasteur: p.id, status: 'already sent today' }); continue; }
+          if (!p.phone) { results.push({ pasteur: p.id, status: 'skipped', reason: 'no phone' }); continue; }
+          const message = lrCfg.reminderMessage
+            .replace(/\[surnom\]/g, surnomOf(p))
+            .replace(/\[nombre\]/g, String(pendingCount));
+          try {
+            await sendSms(p.phone, message);
+            await supabase.from('leave_reminder_log').insert({ church_id: churchId, pasteur_id: p.id, pending_count: pendingCount });
+            results.push({ pasteur: p.id, status: 'sent', count: pendingCount });
+          } catch (e: any) {
+            console.error(`Leave reminder failed for ${p.id}:`, e.message);
+            results.push({ pasteur: p.id, status: 'failed', error: e.message });
+          }
+        }
+      } else {
+        results.push({ info: 'aucune demande en attente' });
+      }
+
+      summary.leaveRequests = { sent: results.filter(r => r.status === 'sent').length, results };
     }
 
     console.log('Reminders summary:', JSON.stringify(summary));

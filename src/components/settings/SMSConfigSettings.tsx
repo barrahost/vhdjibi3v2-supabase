@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
-import { Save, MessageSquare, Key, DollarSign, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Save, MessageSquare, Key, DollarSign, Eye, EyeOff, CheckCircle, CalendarDays } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSMSStatus } from '../../hooks/useSMSStatus';
 
@@ -60,6 +60,17 @@ interface EvangelistRemindersConfig {
   attendusMessage: string;
 }
 
+interface LeaveRequestSmsConfig {
+  enabled: boolean;           // SMS pasteur à la soumission + SMS demandeur à la décision
+  submittedMessage: string;   // [nom], [role], [periode]
+  approvedMessage: string;    // [surnom], [periode]
+  rejectedMessage: string;    // [surnom], [periode]
+  reminderEnabled: boolean;   // relance hebdo des demandes sans réponse
+  reminderDayOfWeek: number;  // 0 = dimanche
+  reminderHour: number;
+  reminderMessage: string;    // [nombre]
+}
+
 interface SMSConfig {
   provider: Provider;
   smsCostXOF: number;
@@ -70,6 +81,7 @@ interface SMSConfig {
   shepherdReminders: ShepherdRemindersConfig;
   familyLeaderReminders: FamilyLeaderRemindersConfig;
   evangelistReminders: EvangelistRemindersConfig;
+  leaveRequestSms: LeaveRequestSmsConfig;
 }
 
 const DEFAULT_REMINDER_MESSAGE =
@@ -90,6 +102,17 @@ const DEFAULT_EV_RELANCE_MESSAGE =
 const DEFAULT_EV_ATTENDUS_MESSAGE =
   "Bergerie AGC : [surnom], [nombre] de tes contacts sont attendus au culte de demain. " +
   "Appelle-les ce soir et accueille-les a l'entree !";
+const DEFAULT_LEAVE_SUBMITTED_MESSAGE =
+  "Bergerie AGC : [nom] ([role]) a soumis une demande de conge : [periode]. " +
+  "Merci de la traiter dans l'appli.";
+const DEFAULT_LEAVE_APPROVED_MESSAGE =
+  "Bergerie AGC : [surnom], ta demande de conge [periode] a ete APPROUVEE. Bon repos !";
+const DEFAULT_LEAVE_REJECTED_MESSAGE =
+  "Bergerie AGC : [surnom], ta demande de conge [periode] n'a pas ete acceptee. " +
+  "Rapproche-toi du pasteur pour en savoir plus.";
+const DEFAULT_LEAVE_REMINDER_MESSAGE =
+  "Bergerie AGC : [nombre] demande(s) de conge attendent ta reponse. " +
+  "Merci de les traiter dans l'appli.";
 
 const DEFAULTS: SMSConfig = {
   provider: 'africastalking',
@@ -129,6 +152,16 @@ const DEFAULTS: SMSConfig = {
     attendusEnabled: false,
     attendusHour: 18,
     attendusMessage: DEFAULT_EV_ATTENDUS_MESSAGE,
+  },
+  leaveRequestSms: {
+    enabled: false,
+    submittedMessage: DEFAULT_LEAVE_SUBMITTED_MESSAGE,
+    approvedMessage: DEFAULT_LEAVE_APPROVED_MESSAGE,
+    rejectedMessage: DEFAULT_LEAVE_REJECTED_MESSAGE,
+    reminderEnabled: false,
+    reminderDayOfWeek: 0,
+    reminderHour: 8,
+    reminderMessage: DEFAULT_LEAVE_REMINDER_MESSAGE,
   },
 };
 
@@ -184,6 +217,16 @@ function normalizeConfig(raw: Record<string, any>): SMSConfig {
       attendusEnabled: raw.evangelistReminders?.attendusEnabled ?? DEFAULTS.evangelistReminders.attendusEnabled,
       attendusHour:    raw.evangelistReminders?.attendusHour ?? DEFAULTS.evangelistReminders.attendusHour,
       attendusMessage: raw.evangelistReminders?.attendusMessage ?? DEFAULTS.evangelistReminders.attendusMessage,
+    },
+    leaveRequestSms: {
+      enabled:           raw.leaveRequestSms?.enabled ?? DEFAULTS.leaveRequestSms.enabled,
+      submittedMessage:  raw.leaveRequestSms?.submittedMessage ?? DEFAULTS.leaveRequestSms.submittedMessage,
+      approvedMessage:   raw.leaveRequestSms?.approvedMessage ?? DEFAULTS.leaveRequestSms.approvedMessage,
+      rejectedMessage:   raw.leaveRequestSms?.rejectedMessage ?? DEFAULTS.leaveRequestSms.rejectedMessage,
+      reminderEnabled:   raw.leaveRequestSms?.reminderEnabled ?? DEFAULTS.leaveRequestSms.reminderEnabled,
+      reminderDayOfWeek: raw.leaveRequestSms?.reminderDayOfWeek ?? DEFAULTS.leaveRequestSms.reminderDayOfWeek,
+      reminderHour:      raw.leaveRequestSms?.reminderHour ?? DEFAULTS.leaveRequestSms.reminderHour,
+      reminderMessage:   raw.leaveRequestSms?.reminderMessage ?? DEFAULTS.leaveRequestSms.reminderMessage,
     },
   };
 }
@@ -1037,6 +1080,159 @@ export default function SMSConfigSettings() {
               Variables : <code className="bg-gray-100 px-1 rounded">[surnom]</code> = prénom de l'évangéliste,{' '}
               <code className="bg-gray-100 px-1 rounded">[nombre]</code> = nombre de contacts concernés.
               Les contacts déjà reçus à l'église ne comptent jamais dans ces rappels.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* SMS demandes de congé */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <CalendarDays className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">SMS demandes de congé</h3>
+              <p className="text-sm text-gray-500">
+                Pasteur averti à chaque nouvelle demande, demandeur averti de la décision
+              </p>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={config.leaveRequestSms.enabled}
+              onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, enabled: e.target.checked } }))}
+              className="h-4 w-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm font-medium text-gray-700">Activer</span>
+          </label>
+        </div>
+
+        {config.leaveRequestSms.enabled && (
+          <div className="space-y-6">
+            {/* Nouvelle demande → pasteur */}
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-gray-700">Nouvelle demande → SMS au pasteur</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message envoyé au pasteur</label>
+                <textarea
+                  value={config.leaveRequestSms.submittedMessage}
+                  onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, submittedMessage: e.target.value } }))}
+                  rows={2}
+                  maxLength={160}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                  <span>
+                    Variables : <code className="bg-gray-100 px-1 rounded">[nom]</code> = demandeur,{' '}
+                    <code className="bg-gray-100 px-1 rounded">[role]</code> = son rôle,{' '}
+                    <code className="bg-gray-100 px-1 rounded">[periode]</code> = dates demandées
+                  </span>
+                  <span>{config.leaveRequestSms.submittedMessage.length}/160</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Décision → demandeur */}
+            <div className="pt-4 border-t border-gray-100 space-y-4">
+              <p className="text-sm font-semibold text-gray-700">Décision du pasteur → SMS au demandeur</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message si demande approuvée</label>
+                <textarea
+                  value={config.leaveRequestSms.approvedMessage}
+                  onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, approvedMessage: e.target.value } }))}
+                  rows={2}
+                  maxLength={160}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500 text-right">{config.leaveRequestSms.approvedMessage.length}/160</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message si demande refusée</label>
+                <textarea
+                  value={config.leaveRequestSms.rejectedMessage}
+                  onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, rejectedMessage: e.target.value } }))}
+                  rows={2}
+                  maxLength={160}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500 text-right">{config.leaveRequestSms.rejectedMessage.length}/160</p>
+              </div>
+              <p className="text-xs text-gray-400">
+                Variables : <code className="bg-gray-100 px-1 rounded">[surnom]</code> = prénom du demandeur,{' '}
+                <code className="bg-gray-100 px-1 rounded">[periode]</code> = dates demandées.
+                Envoyé uniquement si le demandeur a un numéro de téléphone dans sa fiche utilisateur.
+              </p>
+            </div>
+
+            {/* Relance hebdo des demandes sans réponse */}
+            <div className="pt-4 border-t border-gray-100 space-y-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-semibold text-gray-700">Relance hebdo des demandes sans réponse</span>
+                <input
+                  type="checkbox"
+                  checked={config.leaveRequestSms.reminderEnabled}
+                  onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, reminderEnabled: e.target.checked } }))}
+                  className="h-4 w-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                />
+              </label>
+
+              {config.leaveRequestSms.reminderEnabled && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Jour d'envoi</label>
+                      <select
+                        value={config.leaveRequestSms.reminderDayOfWeek}
+                        onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, reminderDayOfWeek: parseInt(e.target.value) } }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                      >
+                        {DAYS_OF_WEEK.map(d => (
+                          <option key={d.value} value={d.value}>{d.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Heure</label>
+                      <select
+                        value={config.leaveRequestSms.reminderHour}
+                        onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, reminderHour: parseInt(e.target.value) } }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                      >
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <option key={h} value={h}>{String(h).padStart(2, '0')}h</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Message de relance</label>
+                    <textarea
+                      value={config.leaveRequestSms.reminderMessage}
+                      onChange={e => setConfig(c => ({ ...c, leaveRequestSms: { ...c.leaveRequestSms, reminderMessage: e.target.value } }))}
+                      rows={2}
+                      maxLength={160}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                    />
+                    <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                      <span>
+                        Variables : <code className="bg-gray-100 px-1 rounded">[surnom]</code> = prénom du pasteur,{' '}
+                        <code className="bg-gray-100 px-1 rounded">[nombre]</code> = demandes en attente
+                      </span>
+                      <span>{config.leaveRequestSms.reminderMessage.length}/160</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Envoyée chaque semaine tant qu'il reste des demandes en attente de réponse (rien n'est envoyé s'il n'y en a aucune).
+                  </p>
+                </>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-400">
+              Les SMS « pasteur » sont envoyés à tous les utilisateurs actifs ayant le rôle Pasteur et un numéro de téléphone.
             </p>
           </div>
         )}

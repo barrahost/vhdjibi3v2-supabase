@@ -42,6 +42,18 @@ function mapRequest(r: any): LeaveRequest {
   };
 }
 
+// SMS best-effort (pasteur à la soumission, demandeur à la décision) : le
+// contenu est reconstruit côté serveur, et un échec SMS ne doit jamais faire
+// échouer l'opération déjà enregistrée en base.
+function notifyLeaveSms(payload: { type: 'submitted'; userId: string } | { type: 'decision'; requestId: string }): void {
+  supabase.functions
+    .invoke('notify-leave-request', { body: payload })
+    .then((res: { error: { message?: string } | null }) => {
+      if (res.error) console.warn('SMS demande de congé non envoyé :', res.error.message);
+    })
+    .catch((e: unknown) => console.warn('SMS demande de congé non envoyé :', e));
+}
+
 export const LeaveRequestService = {
   // ── Public (SECURITY DEFINER — sans auth) ──────────────────────────────
 
@@ -84,6 +96,7 @@ export const LeaveRequestService = {
       p_periods: periods,
     });
     if (error) throw new Error(error.message);
+    notifyLeaveSms({ type: 'submitted', userId });
   },
 
   // ── Admin (auth requise) ────────────────────────────────────────────────
@@ -105,6 +118,7 @@ export const LeaveRequestService = {
       .eq('id', id)
       .eq('church_id', getChurchId());
     if (error) throw error;
+    notifyLeaveSms({ type: 'decision', requestId: id });
   },
 
   async rejectRequest(id: string, reason?: string): Promise<void> {
@@ -118,6 +132,7 @@ export const LeaveRequestService = {
       .eq('id', id)
       .eq('church_id', getChurchId());
     if (error) throw error;
+    notifyLeaveSms({ type: 'decision', requestId: id });
   },
 
   async deleteRequest(id: string): Promise<void> {

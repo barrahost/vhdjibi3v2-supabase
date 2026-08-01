@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.check-sms-balance]
 verify_jwt = false
+
+[functions.notify-leave-request]
+verify_jwt = false
