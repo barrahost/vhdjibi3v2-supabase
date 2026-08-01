@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { Soul } from '../types/database.types';
-import { Search, AlertTriangle, MessageCircle } from 'lucide-react';
+import { Search, AlertTriangle, MessageCircle, RotateCcw } from 'lucide-react';
 import { CustomTable } from '../components/ui/CustomTable';
+import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
+import { DateRangePicker } from '../components/ui/DateRangePicker';
 import { formatDate } from '../utils/dateUtils';
 import EditSoulModal from '../components/souls/EditSoulModal';
 import UndecidedSoulMessageModal from '../components/souls/UndecidedSoulMessageModal.tsx';
@@ -24,6 +26,29 @@ export default function UndecidedSouls({ embedded = false }: UndecidedSoulsProps
   const [currentPage, setCurrentPage] = useState(1);
   const [editingSoul, setEditingSoul] = useState<Soul | null>(null);
   const [messagingSoul, setMessagingSoul] = useState<Soul | null>(null);
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({ startDate: '', endDate: '' });
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [sortBy, setSortBy] = useState<'recent' | 'name'>('recent');
+
+  const activeFiltersCount = [
+    searchTerm !== '',
+    dateRange.startDate !== '' || dateRange.endDate !== '',
+    statusFilter !== 'active',
+    sortBy !== 'recent',
+  ].filter(Boolean).length;
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setDateRange({ startDate: '', endDate: '' });
+    setStatusFilter('active');
+    setSortBy('recent');
+    setCurrentPage(1);
+  };
+
+  // Revenir en page 1 quand un filtre change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateRange, statusFilter, sortBy]);
 
   const columns = [
     {
@@ -86,8 +111,7 @@ export default function UndecidedSouls({ embedded = false }: UndecidedSoulsProps
       const { data, error } = await supabase
         .from('souls')
         .select('*')
-        .eq('church_id', getChurchId())
-        .eq('status', 'active');
+        .eq('church_id', getChurchId());
 
       if (error) {
         console.error('Error loading undecided souls:', error);
@@ -148,12 +172,36 @@ export default function UndecidedSouls({ embedded = false }: UndecidedSoulsProps
     };
   }, []);
 
-  // Filtrer les âmes
-  const filteredSouls = souls.filter(soul =>
-    (soul.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (soul.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (soul.location || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrer les âmes (recherche + statut + période de première visite), puis trier
+  const filteredSouls = souls
+    .filter(soul => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch =
+        (soul.fullName || '').toLowerCase().includes(term) ||
+        (soul.phone || '').toLowerCase().includes(term) ||
+        (soul.location || '').toLowerCase().includes(term);
+      if (!matchesSearch) return false;
+
+      if (statusFilter !== 'all' && soul.status !== statusFilter) return false;
+
+      if (dateRange.startDate || dateRange.endDate) {
+        if (!soul.firstVisitDate) return false;
+        const visit = new Date(soul.firstVisitDate).getTime();
+        if (dateRange.startDate && visit < new Date(dateRange.startDate).getTime()) return false;
+        if (dateRange.endDate) {
+          const end = new Date(dateRange.endDate);
+          end.setHours(23, 59, 59, 999);
+          if (visit > end.getTime()) return false;
+        }
+      }
+      return true;
+    })
+    .sort((a: any, b: any) => {
+      if (sortBy === 'name') {
+        return (a.fullName || '').localeCompare(b.fullName || '', 'fr');
+      }
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
 
   // Pagination
   const totalPages = Math.ceil(filteredSouls.length / ITEMS_PER_PAGE);
@@ -192,16 +240,67 @@ export default function UndecidedSouls({ embedded = false }: UndecidedSoulsProps
       </div>
 
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Rechercher une âme indécise..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
+        <CollapsibleFilters
+          activeCount={activeFiltersCount}
+          storageKey="filters:undecided-souls:open"
+          resetButton={
+            <button
+              onClick={resetAllFilters}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#00665C] bg-white border border-[#00665C] rounded-lg hover:bg-[#00665C] hover:text-white transition-colors"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Réinitialiser les filtres
+            </button>
+          }
+        >
+          <DateRangePicker
+            label="Date de première visite"
+            value={dateRange}
+            onChange={setDateRange}
           />
-        </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+              >
+                <option value="active">Actives uniquement</option>
+                <option value="inactive">Inactives uniquement</option>
+                <option value="all">Toutes les âmes</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tri</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'recent' | 'name')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+              >
+                <option value="recent">Plus récentes d'abord</option>
+                <option value="name">Nom (A → Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher une âme indécise par nom, téléphone ou lieu d'habitation..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#00665C] focus:border-[#00665C]"
+              />
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              {filteredSouls.length} résultat{filteredSouls.length !== 1 ? 's' : ''} trouvé{filteredSouls.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </CollapsibleFilters>
 
         <CustomTable
           data={paginatedSouls}
