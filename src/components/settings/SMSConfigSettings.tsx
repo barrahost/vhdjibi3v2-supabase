@@ -25,6 +25,15 @@ interface LeTextoConfig {
   senderId: string;
 }
 
+interface ShepherdRemindersConfig {
+  enabled: boolean;
+  dayOfWeek: number;      // 0 = dimanche ... 6 = samedi
+  hour: number;
+  thresholdDays: number;
+  cooldownDays: number;
+  message: string;
+}
+
 interface SMSConfig {
   provider: Provider;
   smsCostXOF: number;
@@ -32,7 +41,12 @@ interface SMSConfig {
   africastalking: AfricasTalkingConfig;
   orange: OrangeConfig;
   letexto: LeTextoConfig;
+  shepherdReminders: ShepherdRemindersConfig;
 }
+
+const DEFAULT_REMINDER_MESSAGE =
+  "Bergerie AGC : [surnom], tu as [nombre] ame(s) sans interaction depuis 5+ jours. " +
+  "Merci de les contacter et d'enregistrer l'interaction dans l'appli.";
 
 const DEFAULTS: SMSConfig = {
   provider: 'africastalking',
@@ -41,6 +55,14 @@ const DEFAULTS: SMSConfig = {
   africastalking: { apiKey: '', username: 'vhdjibi3', senderId: '' },
   orange: { clientId: '', clientSecret: '', senderNumber: '', senderName: '' },
   letexto: { apiKey: '', senderId: '' },
+  shepherdReminders: {
+    enabled: false,
+    dayOfWeek: 2,
+    hour: 8,
+    thresholdDays: 5,
+    cooldownDays: 7,
+    message: DEFAULT_REMINDER_MESSAGE,
+  },
 };
 
 // Migre l'ancien format plat ({ apiKey, username, senderId, ... }) vers le format imbriqué actuel.
@@ -64,8 +86,26 @@ function normalizeConfig(raw: Record<string, any>): SMSConfig {
       apiKey:   raw.letexto?.apiKey   ?? DEFAULTS.letexto.apiKey,
       senderId: raw.letexto?.senderId ?? DEFAULTS.letexto.senderId,
     },
+    shepherdReminders: {
+      enabled:       raw.shepherdReminders?.enabled ?? DEFAULTS.shepherdReminders.enabled,
+      dayOfWeek:     raw.shepherdReminders?.dayOfWeek ?? DEFAULTS.shepherdReminders.dayOfWeek,
+      hour:          raw.shepherdReminders?.hour ?? DEFAULTS.shepherdReminders.hour,
+      thresholdDays: raw.shepherdReminders?.thresholdDays ?? DEFAULTS.shepherdReminders.thresholdDays,
+      cooldownDays:  raw.shepherdReminders?.cooldownDays ?? DEFAULTS.shepherdReminders.cooldownDays,
+      message:       raw.shepherdReminders?.message ?? DEFAULTS.shepherdReminders.message,
+    },
   };
 }
+
+const DAYS_OF_WEEK = [
+  { value: 1, label: 'Lundi' },
+  { value: 2, label: 'Mardi' },
+  { value: 3, label: 'Mercredi' },
+  { value: 4, label: 'Jeudi' },
+  { value: 5, label: 'Vendredi' },
+  { value: 6, label: 'Samedi' },
+  { value: 0, label: 'Dimanche' },
+];
 
 export default function SMSConfigSettings() {
   const [config, setConfig]     = useState<SMSConfig>(DEFAULTS);
@@ -504,6 +544,102 @@ export default function SMSConfigSettings() {
           </div>
         </div>
       )}
+
+      {/* Rappels automatiques aux bergers */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <MessageSquare className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Rappels automatiques aux bergers</h3>
+              <p className="text-sm text-gray-500">
+                SMS hebdomadaire aux bergers ayant des âmes sans interaction récente
+              </p>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={config.shepherdReminders.enabled}
+              onChange={e => setConfig(c => ({ ...c, shepherdReminders: { ...c.shepherdReminders, enabled: e.target.checked } }))}
+              className="h-4 w-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+            />
+            <span className="text-sm font-medium text-gray-700">Activer</span>
+          </label>
+        </div>
+
+        {config.shepherdReminders.enabled && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Jour d'envoi</label>
+                <select
+                  value={config.shepherdReminders.dayOfWeek}
+                  onChange={e => setConfig(c => ({ ...c, shepherdReminders: { ...c.shepherdReminders, dayOfWeek: parseInt(e.target.value) } }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                >
+                  {DAYS_OF_WEEK.map(d => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Heure</label>
+                <select
+                  value={config.shepherdReminders.hour}
+                  onChange={e => setConfig(c => ({ ...c, shepherdReminders: { ...c.shepherdReminders, hour: parseInt(e.target.value) } }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, '0')}h</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Seuil (jours)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={config.shepherdReminders.thresholdDays}
+                  onChange={e => setConfig(c => ({ ...c, shepherdReminders: { ...c.shepherdReminders, thresholdDays: parseInt(e.target.value) || 5 } }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">Jours sans interaction avant rappel</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Anti-relance (jours)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={config.shepherdReminders.cooldownDays}
+                  onChange={e => setConfig(c => ({ ...c, shepherdReminders: { ...c.shepherdReminders, cooldownDays: parseInt(e.target.value) || 7 } }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">Délai minimum entre 2 rappels au même berger</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Message du rappel</label>
+              <textarea
+                value={config.shepherdReminders.message}
+                onChange={e => setConfig(c => ({ ...c, shepherdReminders: { ...c.shepherdReminders, message: e.target.value } }))}
+                rows={3}
+                maxLength={160}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#00665C] focus:border-[#00665C] outline-none"
+              />
+              <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                <span>Variables : <code className="bg-gray-100 px-1 rounded">[surnom]</code> = prénom du berger, <code className="bg-gray-100 px-1 rounded">[nombre]</code> = nombre d'âmes en retard</span>
+                <span className={config.shepherdReminders.message.length > 140 ? 'text-amber-600 font-medium' : ''}>
+                  {config.shepherdReminders.message.length}/160
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Paramètres de coût et alertes */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">

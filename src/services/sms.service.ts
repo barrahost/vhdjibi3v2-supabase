@@ -157,7 +157,16 @@ export class SMSService {
 
       if (error) {
         console.error('Edge function error:', error);
-        throw new Error(error.message || 'Erreur lors de l\'envoi du SMS');
+        // Sur une reponse non-2xx, le vrai message d'erreur est dans le corps de la
+        // reponse (error.context), pas dans error.message (generique).
+        let detail = '';
+        try {
+          const body = await (error as any).context?.json?.();
+          detail = body?.error || '';
+        } catch {
+          // corps illisible : on garde le message generique
+        }
+        throw new Error(detail || error.message || 'Erreur lors de l\'envoi du SMS');
       }
 
       if (!data.success) {

@@ -113,8 +113,18 @@ export function PhoneInput({ value, onChange, placeholder, required, className =
   };
 
   const handleNationalChange = (raw: string) => {
-    setNational(raw);
-    emitChange(country, raw);
+    // Si l'utilisateur tape ou colle le numero complet avec l'indicatif du pays
+    // selectionne (ex: "2250556000002" ou "+225 05 56..." avec la CI), on retire
+    // l'indicatif : il est deja fourni par le selecteur — evite le double prefixe.
+    let cleaned = raw;
+    const digits = raw.replace(/\D/g, '');
+    const dial = getCountryCallingCode(country);
+    const startsWithPlus = raw.trim().startsWith('+') || raw.trim().startsWith('00');
+    if (digits.startsWith(dial) && (startsWithPlus || digits.length - dial.length >= 8)) {
+      cleaned = digits.slice(dial.length);
+    }
+    setNational(cleaned);
+    emitChange(country, cleaned);
   };
 
   return (
