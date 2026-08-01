@@ -29,6 +29,9 @@ function todayISO() {
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
+// Date de culte au format JJ/MM/AAAA pour l'affichage
+const frDate = (iso: string) => (iso || '').split('-').reverse().join('/');
+
 export default function CulteReportSubmitForm({ reportType, departmentId, departmentName, onSuccess, onCancel }: CulteReportSubmitFormProps) {
   const { user } = useAuth();
   const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
@@ -190,7 +193,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
         >
           <option value="">-- Sélectionner --</option>
           {events.map((ev) => (
-            <option key={ev.id} value={ev.id}>{ev.serviceDate} — {ev.meetingTypeName}</option>
+            <option key={ev.id} value={ev.id}>{frDate(ev.serviceDate)} — {ev.meetingTypeName}</option>
           ))}
         </select>
 

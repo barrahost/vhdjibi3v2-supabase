@@ -40,6 +40,9 @@ interface Step {
   label: string;
 }
 
+// Date de culte au format JJ/MM/AAAA pour l'affichage
+const frDate = (iso: string) => (iso || '').split('-').reverse().join('/');
+
 export default function CulteReportSubmitModal({ isOpen, reportType, departmentId, departmentName, onClose, onSuccess }: CulteReportSubmitModalProps) {
   const { user } = useAuth();
   const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
@@ -244,7 +247,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
               >
                 <option value="">-- Sélectionner --</option>
                 {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>{ev.serviceDate} — {ev.meetingTypeName}</option>
+                  <option key={ev.id} value={ev.id}>{frDate(ev.serviceDate)} — {ev.meetingTypeName}</option>
                 ))}
               </select>
 
@@ -360,7 +363,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
           <div className="space-y-6">
             {selectedEvent && (
               <p className="text-xs text-gray-500">
-                Culte : <span className="font-medium text-gray-700">{selectedEvent.serviceDate} — {selectedEvent.meetingTypeName}</span>
+                Culte : <span className="font-medium text-gray-700">{frDate(selectedEvent.serviceDate)} — {selectedEvent.meetingTypeName}</span>
               </p>
             )}
             <div>
