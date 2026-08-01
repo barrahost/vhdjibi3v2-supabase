@@ -52,6 +52,46 @@ const DEFAULT_RECAP_MESSAGE =
   "Bergerie AGC : [surnom], ta famille a accueilli [nombre] nouvelle(s) ame(s) cette semaine. " +
   "Pense a organiser leur accueil !";
 
+interface EvangelistConfig {
+  enabled: boolean;
+  dayOfWeek: number;      // creneau du rappel "a relancer"
+  hour: number;
+  thresholdDays: number;  // jours sans contact avant relance
+  cooldownDays: number;
+  relanceMessage: string;    // [surnom], [nombre]
+  attendusEnabled: boolean;  // rappel la veille de chaque culte
+  attendusHour: number;      // heure d'envoi la veille (jour derive du programme des cultes)
+  attendusMessage: string;   // [surnom], [nombre]
+}
+
+const DEFAULT_EV_RELANCE_MESSAGE =
+  "Bergerie AGC : [surnom], [nombre] de tes contacts evangelises attendent une relance. " +
+  "Retrouve-les dans « A relancer » sur l'appli.";
+const DEFAULT_EV_ATTENDUS_MESSAGE =
+  "Bergerie AGC : [surnom], [nombre] de tes contacts sont attendus au culte de demain. " +
+  "Appelle-les ce soir et accueille-les a l'entree !";
+
+// Culte envisage (formulaire d'evangelisation) -> type de rencontre du programme recurrent
+const PLANNED_SERVICE_TO_MEETING_TYPE: Record<string, string> = {
+  wednesday_evening: 'Rendez-Vous des Champions',
+  sunday_first: '1er Culte de Célébration & Contemplation',
+  sunday_second: '2e Culte de Célébration & Contemplation',
+};
+
+function normalizeEvangelistConfig(raw: any): EvangelistConfig {
+  return {
+    enabled:         raw?.enabled === true,
+    dayOfWeek:       Number.isInteger(raw?.dayOfWeek) ? raw.dayOfWeek : 2,
+    hour:            Number.isInteger(raw?.hour) ? raw.hour : 8,
+    thresholdDays:   Number(raw?.thresholdDays) > 0 ? Number(raw.thresholdDays) : 7,
+    cooldownDays:    Number(raw?.cooldownDays) > 0 ? Number(raw.cooldownDays) : 7,
+    relanceMessage:  (raw?.relanceMessage || '').trim() || DEFAULT_EV_RELANCE_MESSAGE,
+    attendusEnabled: raw?.attendusEnabled === true,
+    attendusHour:    Number.isInteger(raw?.attendusHour) ? raw.attendusHour : 18,
+    attendusMessage: (raw?.attendusMessage || '').trim() || DEFAULT_EV_ATTENDUS_MESSAGE,
+  };
+}
+
 function normalizeShepherdConfig(raw: any): ShepherdConfig {
   return {
     enabled:       raw?.enabled === true,
@@ -126,6 +166,7 @@ serve(async (req) => {
 
     const shepherdCfg = normalizeShepherdConfig(settingsRow?.value?.shepherdReminders);
     const flCfg = normalizeFamilyLeaderConfig(settingsRow?.value?.familyLeaderReminders);
+    const evCfg = normalizeEvangelistConfig(settingsRow?.value?.evangelistReminders);
     const churchId = settingsRow?.church_id || 'bergerie';
 
     // force=true (test manuel) ignore les créneaux jour/heure
@@ -141,8 +182,12 @@ serve(async (req) => {
     const shepherdSlot = shepherdCfg.enabled && slotMatches(shepherdCfg.dayOfWeek, shepherdCfg.hour);
     const flAlertSlot  = flCfg.enabled && slotMatches(flCfg.dayOfWeek, flCfg.hour);
     const flRecapSlot  = flCfg.enabled && flCfg.recapEnabled && slotMatches(flCfg.recapDayOfWeek, flCfg.recapHour);
+    const evRelanceSlot = evCfg.enabled && slotMatches(evCfg.dayOfWeek, evCfg.hour);
+    // Attendus : la bonne heure suffit ici ; le "est-ce la veille d'un culte ?"
+    // est verifie dans le bloc via le programme recurrent.
+    const evAttendusMaybe = evCfg.enabled && evCfg.attendusEnabled && (force || now.getUTCHours() === evCfg.attendusHour);
 
-    if (!shepherdSlot && !flAlertSlot && !flRecapSlot) {
+    if (!shepherdSlot && !flAlertSlot && !flRecapSlot && !evRelanceSlot && !evAttendusMaybe) {
       return json({ skipped: 'outside schedule or disabled' });
     }
 
@@ -311,6 +356,129 @@ serve(async (req) => {
       }
 
       summary.familyLeaders = { sent: results.filter(r => r.status === 'sent').length, results };
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // BLOCS 4 & 5 — Évangélistes (relances hebdo + attendus de la veille)
+    // ════════════════════════════════════════════════════════════════════
+    if (evRelanceSlot || evAttendusMaybe) {
+      const results: any[] = [];
+
+      // Contacts évangélisés encore suivis par l'évangéliste (non reçus à l'église)
+      const { data: evSouls, error: evErr } = await supabase
+        .from('evangelized_souls')
+        .select('id, evangelist_id, evangelization_date, planned_service, service_attendance, imported_to_soul_id, created_at')
+        .eq('church_id', churchId)
+        .eq('status', 'active')
+        .not('evangelist_id', 'is', null)
+        .is('imported_to_soul_id', null);
+      if (evErr) throw evErr;
+
+      const { data: recentEvLogs } = await supabase
+        .from('evangelist_reminder_log')
+        .select('evangelist_id, reminder_type, sent_at')
+        .eq('church_id', churchId)
+        .gte('sent_at', new Date(now.getTime() - evCfg.cooldownDays * 24 * 3600 * 1000).toISOString());
+
+      const evangelistIds = [...new Set((evSouls || []).map((s: any) => s.evangelist_id))];
+      const { data: evangelists } = evangelistIds.length
+        ? await supabase.from('users').select('id, full_name, nickname, phone')
+            .eq('church_id', churchId).eq('status', 'active').in('id', evangelistIds)
+        : { data: [] };
+      const evangelistById = new Map((evangelists || []).map((u: any) => [u.id, u]));
+
+      // L'anti-relance est géré par l'appelant (cooldown 7j pour 'relance', 1/jour pour 'attendus')
+      const notifyEvangelist = async (evId: string, type: string, count: number, template: string) => {
+        if (count <= 0) return;
+        const ev = evangelistById.get(evId);
+        if (!ev) { results.push({ evangelist: evId, type, status: 'skipped', reason: 'no user' }); return; }
+        if (!ev.phone) { results.push({ evangelist: evId, type, status: 'skipped', reason: 'no phone' }); return; }
+        const message = template
+          .replace(/\[surnom\]/g, surnomOf(ev))
+          .replace(/\[nombre\]/g, String(count));
+        try {
+          await sendSms(ev.phone, message);
+          await supabase.from('evangelist_reminder_log').insert({ church_id: churchId, evangelist_id: evId, reminder_type: type, item_count: count });
+          results.push({ evangelist: evId, type, status: 'sent', count });
+        } catch (e: any) {
+          console.error(`Evangelist reminder ${type} failed for ${evId}:`, e.message);
+          results.push({ evangelist: evId, type, status: 'failed', error: e.message });
+        }
+      };
+
+      // ── BLOC 4 : relances hebdo (contacts sans nouvelle depuis X jours) ──
+      if (evRelanceSlot) {
+        const relanceCooldown = new Set(
+          (recentEvLogs || []).filter((r: any) => r.reminder_type === 'relance').map((r: any) => r.evangelist_id)
+        );
+        // Dernier contact par âme évangélisée (interactions rattachées à son id)
+        const evSoulIds = (evSouls || []).map((s: any) => s.id);
+        const lastContact = new Map<string, string>();
+        for (let i = 0; i < evSoulIds.length; i += 500) {
+          const batch = evSoulIds.slice(i, i + 500);
+          const { data: rows } = await supabase
+            .from('interactions')
+            .select('soul_id, date')
+            .eq('church_id', churchId)
+            .in('soul_id', batch);
+          (rows || []).forEach((r: any) => {
+            const prev = lastContact.get(r.soul_id);
+            if (!prev || (r.date && r.date > prev)) lastContact.set(r.soul_id, r.date);
+          });
+        }
+        const cutoff = new Date(now.getTime() - evCfg.thresholdDays * 24 * 3600 * 1000).toISOString();
+        const toRelanceBy = new Map<string, number>();
+        (evSouls || []).forEach((s: any) => {
+          const last = lastContact.get(s.id) || s.evangelization_date || s.created_at;
+          if (last && last < cutoff) {
+            toRelanceBy.set(s.evangelist_id, (toRelanceBy.get(s.evangelist_id) || 0) + 1);
+          }
+        });
+        for (const [evId, count] of toRelanceBy) {
+          if (relanceCooldown.has(evId)) { results.push({ evangelist: evId, type: 'relance', status: 'cooldown' }); continue; }
+          await notifyEvangelist(evId, 'relance', count, evCfg.relanceMessage);
+        }
+      }
+
+      // ── BLOC 5 : attendus au culte de demain (veille de chaque culte) ──
+      if (evAttendusMaybe) {
+        // Quels types de culte ont lieu DEMAIN, d'après le programme récurrent ?
+        const tomorrowDow = (now.getUTCDay() + 1) % 7;
+        const { data: schedules } = await supabase
+          .from('culte_recurring_schedules')
+          .select('meeting_type_name, day_of_week, is_active')
+          .eq('church_id', churchId)
+          .eq('is_active', true)
+          .eq('day_of_week', tomorrowDow);
+        const meetingNamesTomorrow = new Set((schedules || []).map((s: any) => s.meeting_type_name));
+        const plannedKeysTomorrow = Object.entries(PLANNED_SERVICE_TO_MEETING_TYPE)
+          .filter(([, name]) => meetingNamesTomorrow.has(name))
+          .map(([key]) => key);
+
+        if (plannedKeysTomorrow.length > 0) {
+          // Un seul rappel "attendus" par évangéliste et par jour
+          const today = now.toISOString().slice(0, 10);
+          const attendusSentToday = new Set(
+            (recentEvLogs || [])
+              .filter((r: any) => r.reminder_type === 'attendus' && String(r.sent_at).slice(0, 10) === today)
+              .map((r: any) => r.evangelist_id)
+          );
+          const attendusBy = new Map<string, number>();
+          (evSouls || []).forEach((s: any) => {
+            if (plannedKeysTomorrow.includes(s.planned_service) && s.service_attendance !== 'came') {
+              attendusBy.set(s.evangelist_id, (attendusBy.get(s.evangelist_id) || 0) + 1);
+            }
+          });
+          for (const [evId, count] of attendusBy) {
+            if (attendusSentToday.has(evId)) { results.push({ evangelist: evId, type: 'attendus', status: 'already sent today' }); continue; }
+            await notifyEvangelist(evId, 'attendus', count, evCfg.attendusMessage);
+          }
+        } else {
+          results.push({ info: 'pas de culte demain' });
+        }
+      }
+
+      summary.evangelists = { sent: results.filter(r => r.status === 'sent').length, results };
     }
 
     console.log('Reminders summary:', JSON.stringify(summary));

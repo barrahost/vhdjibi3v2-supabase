@@ -35,6 +35,7 @@ import {
   Radio,
   Wheat,
   Clock,
+  Trophy,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -311,6 +312,7 @@ export function useNavigationItems(): NavItem[] {
     }
     children.push({ id: 'evangelist-relances', label: 'À relancer', icon: <Clock className="w-5 h-5" />, href: '/evangelisation/relances' });
     children.push({ id: 'evangelist-attendus', label: 'Attendus au culte', icon: <CalendarCheck className="w-5 h-5" />, href: '/evangelisation/attendus' });
+    children.push({ id: 'evangelist-gagnees', label: 'Mes âmes gagnées', icon: <Trophy className="w-5 h-5" />, href: '/evangelisation/gagnees' });
     // Les bergers/responsables de famille/admins ont déjà une entrée Interactions ailleurs
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS) && !hasRole(ROLES.SHEPHERD) && !hasRole(ROLES.FAMILY_LEADER) && !isAdmin) {
       children.push({ id: 'evangelist-interactions', label: 'Mes interactions', icon: <MessageCircle className="w-5 h-5" />, href: '/interactions', dataTour: 'nav-interactions-evangelist' });

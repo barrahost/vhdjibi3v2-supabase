@@ -72,8 +72,14 @@ export function PhoneInput({ value, onChange, placeholder, required, className =
   const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Resynchronise si la valeur change depuis l'exterieur (ex: chargement d'une fiche existante)
+  // Resynchronise si la valeur change depuis l'exterieur (ex: chargement d'une fiche existante).
+  // IMPORTANT : ne rien faire quand la valeur recue est l'echo de notre propre onChange,
+  // sinon un numero en cours de frappe (incomplet, donc non parsable) se fait reinjecter
+  // avec l'indicatif dans le champ national et corrompt la saisie.
   useEffect(() => {
+    const currentDigits = national.replace(/\D/g, '');
+    const expected = currentDigits ? `+${getCountryCallingCode(country)}${currentDigits}` : '';
+    if ((value || '') === expected) return;
     const guessed = guessCountry(value);
     setCountry(guessed);
     setNational(nationalDigits(value, guessed));
