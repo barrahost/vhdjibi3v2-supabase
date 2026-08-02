@@ -4,7 +4,8 @@ export type BusinessProfileType =
   | 'adn' 
   | 'admin'
   | 'family_leader'
-  | 'evangelist';
+  | 'evangelist'
+  | 'pasteur';
 
 export interface BusinessProfile {
   type: BusinessProfileType;
@@ -35,7 +36,8 @@ export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
   adn: 'ADN',
   admin: 'Administrateur',
   family_leader: 'Responsable de Famille',
-  evangelist: 'Évangéliste'
+  evangelist: 'Évangéliste',
+  pasteur: 'Pasteur'
 };
 
 export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> = {
@@ -44,7 +46,8 @@ export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> 
   adn: 'Peut gérer les âmes, audios, statistiques',
   admin: 'Accès complet au système',
   family_leader: 'Peut voir les âmes de sa famille et les assigner à ses bergers',
-  evangelist: 'Peut enregistrer et suivre ses âmes évangélisées'
+  evangelist: 'Peut enregistrer et suivre ses âmes évangélisées',
+  pasteur: 'Supervision et décision : stats, congés, besoins signalés, consultation des âmes'
 };
 
 // Map business profiles to permissions
@@ -87,6 +90,18 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
     'EXPORT_DATA',
     'MANAGE_PROFILE',
     'VIEW_REPLAY_TEACHINGS'
+  ],
+  // Supervision et decision, sans administration technique
+  pasteur: [
+    'MANAGE_LEAVES',
+    'MANAGE_PRAYER_REQUESTS',
+    'MANAGE_CULTE_REPORTS',
+    'MANAGE_SOULS',
+    'VIEW_STATS',
+    'EXPORT_DATA',
+    'MANAGE_PROFILE',
+    'VIEW_REPLAY_TEACHINGS',
+    'MANAGE_BIRTHDAYS'
   ]
 };
 

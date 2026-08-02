@@ -47,7 +47,7 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
     });
     onChange(updated);
   };
-  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'admin'];
+  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'pasteur', 'admin'];
 
   const isProfileSelected = (profileType: BusinessProfileType): boolean => {
     return selectedProfiles.some(profile => profile.type === profileType);

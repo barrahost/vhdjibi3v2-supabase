@@ -21,6 +21,7 @@ const PROFILE_BADGE_COLORS: Record<BusinessProfileType, string> = {
   department_leader: 'bg-blue-50 text-blue-700 border-blue-200',
   family_leader:     'bg-orange-50 text-orange-700 border-orange-200',
   evangelist:        'bg-[#F2B636]/10 text-[#7a5a00] border-[#F2B636]/30',
+  pasteur:           'bg-indigo-50 text-indigo-700 border-indigo-200',
 };
 
 interface UserData {

@@ -6,13 +6,15 @@ import { ADNDashboard } from '../components/dashboard/ADNDashboard';
 import DepartmentLeaderDashboard from '../components/servants/DepartmentLeaderDashboard';
 import FamilyLeaderDashboard from '../components/dashboard/FamilyLeaderDashboard';
 import EvangelistDashboard from '../components/dashboard/EvangelistDashboard';
+import { PastorDashboard } from '../components/dashboard/PastorDashboard';
 import { ROLES } from '../constants/roles';
-import { Crown, Shield, Heart, Briefcase, Home, Megaphone } from 'lucide-react';
+import { Crown, Shield, Heart, Briefcase, Home, Megaphone, Church } from 'lucide-react';
 
 // Rôles disposant d'un tableau de bord dédié, dans l'ordre d'affichage des onglets
 const DASHBOARD_VIEWS: { role: string; label: string; icon: React.ReactNode }[] = [
   { role: ROLES.ADMIN, label: 'Administration', icon: <Crown className="w-4 h-4" /> },
   { role: ROLES.SUPER_ADMIN, label: 'Administration', icon: <Crown className="w-4 h-4" /> },
+  { role: ROLES.PASTEUR, label: 'Pasteur', icon: <Church className="w-4 h-4" /> },
   { role: ROLES.ADN, label: 'ADN', icon: <Shield className="w-4 h-4" /> },
   { role: ROLES.SHEPHERD, label: 'Berger(e)', icon: <Heart className="w-4 h-4" /> },
   { role: ROLES.DEPARTMENT_LEADER, label: 'Département', icon: <Briefcase className="w-4 h-4" /> },
@@ -32,6 +34,8 @@ function renderDashboard(role: string) {
       return <FamilyLeaderDashboard />;
     case ROLES.EVANGELIST:
       return <EvangelistDashboard />;
+    case ROLES.PASTEUR:
+      return <PastorDashboard />;
     case ROLES.ADMIN:
     case ROLES.SUPER_ADMIN:
       return <AdminDashboard />;

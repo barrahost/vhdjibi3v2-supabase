@@ -34,6 +34,7 @@ export const PERMISSIONS = {
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
+  PASTEUR: 'pasteur',
   SHEPHERD: 'shepherd',
   ADN: 'adn',
   DEPARTMENT_LEADER: 'department_leader',
@@ -70,6 +71,19 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_REPLAY_TEACHINGS,
     PERMISSIONS.MANAGE_BIRTHDAYS,
     PERMISSIONS.MANAGE_EVANGELIZED_SOULS
+  ],
+  // Pasteur : supervision et decision (stats, conges, besoins, consultation des ames),
+  // sans l'administration technique (utilisateurs, parametres, config SMS).
+  [ROLES.PASTEUR]: [
+    PERMISSIONS.MANAGE_LEAVES,
+    PERMISSIONS.MANAGE_PRAYER_REQUESTS,
+    PERMISSIONS.MANAGE_CULTE_REPORTS,
+    PERMISSIONS.MANAGE_SOULS,
+    PERMISSIONS.VIEW_STATS,
+    PERMISSIONS.EXPORT_DATA,
+    PERMISSIONS.MANAGE_PROFILE,
+    PERMISSIONS.VIEW_REPLAY_TEACHINGS,
+    PERMISSIONS.MANAGE_BIRTHDAYS
   ],
   [ROLES.SHEPHERD]: [
     PERMISSIONS.MANAGE_INTERACTIONS,

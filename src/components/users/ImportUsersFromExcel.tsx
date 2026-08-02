@@ -53,11 +53,12 @@ const PROFILE_LABELS: Record<BusinessProfileType, string> = {
   department_leader:  'Resp. Département',
   family_leader:      'Resp. Famille',
   evangelist:         'Évangéliste',
+  pasteur:            'Pasteur',
 };
 
 const DEFAULT_PWD: Record<BusinessProfileType, string> = {
   admin: '@123456', adn: '@123456', shepherd: '@123456',
-  department_leader: '@123456', family_leader: '@123456', evangelist: '@123456',
+  department_leader: '@123456', family_leader: '@123456', evangelist: '@123456', pasteur: '@123456',
 };
 
 const normalize = (s: string) =>

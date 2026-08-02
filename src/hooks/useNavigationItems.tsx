@@ -202,9 +202,9 @@ export function useNavigationItems(): NavItem[] {
     }
   }
 
-  // Souls management (ADN + admin, not family leaders)
+  // Souls management (ADN + admin + pasteur, not family leaders)
   if (
-    (hasRole(ROLES.ADN) || isAdmin) &&
+    (hasRole(ROLES.ADN) || isAdmin || hasRole(ROLES.PASTEUR)) &&
     (hasPermission(PERMISSIONS.MANAGE_SOULS) || hasPermission(PERMISSIONS.MANAGE_USERS))
   ) {
     const children: NavItem[] = [];
@@ -263,9 +263,9 @@ export function useNavigationItems(): NavItem[] {
     items.push({ id: 'family-management', label: 'Ma famille de service', icon: <UsersRound className="w-5 h-5" />, children });
   }
 
-  // Admin tracking & interactions
+  // Admin tracking & interactions (pasteur : consultation du suivi)
   if (
-    hasPermission(PERMISSIONS.MANAGE_USERS) &&
+    (hasPermission(PERMISSIONS.MANAGE_USERS) || hasRole(ROLES.PASTEUR)) &&
     hasPermission(PERMISSIONS.VIEW_STATS) &&
     (hasModule('interactions') || hasModule('attendance') || hasModule('spiritual_progression'))
   ) {
@@ -283,10 +283,10 @@ export function useNavigationItems(): NavItem[] {
     });
   }
 
-  // Statistics (admin only, not ADN)
+  // Statistics (admin + pasteur)
   if (
     hasPermission(PERMISSIONS.VIEW_STATS) &&
-    isAdmin &&
+    (isAdmin || hasRole(ROLES.PASTEUR)) &&
     hasModule('statistics')
   ) {
     items.push({
