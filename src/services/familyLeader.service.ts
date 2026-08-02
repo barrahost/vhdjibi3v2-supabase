@@ -59,6 +59,18 @@ export class FamilyLeaderService {
     }).eq('id', soulId);
   }
 
+  /** Signale un membre comme indécis : il quitte la famille (et son berger) et
+   *  retourne dans le circuit des âmes indécises, suivi par l'équipe ADN. */
+  static async markSoulUndecided(soulId: string) {
+    const { error } = await supabase.from('souls').update({
+      is_undecided: true,
+      shepherd_id: null,
+      service_family_id: null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', soulId);
+    if (error) throw error;
+  }
+
   /** Récupère les bergers de la famille.
    *  Priorité : shepherd_ids sur la famille. Fallback : bergers déduits des âmes assignées. */
   static async getShepherdsOfFamily(shepherdIds: string[] = [], familyId?: string): Promise<{ id: string; fullName: string; soulCount: number }[]> {

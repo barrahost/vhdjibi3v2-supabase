@@ -30,7 +30,7 @@ import { useConfirmModal } from '../hooks/useConfirmModal';
 import { Modal } from '../components/ui/Modal';
 
 const ITEMS_PER_PAGE = 10;
-const FILTERS_STORAGE_KEY = 'souls:filters:v1';
+const FILTERS_STORAGE_KEY = 'souls:filters:v2';
 
 type PersistedFilters = {
   searchTerm: string;
@@ -44,13 +44,8 @@ type PersistedFilters = {
 const DEFAULT_FILTERS: PersistedFilters = {
   searchTerm: '',
   selectedShepherdId: null,
-  dateRange: (() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const fmt = (d: Date) => d.toISOString().split('T')[0];
-    return { startDate: fmt(start), endDate: fmt(end) };
-  })(),
+  // Pas de periode par defaut : "Toutes les ames" affiche vraiment tout
+  dateRange: { startDate: '', endDate: '' },
   statusFilter: 'active',
   sortConfig: { field: 'fullName' as keyof Soul, direction: 'asc' },
   currentPage: 1,
@@ -121,12 +116,7 @@ export default function SoulManagement({ embedded = false }: SoulManagementProps
     }
   }, [searchTerm, selectedShepherdId, dateRange, statusFilter, sortConfig, currentPage]);
 
-  const isDefaultMonth = (() => {
-    const now = new Date();
-    const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const e = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    return dateRange.startDate === s && dateRange.endDate === e;
-  })();
+  const isDefaultMonth = dateRange.startDate === '' && dateRange.endDate === '';
   const hasActiveFilters =
     searchTerm !== '' ||
     selectedShepherdId !== null ||
@@ -143,11 +133,7 @@ export default function SoulManagement({ embedded = false }: SoulManagementProps
   const resetAllFilters = () => {
     setSearchTerm('');
     setSelectedShepherdId(null);
-    const _now = new Date();
-    const _start = new Date(_now.getFullYear(), _now.getMonth(), 1);
-    const _end = new Date(_now.getFullYear(), _now.getMonth() + 1, 0);
-    const _fmt = (d: Date) => d.toISOString().split('T')[0];
-    setDateRange({ startDate: _fmt(_start), endDate: _fmt(_end) });
+    setDateRange({ startDate: '', endDate: '' });
     setStatusFilter('active');
     setSortConfig({ field: 'fullName' as keyof Soul, direction: 'asc' });
     setCurrentPage(1);

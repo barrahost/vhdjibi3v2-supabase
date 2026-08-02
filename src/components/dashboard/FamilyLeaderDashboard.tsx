@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
-import { Heart, Users, UserPlus, AlertCircle, BarChart3, Search } from 'lucide-react';
+import { Heart, Users, UserPlus, AlertCircle, BarChart3, Search, HelpCircle } from 'lucide-react';
 import PendingActionsWidget from './PendingActionsWidget';
 import { StatCard } from './stats/StatCard';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 import toast from 'react-hot-toast';
 
 export default function FamilyLeaderDashboard() {
@@ -15,6 +17,7 @@ export default function FamilyLeaderDashboard() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const { confirm, confirmModalProps } = useConfirmModal();
 
   const userId = user?.id || user?.uid;
 
@@ -108,6 +111,25 @@ export default function FamilyLeaderDashboard() {
     }
   };
 
+  const handleMarkUndecided = async (soul: Soul) => {
+    const ok = await confirm(
+      `${soul.fullName} sera retiré(e) de votre famille et pris(e) en charge par l'équipe ADN parmi les âmes indécises. Continuer ?`,
+      { title: 'Signaler comme indécis(e)', confirmLabel: 'Signaler', variant: 'warning' }
+    );
+    if (!ok) return;
+    try {
+      setSavingId(soul.id);
+      await FamilyLeaderService.markSoulUndecided(soul.id);
+      setSouls(prev => prev.filter(s => s.id !== soul.id));
+      toast.success(`${soul.fullName} signalé(e) comme indécis(e)`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors du signalement');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12 text-gray-500">Chargement...</div>;
   }
@@ -154,6 +176,16 @@ export default function FamilyLeaderDashboard() {
             <option key={sh.id} value={sh.id}>{sh.fullName}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => handleMarkUndecided(soul)}
+          disabled={savingId === soul.id}
+          title="Signaler comme indécis(e) : le membre quittera la famille et sera suivi par l'équipe ADN"
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-700 border border-amber-300 rounded-md hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span className="hidden sm:inline">Indécis(e)</span>
+        </button>
       </div>
     </div>
   );
@@ -311,6 +343,8 @@ export default function FamilyLeaderDashboard() {
           </div>
         )}
       </div>
+
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }
