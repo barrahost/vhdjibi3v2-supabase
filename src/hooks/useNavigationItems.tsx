@@ -37,6 +37,7 @@ import {
   Clock,
   Trophy,
   Eye,
+  Network,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -374,6 +375,9 @@ export function useNavigationItems(): NavItem[] {
 
     items.push({ id: 'evangelization', label: 'Évangélisation', icon: <Megaphone className="w-5 h-5" />, children });
   }
+
+  // Organigramme de l'eglise : visible par tous
+  items.push({ id: 'church-organization', label: 'Organisation', icon: <Network className="w-5 h-5" />, href: '/organisation' });
 
   // Replay (not ADN)
   if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && !onlyRole(ROLES.ADN) && hasModule('audio')) {

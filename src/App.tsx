@@ -29,6 +29,7 @@ const SoulsHub = lazy(() => import('./pages/SoulsHub'));
 const EvangelistRelances = lazy(() => import('./pages/EvangelistRelances'));
 const EvangelistAttendus = lazy(() => import('./pages/EvangelistAttendus'));
 const EvangelistWonSouls = lazy(() => import('./pages/EvangelistWonSouls'));
+const ChurchOrganization = lazy(() => import('./pages/ChurchOrganization'));
 const EvangelizedSignals = lazy(() => import('./pages/EvangelizedSignals'));
 const InteractionsManagement = lazy(() => import('./pages/InteractionsManagement'));
 const AssignedSouls = lazy(() => import('./pages/AssignedSouls'));
@@ -228,6 +229,12 @@ function AppContent() {
           <Route path="evangelisation/attendus" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
               <EvangelistAttendus />
+            </PrivateRoute>
+          } />
+          {/* Organigramme de l'eglise : visible par tous les utilisateurs connectes */}
+          <Route path="organisation" element={
+            <PrivateRoute>
+              <ChurchOrganization />
             </PrivateRoute>
           } />
           <Route path="evangelisation/gagnees" element={

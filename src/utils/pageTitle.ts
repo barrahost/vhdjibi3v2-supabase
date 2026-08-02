@@ -17,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/evangelisation/relances': 'À relancer',
   '/evangelisation/attendus': 'Attendus au culte',
   '/signalements-evangelistes': 'Signalements évangélistes',
+  '/organisation': "Organisation de l'Église",
   '/presences': 'Présences',
   '/attendance': 'Présences',
   '/historique-presences': 'Historique des présences',
