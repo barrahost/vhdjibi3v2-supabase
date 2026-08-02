@@ -35,6 +35,7 @@ export const ROLES = {
   SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
   PASTEUR: 'pasteur',
+  PASTEUR_ASSISTANT: 'pasteur_assistant',
   SHEPHERD: 'shepherd',
   ADN: 'adn',
   DEPARTMENT_LEADER: 'department_leader',
@@ -84,6 +85,13 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.MANAGE_PROFILE,
     PERMISSIONS.VIEW_REPLAY_TEACHINGS,
     PERMISSIONS.MANAGE_BIRTHDAYS
+  ],
+  // Pasteur Assistant (PA/AP) : supervision d'un portefeuille de departements
+  [ROLES.PASTEUR_ASSISTANT]: [
+    PERMISSIONS.MANAGE_CULTE_REPORTS,
+    PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS,
+    PERMISSIONS.MANAGE_PROFILE,
+    PERMISSIONS.VIEW_REPLAY_TEACHINGS
   ],
   [ROLES.SHEPHERD]: [
     PERMISSIONS.MANAGE_INTERACTIONS,

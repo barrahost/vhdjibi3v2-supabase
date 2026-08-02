@@ -36,6 +36,7 @@ import {
   Wheat,
   Clock,
   Trophy,
+  Eye,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -93,6 +94,7 @@ export function useNavigationItems(): NavItem[] {
     alerts.find(a => a.type === type)?.count ?? 0;
 
   const [ledCulteReports, setLedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
+  const [supervisedCulteReports, setSupervisedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
 
   useEffect(() => {
     if (!hasRole(ROLES.DEPARTMENT_LEADER) || !user?.businessProfiles) {
@@ -119,6 +121,42 @@ export function useNavigationItems(): NavItem[] {
         })
         .filter((d: { reportType: CulteReportType } | null): d is { reportType: CulteReportType } => d !== null);
       if (!cancelled) setLedCulteReports(mapped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Pasteur Assistant : departements supervises ayant une page de rapports,
+  // hors ceux qu'il dirige deja lui-meme (deja listes dans son groupe Rapport).
+  useEffect(() => {
+    if (!hasRole(ROLES.PASTEUR_ASSISTANT) || !user?.businessProfiles) {
+      setSupervisedCulteReports([]);
+      return;
+    }
+    const profiles = user.businessProfiles as any[];
+    const ownIds = new Set(getProfileDepartmentIds(profiles.find((p) => p.type === 'department_leader')));
+    const paIds = getProfileDepartmentIds(profiles.find((p) => p.type === 'pasteur_assistant'))
+      .filter((id) => !ownIds.has(id));
+    if (paIds.length === 0) {
+      setSupervisedCulteReports([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('church_id', getChurchId())
+        .in('id', paIds);
+      const mapped = (data || [])
+        .map((d: { id: string; name: string }) => {
+          const reportType = DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(d.name)];
+          return reportType ? { reportType } : null;
+        })
+        .filter((d: { reportType: CulteReportType } | null): d is { reportType: CulteReportType } => d !== null);
+      if (!cancelled) setSupervisedCulteReports(mapped);
     })();
     return () => {
       cancelled = true;
@@ -200,6 +238,22 @@ export function useNavigationItems(): NavItem[] {
     if (children.length > 0) {
       items.push({ id: 'department-management', label: 'Rapport', icon: <Briefcase className="w-5 h-5" />, children });
     }
+  }
+
+  // Pasteur Assistant : espace Supervision de son portefeuille de departements
+  if (hasRole(ROLES.PASTEUR_ASSISTANT) && !isAdmin) {
+    const children: NavItem[] = [];
+    supervisedCulteReports.forEach(({ reportType }) => {
+      children.push({
+        id: `pa-report-${reportType}`,
+        label: CULTE_REPORT_NAV_LABEL[reportType],
+        href: `/rapports/${reportType}`,
+        icon: CULTE_REPORT_NAV_ICON[reportType],
+      });
+    });
+    children.push({ id: 'pa-servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
+    children.push({ id: 'pa-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> });
+    items.push({ id: 'pa-supervision', label: 'Supervision', icon: <Eye className="w-5 h-5" />, children });
   }
 
   // Souls management (ADN + admin + pasteur, not family leaders)
@@ -382,7 +436,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Rapports de culte (admin / super_admin) : tableau de bord + une page par département + besoins
-  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || !hasRole(ROLES.DEPARTMENT_LEADER))) {
+  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT)))) {
     items.push({
       id: 'culte-reports',
       label: 'Rapports de culte',
@@ -419,7 +473,7 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)) {
       children.push({ id: 'settings', label: 'Paramètres', href: '/parametres', icon: <Settings className="w-5 h-5" /> });
     }
-    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || !hasRole(ROLES.DEPARTMENT_LEADER))) {
+    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT)))) {
       children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
       children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
       children.push({ id: 'recurring-schedule', label: 'Programme récurrent', href: '/parametres-programme-recurrent', icon: <CalendarRange className="w-5 h-5" /> });

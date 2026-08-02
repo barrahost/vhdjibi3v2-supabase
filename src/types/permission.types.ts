@@ -28,7 +28,7 @@ export type Permission =
   | 'MANAGE_CULTE_REPORTS'
   | '*';
 
-export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'department_leader' | 'family_leader' | 'evangelist';
+export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'pasteur_assistant' | 'department_leader' | 'family_leader' | 'evangelist';
 
 export interface UserRoles {
   primary: BaseRole;

@@ -30,11 +30,13 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
-  // Responsable de département (non admin) : le formulaire est restreint à SES département(s).
+  // Responsable de département ou pasteur assistant (non admin) : formulaire restreint à SES département(s).
   const isDeptLeaderView = !(hasPermission('*') || hasPermission('MANAGE_SERVANTS'))
-    && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader');
+    && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader' || p?.type === 'pasteur_assistant');
   const lockedDepartmentIds = isDeptLeaderView
-    ? getProfileDepartmentIds(user?.businessProfiles?.find((p: any) => p.type === 'department_leader'))
+    ? Array.from(new Set(((user?.businessProfiles || []) as any[])
+        .filter((p: any) => p.type === 'department_leader' || p.type === 'pasteur_assistant')
+        .flatMap((p: any) => getProfileDepartmentIds(p))))
     : [];
   const lockedDepartmentId = lockedDepartmentIds.length === 1 ? lockedDepartmentIds[0] : '';
   const isDeptLocked = lockedDepartmentIds.length === 1;

@@ -31,8 +31,10 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const isAdmin = hasPermission('*') || hasPermission('MANAGE_SERVANTS');
-  // Vue restreinte responsable de département : dès qu'on détient ce profil sans être admin
-  const isDeptLeaderView = !isAdmin && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader');
+  // Vue restreinte : responsable de département OU pasteur assistant (supervision), sans être admin
+  const isDeptLeaderView = !isAdmin && !!(user?.businessProfiles as any[])?.some(
+    (p: any) => p?.type === 'department_leader' || p?.type === 'pasteur_assistant'
+  );
   const [servants, setServants] = useState<Servant[]>([]);
   const [showOrphanModal, setShowOrphanModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,8 +56,12 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
   // Auto-filter by department(s) if user is a department leader (non admin)
   useEffect(() => {
     if (isDeptLeaderView && user?.businessProfiles) {
-      const deptLeaderProfile = user.businessProfiles.find((p: any) => p.type === 'department_leader');
-      const ids = getProfileDepartmentIds(deptLeaderProfile);
+      // Union des départements diriges (department_leader) et supervises (pasteur_assistant)
+      const ids = Array.from(new Set(
+        (user.businessProfiles as any[])
+          .filter((p: any) => p.type === 'department_leader' || p.type === 'pasteur_assistant')
+          .flatMap((p: any) => getProfileDepartmentIds(p))
+      ));
       setLeaderDepartmentIds(ids);
       setSelectedDepartmentId(ids.length === 1 ? ids[0] : '');
     }

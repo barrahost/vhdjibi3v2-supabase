@@ -4,6 +4,9 @@ import { HandHelping, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CulteReportService } from '../services/culteReport.service';
 import { CulteNeed, CulteNeedPriority } from '../types/culteReport.types';
+import { getProfileDepartmentIds } from '../types/businessProfile.types';
+import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 
 const PRIORITY_STYLES: Record<CulteNeedPriority, string> = {
   high: 'bg-red-100 text-red-700',
@@ -18,16 +21,32 @@ const PRIORITY_LABELS: Record<CulteNeedPriority, string> = {
 };
 
 export default function CulteNeedsManagement() {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const [needs, setNeeds] = useState<CulteNeed[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddressed, setShowAddressed] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Un Pasteur Assistant (non admin) ne voit que les besoins de SES departements supervises
+  const profiles = ((user as any)?.businessProfiles || []) as any[];
+  const isAdminU = userRole === 'admin' || userRole === 'super_admin'
+    || profiles.some((p) => p?.type === 'admin');
+  const paProfile = profiles.find((p) => p?.type === 'pasteur_assistant');
+  const supervisedIds = !isAdminU && paProfile ? getProfileDepartmentIds(paProfile) : [];
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await CulteReportService.getNeeds({ isAddressed: showAddressed ? undefined : false });
+      let data = await CulteReportService.getNeeds({ isAddressed: showAddressed ? undefined : false });
+      if (supervisedIds.length > 0) {
+        const { data: depts } = await supabase
+          .from('departments')
+          .select('name')
+          .eq('church_id', getChurchId())
+          .in('id', supervisedIds);
+        const names = new Set((depts || []).map((d: any) => d.name));
+        data = data.filter((n) => names.has(n.departmentName));
+      }
       setNeeds(data);
     } catch (error) {
       console.error('Error loading needs:', error);
@@ -35,6 +54,7 @@ export default function CulteNeedsManagement() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddressed]);
 
   useEffect(() => { load(); }, [load]);

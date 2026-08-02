@@ -36,9 +36,9 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen]);
 
-  const toggleDepartment = (departmentId: string) => {
+  const toggleDepartment = (departmentId: string, profileType: BusinessProfileType = 'department_leader') => {
     const updated = selectedProfiles.map((p) => {
-      if (p.type !== 'department_leader') return p;
+      if (p.type !== profileType) return p;
       const current = getProfileDepartmentIds(p);
       const next = current.includes(departmentId)
         ? current.filter((id) => id !== departmentId)
@@ -47,7 +47,7 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
     });
     onChange(updated);
   };
-  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'pasteur', 'admin'];
+  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'pasteur_assistant', 'pasteur', 'admin'];
 
   const isProfileSelected = (profileType: BusinessProfileType): boolean => {
     return selectedProfiles.some(profile => profile.type === profileType);
@@ -223,6 +223,39 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
           {getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'department_leader')).length === 0 && (
             <p className="mt-1 text-xs text-amber-600">
               Sans département, cet utilisateur n'aura pas accès aux fonctions liées (ex : rapport de culte).
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Départements supervisés pour un Pasteur Assistant (PA/AP) */}
+      {isProfileSelected('pasteur_assistant') && (
+        <div className="pl-3 border-l-2 border-cyan-100">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Départements supervisés
+          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Le Pasteur Assistant voit les rapports, B.O.S.S et besoins signalés de ces départements.
+          </p>
+          <div className="max-h-40 overflow-y-auto space-y-1.5 border border-gray-200 rounded-md p-2">
+            {departments.map((d) => {
+              const currentIds = getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'pasteur_assistant'));
+              return (
+                <label key={d.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={currentIds.includes(d.id)}
+                    onChange={() => toggleDepartment(d.id, 'pasteur_assistant')}
+                    className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
+                  />
+                  {d.name}
+                </label>
+              );
+            })}
+          </div>
+          {getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'pasteur_assistant')).length === 0 && (
+            <p className="mt-1 text-xs text-amber-600">
+              Sans département supervisé, ce profil n'apportera aucun accès.
             </p>
           )}
         </div>
