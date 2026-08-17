@@ -87,7 +87,10 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect, on
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Ajouter une âme">
-      <div className="p-4 space-y-4">
+      {/* Corps défilant + pied collant : les boutons d'action restent visibles
+          même quand le zoom ou un petit écran réduit la hauteur disponible. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="p-4 space-y-4">
         {showEmergencyWarning && (
           <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800">
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -116,8 +119,8 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect, on
           />
         </div>
 
-        {/* Liste */}
-        <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-md">
+        {/* Liste : plafonnée aussi en fraction d'écran pour laisser le pied visible en zoom fort */}
+        <div className="max-h-[min(400px,50dvh)] overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-md">
           {loading ? (
             <div className="py-8 text-center text-gray-500 text-sm">Chargement...</div>
           ) : filtered.length === 0 ? (
@@ -148,7 +151,10 @@ export default function PickEvangelizedSoulModal({ isOpen, onClose, onSelect, on
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        </div>
+
+        {/* Pied collant : toujours affiché en bas de la modale, même en plein défilement */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
           {onCreateNew ? (
             <button
               type="button"
