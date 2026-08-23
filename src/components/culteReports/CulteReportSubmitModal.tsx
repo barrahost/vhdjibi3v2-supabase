@@ -12,6 +12,7 @@ import {
   CulteReportSpeaker,
   CulteEvent,
   CULTE_REPORT_TYPE_LABELS,
+  isMeetingTypeEligible,
 } from '../../types/culteReport.types';
 import { CulteReportFields } from './CulteReportFields';
 import { CulteReportFormValues, blankFormValues, buildCulteReportData } from '../../utils/culteReportFormHelpers';
@@ -143,9 +144,17 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportType, selectedEventId]);
 
+  // Types de rencontre réservés à d'autres départements : masqués pour ce rapport
+  const eligibleEvents = events.filter((ev) => isMeetingTypeEligible(meetingTypes, ev.meetingTypeName, reportType));
+  const eligibleMeetingTypes = meetingTypes.filter((mt) => !mt.eligibleReportTypes?.length || mt.eligibleReportTypes.includes(reportType));
+
   const handleCreateEvent = async () => {
     if (!newEventMeetingType.trim()) {
       toast.error('Indiquez le type de rencontre');
+      return;
+    }
+    if (!isMeetingTypeEligible(meetingTypes, newEventMeetingType, reportType)) {
+      toast.error("Ce type de rencontre n'est pas ouvert au rapport de votre département");
       return;
     }
     setIsCreatingEvent(true);
@@ -246,12 +255,12 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
                 disabled={loadingEvents}
               >
                 <option value="">-- Sélectionner --</option>
-                {events.map((ev) => (
+                {eligibleEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>{frDate(ev.serviceDate)} — {ev.meetingTypeName}</option>
                 ))}
               </select>
 
-              {!loadingEvents && events.length === 0 && !showCreateEvent && (
+              {!loadingEvents && eligibleEvents.length === 0 && !showCreateEvent && (
                 <p className="mt-1 text-xs text-amber-600">
                   Aucun culte disponible — soit vous avez déjà soumis votre rapport pour tous les cultes récents, soit celui d'aujourd'hui n'a pas encore été créé.
                 </p>
@@ -302,7 +311,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
                           className={inputCls}
                         >
                           <option value="">-- Sélectionner --</option>
-                          {meetingTypes.map((mt) => <option key={mt.id} value={mt.name}>{mt.name}</option>)}
+                          {eligibleMeetingTypes.map((mt) => <option key={mt.id} value={mt.name}>{mt.name}</option>)}
                           <option value="__custom__">Autre (nouveau type)...</option>
                         </select>
                       )}

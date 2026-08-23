@@ -165,6 +165,23 @@ export interface CulteReportMeetingType {
   churchId: string;
   name: string;
   description?: string;
+  /** Départements (types de rapport) autorisés à rapporter sur ce type de rencontre.
+   *  null ou vide = tous les départements. */
+  eligibleReportTypes?: CulteReportType[] | null;
+}
+
+/** Ce type de rencontre est-il proposé au département `reportType` ?
+ *  Règles : éligibilité vide/nulle = tous ; nom de rencontre inconnu
+ *  (type personnalisé, non configuré) = tous. */
+export function isMeetingTypeEligible(
+  meetingTypes: CulteReportMeetingType[],
+  meetingTypeName: string,
+  reportType: CulteReportType
+): boolean {
+  const target = normalizeDeptName(meetingTypeName || '');
+  const mt = meetingTypes.find((m) => normalizeDeptName(m.name) === target);
+  if (!mt || !mt.eligibleReportTypes || mt.eligibleReportTypes.length === 0) return true;
+  return mt.eligibleReportTypes.includes(reportType);
 }
 
 export interface CulteReportSpeaker {

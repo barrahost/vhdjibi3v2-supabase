@@ -2,18 +2,26 @@ import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { CalendarClock, Pencil, Trash2, Plus } from 'lucide-react';
 import { MeetingTypeService } from '../services/meetingTypeSpeaker.service';
-import { CulteReportMeetingType } from '../types/culteReport.types';
+import { CulteReportMeetingType, CulteReportType, DEPARTMENT_NAME_BY_REPORT_TYPE } from '../types/culteReport.types';
 import { useConfirmModal } from '../hooks/useConfirmModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+
+// Départements rapporteurs, dans l'ordre d'affichage des cases à cocher
+const REPORTING_DEPARTMENTS = (Object.entries(DEPARTMENT_NAME_BY_REPORT_TYPE) as [CulteReportType, string][]);
 
 export default function MeetingTypeSettings() {
   const [items, setItems] = useState<CulteReportMeetingType[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [eligible, setEligible] = useState<CulteReportType[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { confirm, confirmModalProps } = useConfirmModal();
+
+  const toggleEligible = (type: CulteReportType) => {
+    setEligible(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,7 +37,7 @@ export default function MeetingTypeSettings() {
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => { setName(''); setDescription(''); setEditingId(null); };
+  const resetForm = () => { setName(''); setDescription(''); setEligible([]); setEditingId(null); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +48,10 @@ export default function MeetingTypeSettings() {
     setIsSubmitting(true);
     try {
       if (editingId) {
-        await MeetingTypeService.update(editingId, name, description);
+        await MeetingTypeService.update(editingId, name, description, eligible);
         toast.success('Type de rencontre modifié');
       } else {
-        await MeetingTypeService.create(name, description);
+        await MeetingTypeService.create(name, description, eligible);
         toast.success('Type de rencontre ajouté');
       }
       resetForm();
@@ -57,6 +65,7 @@ export default function MeetingTypeSettings() {
 
   const handleEdit = (item: CulteReportMeetingType) => {
     setEditingId(item.id); setName(item.name); setDescription(item.description || '');
+    setEligible(item.eligibleReportTypes ?? []);
   };
 
   const handleDelete = async (id: string) => {
@@ -87,6 +96,26 @@ export default function MeetingTypeSettings() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
           <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Départements éligibles au rapport</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+            {REPORTING_DEPARTMENTS.map(([type, deptName]) => (
+              <label key={type} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eligible.includes(type)}
+                  onChange={() => toggleEligible(type)}
+                  className="h-4 w-4 rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                />
+                {deptName}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-gray-500">
+            Seuls les départements cochés verront ce type de rencontre dans leur formulaire de rapport.{' '}
+            <span className="font-medium">Aucune case cochée = tous les départements.</span>
+          </p>
+        </div>
         <div className="flex gap-3">
           <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md disabled:opacity-50">
             <Plus className="w-4 h-4" /> {editingId ? 'Enregistrer' : 'Ajouter'}
@@ -106,10 +135,15 @@ export default function MeetingTypeSettings() {
           <div className="p-6 text-center text-gray-400">Aucun type de rencontre.</div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between px-4 py-3">
-              <div>
+            <div key={item.id} className="flex items-center justify-between px-4 py-3 gap-3">
+              <div className="min-w-0">
                 <p className="font-medium text-gray-900">{item.name}</p>
                 {item.description && <p className="text-sm text-gray-500">{item.description}</p>}
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {item.eligibleReportTypes?.length
+                    ? <>Rapports : {item.eligibleReportTypes.map(t => DEPARTMENT_NAME_BY_REPORT_TYPE[t] ?? t).join(', ')}</>
+                    : 'Rapports : tous les départements'}
+                </p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier">
