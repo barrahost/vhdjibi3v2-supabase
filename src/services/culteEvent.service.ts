@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
-import { CulteEvent, CulteRecurringSchedule, DayOfWeek } from '../types/culteReport.types';
+import { CulteEvent, CulteRecurringSchedule, CulteReportType, DayOfWeek } from '../types/culteReport.types';
 
 function mapEvent(row: any): CulteEvent {
   return {
@@ -84,6 +84,50 @@ export const CulteEventService = {
       .single();
     if (error) throw error;
     return mapEvent(data);
+  },
+
+  /** Corrige la date/le nom d'un evenement deja cree (ex: erreur de saisie manuelle) --
+   * n'importe quel departement peut la corriger, meme apres qu'un rapport y soit rattache :
+   * les rapports deja soumis pour cet event_id sont resynchronises (date/nom denormalises). */
+  async updateEvent(id: string, serviceDate: string, meetingTypeName: string): Promise<CulteEvent> {
+    const { data, error } = await supabase
+      .from('culte_events')
+      .update({ service_date: serviceDate, meeting_type_name: meetingTypeName.trim() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    const { error: syncErr } = await supabase
+      .from('culte_reports')
+      .update({ service_date: serviceDate, meeting_type_name: meetingTypeName.trim() })
+      .eq('event_id', id);
+    if (syncErr) throw syncErr;
+
+    return mapEvent(data);
+  },
+
+  /** Evenements qu'un departement a retires de sa propre liste "Culte du jour" (trop ancien,
+   * pas de rapport a faire) -- n'affecte que ce departement : l'evenement et les rapports deja
+   * soumis par d'autres departements restent intacts. */
+  async getDismissedEventIds(reportType: CulteReportType): Promise<Set<string>> {
+    const { data, error } = await supabase
+      .from('culte_event_dismissals')
+      .select('event_id')
+      .eq('church_id', getChurchId())
+      .eq('report_type', reportType);
+    if (error) throw error;
+    return new Set((data ?? []).map((r: any) => r.event_id));
+  },
+
+  async dismissEvent(eventId: string, reportType: CulteReportType, dismissedBy?: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('culte_event_dismissals')
+      .upsert(
+        { church_id: getChurchId(), event_id: eventId, report_type: reportType, dismissed_by: dismissedBy ?? null },
+        { onConflict: 'event_id,report_type' }
+      );
+    if (error) throw error;
   },
 };
 

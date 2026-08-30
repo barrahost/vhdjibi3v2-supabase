@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Check } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
 import { Modal } from '../ui/Modal';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { CulteReportService } from '../../services/culteReport.service';
 import { MeetingTypeService, SpeakerService } from '../../services/meetingTypeSpeaker.service';
@@ -46,6 +48,7 @@ const frDate = (iso: string) => (iso || '').split('-').reverse().join('/');
 
 export default function CulteReportSubmitModal({ isOpen, reportType, departmentId, departmentName, onClose, onSuccess }: CulteReportSubmitModalProps) {
   const { user } = useAuth();
+  const { confirm, confirmModalProps } = useConfirmModal();
   const [meetingTypes, setMeetingTypes] = useState<CulteReportMeetingType[]>([]);
   const [speakers, setSpeakers] = useState<CulteReportSpeaker[]>([]);
   const [notes, setNotes] = useState('');
@@ -66,6 +69,12 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [adnPrefillCount, setAdnPrefillCount] = useState<number | null>(null);
 
+  const [showEditEvent, setShowEditEvent] = useState(false);
+  const [editEventDate, setEditEventDate] = useState('');
+  const [editEventMeetingType, setEditEventMeetingType] = useState('');
+  const [isEditCustomMeetingType, setIsEditCustomMeetingType] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const steps: Step[] = useMemo(() => {
     const dataSteps: Step[] = reportType === 'sono'
       ? [
@@ -83,6 +92,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
     setValues(blankFormValues());
     setNotes(''); setNeedsNotes(''); setSelectedEventId(''); setStepIndex(0); setShowCreateEvent(false);
     setNewEventMeetingType(''); setIsCustomMeetingType(false); setAdnPrefillCount(null);
+    setShowEditEvent(false);
   };
 
   const loadEvents = async () => {
@@ -90,12 +100,13 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
     try {
       const today = todayISO();
       await CulteEventService.ensureRecurringEventsForDate(today);
-      const [recentEvents, ownReports] = await Promise.all([
+      const [recentEvents, ownReports, dismissedIds] = await Promise.all([
         CulteEventService.getRecentEvents(30),
         CulteReportService.getHistory({ reportType }),
+        CulteEventService.getDismissedEventIds(reportType),
       ]);
       const alreadyUsed = new Set(ownReports.map((r) => r.eventId).filter((id): id is string => !!id));
-      setEvents(recentEvents.filter((ev) => !alreadyUsed.has(ev.id)));
+      setEvents(recentEvents.filter((ev) => !alreadyUsed.has(ev.id) && !dismissedIds.has(ev.id)));
     } catch (error) {
       console.error('Error loading culte events:', error);
       toast.error('Erreur lors du chargement des cultes');
@@ -147,6 +158,59 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   // Types de rencontre réservés à d'autres départements : masqués pour ce rapport
   const eligibleEvents = events.filter((ev) => isMeetingTypeEligible(meetingTypes, ev.meetingTypeName, reportType));
   const eligibleMeetingTypes = meetingTypes.filter((mt) => !mt.eligibleReportTypes?.length || mt.eligibleReportTypes.includes(reportType));
+
+  // Corrige une erreur de saisie (date ou nom) sur un culte déjà créé -- accessible à tout
+  // département, même après qu'un rapport y ait été rattaché (les rapports déjà soumis pour
+  // cet événement sont resynchronisés côté service).
+  const openEditEvent = () => {
+    if (!selectedEvent) return;
+    setEditEventDate(selectedEvent.serviceDate);
+    setEditEventMeetingType(selectedEvent.meetingTypeName);
+    setIsEditCustomMeetingType(!eligibleMeetingTypes.some((mt) => mt.name === selectedEvent.meetingTypeName));
+    setShowEditEvent(true);
+  };
+
+  const handleSaveEditEvent = async () => {
+    if (!selectedEvent) return;
+    if (!editEventMeetingType.trim()) {
+      toast.error('Indiquez le type de rencontre');
+      return;
+    }
+    if (!isMeetingTypeEligible(meetingTypes, editEventMeetingType, reportType)) {
+      toast.error("Ce type de rencontre n'est pas ouvert au rapport de votre département");
+      return;
+    }
+    setIsSavingEdit(true);
+    try {
+      const updated = await CulteEventService.updateEvent(selectedEvent.id, editEventDate, editEventMeetingType);
+      setEvents((prev) => prev.map((ev) => (ev.id === updated.id ? updated : ev)));
+      setShowEditEvent(false);
+      toast.success('Culte corrigé');
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la correction du culte');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // Retire un culte trop ancien de la liste de CE departement uniquement (pas de rapport a
+  // faire) -- l'evenement et les rapports deja soumis par d'autres departements sont intacts.
+  const handleDismissEvent = async () => {
+    if (!selectedEvent) return;
+    const ok = await confirm(
+      `Retirer "${frDate(selectedEvent.serviceDate)} — ${selectedEvent.meetingTypeName}" de ta liste ? Il n'apparaîtra plus tant que tu n'auras pas à le rapporter.`,
+      { title: 'Retirer ce culte', confirmLabel: 'Retirer', variant: 'warning' }
+    );
+    if (!ok) return;
+    try {
+      await CulteEventService.dismissEvent(selectedEvent.id, reportType, user?.id || null);
+      setEvents((prev) => prev.filter((ev) => ev.id !== selectedEvent.id));
+      setSelectedEventId('');
+      toast.success('Culte retiré de ta liste');
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors du retrait du culte');
+    }
+  };
 
   const handleCreateEvent = async () => {
     if (!newEventMeetingType.trim()) {
@@ -222,6 +286,8 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   };
 
   return (
+    <>
+    <ConfirmModal {...confirmModalProps} />
     <Modal isOpen={isOpen} onClose={handleClose} title={`Nouveau rapport — ${CULTE_REPORT_TYPE_LABELS[reportType]}`}>
       {/* Progression */}
       <div className="px-6 pt-4 flex items-center gap-2">
@@ -250,7 +316,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
               <select
                 required
                 value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
+                onChange={(e) => { setSelectedEventId(e.target.value); setShowEditEvent(false); }}
                 className={inputCls}
                 disabled={loadingEvents}
               >
@@ -266,15 +332,37 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
                 </p>
               )}
 
-              {!showCreateEvent ? (
-                <button
-                  type="button"
-                  onClick={() => setShowCreateEvent(true)}
-                  className="mt-2 text-xs font-medium text-[#00665C] hover:underline"
-                >
-                  + Créer ce culte (s'il n'apparaît pas dans la liste)
-                </button>
-              ) : (
+              {!showCreateEvent && !showEditEvent && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateEvent(true)}
+                    className="text-xs font-medium text-[#00665C] hover:underline"
+                  >
+                    + Créer ce culte (s'il n'apparaît pas dans la liste)
+                  </button>
+                  {selectedEvent && (
+                    <button
+                      type="button"
+                      onClick={openEditEvent}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#00665C]"
+                    >
+                      <Pencil className="w-3 h-3" /> Corriger la date ou le nom de ce culte
+                    </button>
+                  )}
+                  {selectedEvent && (
+                    <button
+                      type="button"
+                      onClick={handleDismissEvent}
+                      className="text-xs font-medium text-gray-400 hover:text-red-500"
+                    >
+                      Retirer ce culte de ma liste (trop ancien)
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {showCreateEvent && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -327,6 +415,67 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
                       {isCreatingEvent ? 'Création...' : 'Créer et sélectionner'}
                     </button>
                     <button type="button" onClick={() => setShowCreateEvent(false)} className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {showEditEvent && selectedEvent && (
+                <div className="mt-3 p-3 bg-amber-50 rounded-md border border-amber-200 space-y-3">
+                  <p className="text-xs text-amber-700">
+                    Corrige la date et/ou le type de ce culte — les rapports déjà soumis pour ce culte seront aussi mis à jour.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Date du culte</label>
+                      <input type="date" value={editEventDate} onChange={(e) => setEditEventDate(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Type de rencontre</label>
+                      {isEditCustomMeetingType ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editEventMeetingType}
+                            onChange={(e) => setEditEventMeetingType(e.target.value)}
+                            className={inputCls}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setIsEditCustomMeetingType(false)}
+                            className="px-2 text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
+                          >
+                            Choisir dans la liste
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={editEventMeetingType}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') { setIsEditCustomMeetingType(true); setEditEventMeetingType(''); }
+                            else setEditEventMeetingType(e.target.value);
+                          }}
+                          className={inputCls}
+                        >
+                          <option value="">-- Sélectionner --</option>
+                          {eligibleMeetingTypes.map((mt) => <option key={mt.id} value={mt.name}>{mt.name}</option>)}
+                          <option value="__custom__">Autre (nouveau type)...</option>
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveEditEvent}
+                      disabled={isSavingEdit}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md disabled:opacity-50"
+                    >
+                      {isSavingEdit ? 'Enregistrement...' : 'Enregistrer la correction'}
+                    </button>
+                    <button type="button" onClick={() => setShowEditEvent(false)} className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">
                       Annuler
                     </button>
                   </div>
@@ -415,5 +564,6 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
         )}
       </div>
     </Modal>
+    </>
   );
 }
