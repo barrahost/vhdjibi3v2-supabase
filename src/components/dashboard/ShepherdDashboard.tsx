@@ -209,10 +209,12 @@ export function ShepherdDashboard() {
 
     return {
       totalSouls: souls.length,
+      totalServants: servants.length,
+      totalMembers: souls.length + servants.length,
       totalInteractions: recentInteractions.length,
       soulsNeedingAttention,
     };
-  }, [souls, recentInteractions]);
+  }, [souls, servants, recentInteractions]);
 
   const soulsWithLastContact = useMemo(() => {
     return souls.map(soul => {
@@ -297,11 +299,15 @@ export function ShepherdDashboard() {
       {/* Statistiques */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
-          title="Mes âmes"
-          value={stats.totalSouls}
+          title="Mes membres"
+          value={stats.totalMembers}
           icon={Users}
-          trend={`${stats.totalSouls}`}
-          trendLabel="âmes assignées"
+          trend={`${stats.totalSouls} âme${stats.totalSouls > 1 ? 's' : ''}`}
+          trendLabel={`+ ${stats.totalServants} B.O.S.S`}
+          details={[
+            { label: 'Âmes', value: stats.totalSouls },
+            { label: 'B.O.S.S', value: stats.totalServants },
+          ]}
         />
         <StatCard
           title="Interactions"
