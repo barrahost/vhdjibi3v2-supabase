@@ -8,6 +8,7 @@ import OrphanedServantsModal from './OrphanedServantsModal';
 import ConvertServantToUserModal from './ConvertServantToUserModal';
 import { CustomPagination } from '../ui/CustomPagination';
 import { useDepartments } from '../../hooks/useDepartments';
+import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -52,6 +53,8 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
     direction: 'asc'
   });
   const { departments } = useDepartments();
+  const { families } = useServiceFamilies();
+  const getFamilyName = (familyId?: string) => families.find(f => f.id === familyId)?.name || '';
 
   // Auto-filter by department(s) if user is a department leader (non admin)
   useEffect(() => {
@@ -132,6 +135,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
         phone: r.phone || '',
         email: r.email || '',
         departmentIds: r.department_ids || [],
+        familyId: r.family_id || undefined,
         isHead: r.is_head || false,
         isShepherd: r.is_shepherd || false,
         originalSoulId: r.original_soul_id || null,
@@ -300,6 +304,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                     ? servant.departmentIds.map((id: string) => getDepartmentName(id))
                     : undefined
                 }
+                familyName={getFamilyName(servant.familyId)}
                 onEdit={() => setEditingServant(servant)}
                 onConvert={isAdmin ? (s) => setConvertingServant(s) : undefined}
               />
@@ -339,6 +344,9 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Département
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Famille
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -347,7 +355,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedServants.length === 0 ? (
                 <tr>
-                  <td colSpan={onSelectionChange ? 5 : 4} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={onSelectionChange ? 6 : 5} className="px-6 py-4 text-center text-gray-500">
                     Aucun B.O.S.S trouvé
                   </td>
                 </tr>
@@ -370,6 +378,7 @@ export default function ServantList({ statusFilter, selectedServantIds = [], onS
                           ? servant.departmentIds.map((id: string) => getDepartmentName(id))
                           : undefined
                       }
+                      familyName={getFamilyName(servant.familyId)}
                       onEdit={() => setEditingServant(servant)}
                       onConvert={isAdmin ? (s) => setConvertingServant(s) : undefined}
                     />

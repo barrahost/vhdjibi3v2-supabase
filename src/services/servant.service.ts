@@ -20,6 +20,7 @@ function rowToServant(row: any): Servant {
     phone: row.phone,
     email: row.email,
     departmentIds: row.department_ids || [],
+    familyId: row.family_id || undefined,
     isHead: row.is_head,
     isShepherd: row.is_shepherd,
     shepherdId: row.shepherd_id,
@@ -41,6 +42,7 @@ function formToRow(data: Partial<ServantFormData>): Record<string, any> {
   if (data.phone !== undefined)           row.phone            = data.phone;
   if (data.email !== undefined)           row.email            = data.email?.trim() || null;
   if (data.departmentIds !== undefined)   row.department_ids   = data.departmentIds;
+  if (data.familyId !== undefined)        row.family_id        = data.familyId || null;
   if (data.isHead !== undefined)          row.is_head          = data.isHead;
   if (data.isShepherd !== undefined)      row.is_shepherd      = data.isShepherd;
   if (data.shepherdId !== undefined)      row.shepherd_id      = data.shepherdId;
@@ -65,7 +67,7 @@ export class ServantService {
       // Vérifier si la personne existe déjà (même téléphone) → upsert
       const { data: existing } = await supabase
         .from('servants')
-        .select('id, department_ids')
+        .select('id, department_ids, family_id')
         .eq('church_id', getChurchId())
         .eq('phone', data.phone)
         .limit(1);
@@ -78,6 +80,7 @@ export class ServantService {
           .from('servants')
           .update({
             department_ids: merged,
+            family_id: existing[0].family_id || data.familyId || null,
             is_head: data.isHead || false,
             updated_at: new Date().toISOString(),
           })
@@ -97,6 +100,7 @@ export class ServantService {
         phone: data.phone,
         email: data.email?.trim() || null,
         department_ids: deptIds,
+        family_id: data.familyId || null,
         is_head: data.isHead,
         is_shepherd: data.isShepherd || false,
         shepherd_id: data.shepherdId || null,

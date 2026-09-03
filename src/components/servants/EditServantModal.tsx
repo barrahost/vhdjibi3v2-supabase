@@ -6,6 +6,7 @@ import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { PhoneInput } from '../ui/PhoneInput';
 import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { useDepartments } from '../../hooks/useDepartments';
+import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -26,11 +27,13 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
     phone: '',
     email: '',
     departmentIds: [] as string[],
+    familyId: '',
     isHead: false,
     status: 'active' as 'active' | 'inactive'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { departments, loading: loadingDepartments } = useDepartments();
+  const { families, loading: loadingFamilies } = useServiceFamilies();
 
   useEffect(() => {
     if (servant) {
@@ -41,6 +44,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
         phone: servant.phone.replace('+225', ''),
         email: servant.email || '',
         departmentIds: servant.departmentIds || [],
+        familyId: servant.familyId || '',
         isHead: servant.isHead,
         status: servant.status || 'active'
       });
@@ -76,6 +80,7 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
         phone: phoneValidation.formattedNumber,
         email: formData.email.trim() || null,
         department_ids: formData.departmentIds,
+        family_id: formData.familyId || null,
         is_head: formData.isHead,
         status: formData.status,
         updated_at: new Date().toISOString(),
@@ -189,6 +194,26 @@ export default function EditServantModal({ servant, departmentName, isOpen, onCl
                 </label>
               ))}
             </div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Famille de service (optionnel)
+          </label>
+          {loadingFamilies ? (
+            <p className="text-sm text-gray-500">Chargement...</p>
+          ) : (
+            <select
+              value={formData.familyId}
+              onChange={(e) => setFormData(prev => ({ ...prev, familyId: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+            >
+              <option value="">-- Aucune --</option>
+              {families.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
           )}
         </div>
 

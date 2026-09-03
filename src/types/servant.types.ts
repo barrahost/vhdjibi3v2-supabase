@@ -8,6 +8,7 @@ export interface Servant {
   phone: string;
   email: string;
   departmentIds: string[];
+  familyId?: string;
   isHead: boolean;
   isShepherd?: boolean;
   shepherdId?: string;
@@ -29,6 +30,7 @@ export interface ServantFormData {
   phone: string;
   email: string;
   departmentIds: string[];
+  familyId?: string;
   isHead: boolean;
   isShepherd?: boolean;
   shepherdId?: string;

@@ -10,13 +10,14 @@ interface ServantListItemProps {
   servant: Servant;
   departmentName: string;
   departmentNames?: string[];
+  familyName?: string;
   onEdit: () => void;
   onConvert?: (servant: Servant) => void;
   /** 'row' (cellules de tableau, defaut) ou 'card' (carte mobile) */
   variant?: 'row' | 'card';
 }
 
-export default function ServantListItem({ servant, departmentName, departmentNames, onEdit, onConvert, variant = 'row' }: ServantListItemProps) {
+export default function ServantListItem({ servant, departmentName, departmentNames, familyName, onEdit, onConvert, variant = 'row' }: ServantListItemProps) {
   const { confirm, confirmModalProps } = useConfirmModal();
   const handleDelete = async () => {
     if (await confirm('Êtes-vous sûr de vouloir supprimer ce B.O.S.S ?')) {
@@ -135,6 +136,10 @@ export default function ServantListItem({ servant, departmentName, departmentNam
             <span className="text-xs font-medium text-gray-400 uppercase pt-0.5">Département</span>
             <div className="min-w-0 text-sm text-gray-600">{departmentDisplay}</div>
           </div>
+          <div className="mt-1 flex items-start gap-2">
+            <span className="text-xs font-medium text-gray-400 uppercase pt-0.5">Famille</span>
+            <div className="min-w-0 text-sm text-gray-600">{familyName || <span className="text-amber-600">Non rattaché</span>}</div>
+          </div>
         </div>
         <ConfirmModal {...confirmModalProps} />
       </>
@@ -156,6 +161,9 @@ export default function ServantListItem({ servant, departmentName, departmentNam
       </td>
       <td className="px-6 py-4 text-sm text-gray-500">
         {departmentDisplay}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {familyName || <span className="text-amber-600 text-xs">Non rattaché</span>}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         {actions}
