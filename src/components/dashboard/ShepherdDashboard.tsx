@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Soul, Interaction } from '../../types/database.types';
+import type { Servant } from '../../types/servant.types';
 import { StatCard } from './stats/StatCard';
-import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle, Search, X } from 'lucide-react';
+import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle, Search, X, Briefcase } from 'lucide-react';
+import { useDepartments } from '../../hooks/useDepartments';
 import PendingActionsWidget from './PendingActionsWidget';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
@@ -15,6 +17,8 @@ export function ShepherdDashboard() {
   const { user } = useAuth();
   const [recentInteractions, setRecentInteractions] = useState<Interaction[]>([]);
   const [souls, setSouls] = useState<Soul[]>([]);
+  const [servants, setServants] = useState<Servant[]>([]);
+  const { departments } = useDepartments();
   const [shepherdId, setShepherdId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactionSoul, setInteractionSoul] = useState<Soul | null>(null);
@@ -85,13 +89,15 @@ export function ShepherdDashboard() {
 
     const loadData = async () => {
       try {
-        const [soulsResult, interactionsResult] = await Promise.all([
+        const [soulsResult, interactionsResult, servantsResult] = await Promise.all([
           supabase.from('souls').select('*').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).eq('status', 'active'),
           supabase.from('interactions').select('id, soul_id, shepherd_id, date, type, notes, created_at').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).order('created_at', { ascending: false }).limit(50),
+          supabase.from('servants').select('*').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).eq('status', 'active'),
         ]);
 
         if (soulsResult.error) console.error('[ShepherdDashboard] souls error:', soulsResult.error);
         if (interactionsResult.error) console.error('[ShepherdDashboard] interactions error:', interactionsResult.error);
+        if (servantsResult.error) console.error('[ShepherdDashboard] servants error:', servantsResult.error);
 
         if (!cancelled) {
           setSouls((soulsResult.data ?? []).map((r: any) => ({
@@ -114,6 +120,24 @@ export function ShepherdDashboard() {
             notes: r.notes,
           } as unknown as Interaction));
           setRecentInteractions(mapped);
+
+          setServants((servantsResult.data ?? []).map((r: any) => ({
+            id: r.id,
+            fullName: r.full_name || '',
+            nickname: r.nickname || '',
+            gender: r.gender,
+            phone: r.phone || '',
+            email: r.email || '',
+            departmentIds: r.department_ids || [],
+            familyId: r.family_id || undefined,
+            isHead: r.is_head || false,
+            isShepherd: r.is_shepherd || false,
+            shepherdId: r.shepherd_id || undefined,
+            status: r.status || 'active',
+            createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+            updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+          } as Servant)));
+
           setLoading(false);
         }
       } catch (error) {
@@ -146,12 +170,30 @@ export function ShepherdDashboard() {
       })
       .subscribe();
 
+    const servantsChannel = supabase
+      .channel('shepherd-servants-' + shepherdId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servants', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
+        const { data } = await supabase.from('servants').select('*').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).eq('status', 'active');
+        if (!cancelled) setServants((data ?? []).map((r: any) => ({
+          id: r.id, fullName: r.full_name || '', nickname: r.nickname || '', gender: r.gender,
+          phone: r.phone || '', email: r.email || '', departmentIds: r.department_ids || [],
+          familyId: r.family_id || undefined, isHead: r.is_head || false, isShepherd: r.is_shepherd || false,
+          shepherdId: r.shepherd_id || undefined, status: r.status || 'active',
+          createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+          updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+        } as Servant)));
+      })
+      .subscribe();
+
     return () => {
       cancelled = true;
       supabase.removeChannel(soulsChannel);
       supabase.removeChannel(interactionsChannel);
+      supabase.removeChannel(servantsChannel);
     };
   }, [shepherdId]);
+
+  const departmentName = (id: string) => departments.find(d => d.id === id)?.name || '';
 
   // Stats dérivées en temps réel
   const stats = useMemo(() => {
@@ -361,6 +403,58 @@ export function ShepherdDashboard() {
           )}
         </div>
       </div>
+
+      {/* Mes B.O.S.S — serviteurs dont je suis le berger */}
+      {servants.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="px-3 py-2.5 border-b flex items-center justify-between gap-2">
+            <h2 className="text-sm sm:text-base font-semibold text-brand-700">Mes B.O.S.S</h2>
+            <span className="text-xs text-gray-500 flex-shrink-0">{servants.length} suivi{servants.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className="divide-y max-h-[400px] overflow-y-auto">
+            {servants.map(servant => (
+              <div key={servant.id} className="px-3 py-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
+                  <Briefcase className="w-3.5 h-3.5 text-blue-700" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{servant.fullName}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {servant.departmentIds?.map(id => (
+                      <span key={id} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-normal">
+                        {departmentName(id)}
+                      </span>
+                    ))}
+                    {servant.phone && <span className="text-[10px] text-gray-400 truncate">{servant.phone}</span>}
+                  </div>
+                </div>
+                <div className="flex-shrink-0 flex items-center gap-1">
+                  {telHref(servant.phone) && (
+                    <a
+                      href={telHref(servant.phone)!}
+                      title="Appeler"
+                      className="inline-flex items-center justify-center w-7 h-7 text-brand-700 border border-[#00665C]/40 rounded-lg hover:bg-brand-700/10 transition-colors"
+                    >
+                      <Phone className="w-3 h-3" />
+                    </a>
+                  )}
+                  {whatsappHref(servant.phone) && (
+                    <a
+                      href={whatsappHref(servant.phone)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="WhatsApp"
+                      className="inline-flex items-center justify-center w-7 h-7 text-[#25D366] border border-[#25D366]/40 rounded-lg hover:bg-[#25D366]/10 transition-colors"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Progression spirituelle */}
       <div className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 shadow-sm">
