@@ -1,4 +1,5 @@
 import type { ServiceFamily, Soul } from '../types/database.types';
+import type { Servant } from '../types/servant.types';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 
@@ -57,6 +58,43 @@ export class FamilyLeaderService {
       shepherd_id: shepherdId || null,
       updated_at: new Date().toISOString(),
     }).eq('id', soulId);
+  }
+
+  /** Liste les B.O.S.S (serviteurs) rattachés à une famille. Tout B.O.S.S
+   *  rattaché à une famille est considéré membre de cette famille, au même
+   *  titre qu'une âme. */
+  static async getServantsByFamilyId(familyId: string): Promise<Servant[]> {
+    const { data, error } = await supabase
+      .from('servants')
+      .select('*')
+      .eq('church_id', getChurchId())
+      .eq('family_id', familyId)
+      .eq('status', 'active');
+    if (error || !data) return [];
+    return data.map((row: any) => ({
+      id: row.id,
+      fullName: row.full_name || '',
+      nickname: row.nickname || '',
+      gender: row.gender,
+      phone: row.phone || '',
+      email: row.email || '',
+      departmentIds: row.department_ids || [],
+      familyId: row.family_id || undefined,
+      isHead: row.is_head || false,
+      isShepherd: row.is_shepherd || false,
+      shepherdId: row.shepherd_id || undefined,
+      status: row.status || 'active',
+      createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+      updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+    } as Servant));
+  }
+
+  /** Met à jour le berger assigné à un B.O.S.S. */
+  static async assignShepherdToServant(servantId: string, shepherdId: string | null) {
+    await supabase.from('servants').update({
+      shepherd_id: shepherdId || null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', servantId);
   }
 
   /** Signale un membre comme indécis : il quitte la famille (et son berger) et

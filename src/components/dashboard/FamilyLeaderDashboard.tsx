@@ -2,17 +2,35 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FamilyLeaderService } from '../../services/familyLeader.service';
 import type { ServiceFamily, Soul } from '../../types/database.types';
-import { Heart, Users, UserPlus, AlertCircle, BarChart3, Search, HelpCircle } from 'lucide-react';
+import type { Servant } from '../../types/servant.types';
+import { useDepartments } from '../../hooks/useDepartments';
+import { Heart, Users, UserPlus, AlertCircle, BarChart3, Search, HelpCircle, Briefcase } from 'lucide-react';
 import PendingActionsWidget from './PendingActionsWidget';
 import { StatCard } from './stats/StatCard';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 import toast from 'react-hot-toast';
 
+// Membre unifié : une âme ou un B.O.S.S rattaché à la famille — tous deux
+// comptent comme "membre de la famille".
+interface FamilyMember {
+  id: string;
+  kind: 'soul' | 'servant';
+  fullName: string;
+  nickname?: string;
+  phone?: string;
+  location?: string;
+  originSource?: string;
+  departmentIds?: string[];
+  shepherdId?: string;
+}
+
 export default function FamilyLeaderDashboard() {
   const { user } = useAuth();
+  const { departments } = useDepartments();
   const [family, setFamily] = useState<ServiceFamily | null>(null);
   const [souls, setSouls] = useState<Soul[]>([]);
+  const [servants, setServants] = useState<Servant[]>([]);
   const [shepherds, setShepherds] = useState<{ id: string; fullName: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -21,6 +39,8 @@ export default function FamilyLeaderDashboard() {
 
   const userId = user?.id || user?.uid;
 
+  const departmentName = (id: string) => departments.find(d => d.id === id)?.name || 'Département inconnu';
+
   const load = async () => {
     if (!userId) return;
     try {
@@ -28,11 +48,13 @@ export default function FamilyLeaderDashboard() {
       const fam = await FamilyLeaderService.getFamilyByLeaderId(userId);
       setFamily(fam);
       if (fam) {
-        const [s, sh] = await Promise.all([
+        const [s, sv, sh] = await Promise.all([
           FamilyLeaderService.getSoulsByFamilyId(fam.id),
+          FamilyLeaderService.getServantsByFamilyId(fam.id),
           FamilyLeaderService.getShepherdsOfFamily(fam.shepherdIds || [], fam.id),
         ]);
         setSouls(s);
+        setServants(sv);
         setShepherds(sh);
       }
     } catch (err) {
@@ -43,49 +65,62 @@ export default function FamilyLeaderDashboard() {
     }
   };
 
+  // Liste unifiée : âmes + B.O.S.S rattachés à la famille
+  const members: FamilyMember[] = useMemo(() => [
+    ...souls.map((s): FamilyMember => ({
+      id: s.id, kind: 'soul', fullName: s.fullName, nickname: s.nickname,
+      phone: s.phone, location: s.location, originSource: s.originSource,
+      shepherdId: s.shepherdId,
+    })),
+    ...servants.map((sv): FamilyMember => ({
+      id: sv.id, kind: 'servant', fullName: sv.fullName, nickname: sv.nickname,
+      phone: sv.phone, departmentIds: sv.departmentIds, shepherdId: sv.shepherdId,
+    })),
+  ], [souls, servants]);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const stats = useMemo(() => {
-    const total = souls.length;
-    const assigned = souls.filter(s => s.shepherdId).length;
+    const total = members.length;
+    const assigned = members.filter(m => m.shepherdId).length;
     return { total, assigned, unassigned: total - assigned };
-  }, [souls]);
+  }, [members]);
 
   // Filtre par nom ou téléphone
-  const filteredSouls = useMemo(() => {
+  const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return souls;
-    return souls.filter(s =>
-      s.fullName?.toLowerCase().includes(q) ||
-      s.phone?.toLowerCase().includes(q) ||
-      s.nickname?.toLowerCase().includes(q)
+    if (!q) return members;
+    return members.filter(m =>
+      m.fullName?.toLowerCase().includes(q) ||
+      m.phone?.toLowerCase().includes(q) ||
+      m.nickname?.toLowerCase().includes(q)
     );
-  }, [souls, search]);
+  }, [members, search]);
 
-  // Tri : non assignées en premier, puis assignées (ordre alphabétique dans chaque groupe)
-  const unassignedSouls = useMemo(
+  // Tri : non assignés en premier, puis assignés (ordre alphabétique dans chaque groupe)
+  const unassignedMembers = useMemo(
     () =>
-      filteredSouls
-        .filter(s => !s.shepherdId)
+      filteredMembers
+        .filter(m => !m.shepherdId)
         .sort((a, b) => a.fullName.localeCompare(b.fullName)),
-    [filteredSouls]
+    [filteredMembers]
   );
-  const assignedSouls = useMemo(
+  const assignedMembers = useMemo(
     () =>
-      filteredSouls
-        .filter(s => s.shepherdId)
+      filteredMembers
+        .filter(m => m.shepherdId)
         .sort((a, b) => a.fullName.localeCompare(b.fullName)),
-    [filteredSouls]
+    [filteredMembers]
   );
 
   // Charge par berger (calculée côté client)
   const shepherdLoad = useMemo(() => {
     const counts = new Map<string, number>();
-    souls.forEach(s => {
-      if (s.shepherdId) counts.set(s.shepherdId, (counts.get(s.shepherdId) || 0) + 1);
+    members.forEach(m => {
+      if (m.shepherdId) counts.set(m.shepherdId, (counts.get(m.shepherdId) || 0) + 1);
     });
     const rows = shepherds.map(sh => ({
       id: sh.id,
@@ -95,14 +130,19 @@ export default function FamilyLeaderDashboard() {
     rows.sort((a, b) => b.count - a.count || a.fullName.localeCompare(b.fullName));
     const max = rows.reduce((m, r) => Math.max(m, r.count), 0);
     return { rows, max };
-  }, [souls, shepherds]);
+  }, [members, shepherds]);
 
-  const handleAssign = async (soulId: string, shepherdId: string) => {
+  const handleAssign = async (member: FamilyMember, shepherdId: string) => {
     try {
-      setSavingId(soulId);
-      await FamilyLeaderService.assignShepherdToSoul(soulId, shepherdId || null);
+      setSavingId(member.id);
+      if (member.kind === 'soul') {
+        await FamilyLeaderService.assignShepherdToSoul(member.id, shepherdId || null);
+        setSouls(prev => prev.map(s => s.id === member.id ? { ...s, shepherdId: shepherdId || undefined } : s));
+      } else {
+        await FamilyLeaderService.assignShepherdToServant(member.id, shepherdId || null);
+        setServants(prev => prev.map(sv => sv.id === member.id ? { ...sv, shepherdId: shepherdId || undefined } : sv));
+      }
       toast.success('Berger assigné');
-      setSouls(prev => prev.map(s => s.id === soulId ? { ...s, shepherdId: shepherdId || undefined } : s));
     } catch (err) {
       console.error(err);
       toast.error("Erreur lors de l'assignation");
@@ -111,17 +151,17 @@ export default function FamilyLeaderDashboard() {
     }
   };
 
-  const handleMarkUndecided = async (soul: Soul) => {
+  const handleMarkUndecided = async (member: FamilyMember) => {
     const ok = await confirm(
-      `${soul.fullName} sera retiré(e) de votre famille et pris(e) en charge par l'équipe ADN parmi les âmes indécises. Continuer ?`,
+      `${member.fullName} sera retiré(e) de votre famille et pris(e) en charge par l'équipe ADN parmi les âmes indécises. Continuer ?`,
       { title: 'Signaler comme indécis(e)', confirmLabel: 'Signaler', variant: 'warning' }
     );
     if (!ok) return;
     try {
-      setSavingId(soul.id);
-      await FamilyLeaderService.markSoulUndecided(soul.id);
-      setSouls(prev => prev.filter(s => s.id !== soul.id));
-      toast.success(`${soul.fullName} signalé(e) comme indécis(e)`);
+      setSavingId(member.id);
+      await FamilyLeaderService.markSoulUndecided(member.id);
+      setSouls(prev => prev.filter(s => s.id !== member.id));
+      toast.success(`${member.fullName} signalé(e) comme indécis(e)`);
     } catch (err) {
       console.error(err);
       toast.error('Erreur lors du signalement');
@@ -146,29 +186,40 @@ export default function FamilyLeaderDashboard() {
     );
   }
 
-  const renderSoulRow = (soul: Soul) => (
-    <div key={soul.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  const renderMemberRow = (member: FamilyMember) => (
+    <div key={member.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div className="flex-1">
         <div className="font-medium text-gray-900">
-          {soul.fullName}
-          {soul.nickname && <span className="text-gray-500 font-normal"> ({soul.nickname})</span>}
+          {member.fullName}
+          {member.nickname && <span className="text-gray-500 font-normal"> ({member.nickname})</span>}
         </div>
         <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
-          {soul.originSource && (
-            <span className="px-2 py-0.5 bg-gray-100 rounded">
-              {soul.originSource === 'culte' ? 'Culte' : 'Évangélisation'}
+          {member.kind === 'servant' ? (
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded inline-flex items-center gap-1">
+              <Briefcase className="w-3 h-3" /> B.O.S.S
+              {member.departmentIds && member.departmentIds.length > 0 && (
+                <span> · {member.departmentIds.map(departmentName).join(', ')}</span>
+              )}
             </span>
+          ) : (
+            <>
+              {member.originSource && (
+                <span className="px-2 py-0.5 bg-gray-100 rounded">
+                  {member.originSource === 'culte' ? 'Culte' : 'Évangélisation'}
+                </span>
+              )}
+              {member.location && <span>📍 {member.location}</span>}
+            </>
           )}
-          <span>📞 {soul.phone}</span>
-          <span>📍 {soul.location}</span>
+          {member.phone && <span>📞 {member.phone}</span>}
         </div>
       </div>
 
       <div className="flex items-center gap-2">
         <select
-          value={soul.shepherdId || ''}
-          onChange={(e) => handleAssign(soul.id, e.target.value)}
-          disabled={savingId === soul.id || shepherds.length === 0}
+          value={member.shepherdId || ''}
+          onChange={(e) => handleAssign(member, e.target.value)}
+          disabled={savingId === member.id || shepherds.length === 0}
           className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]"
         >
           <option value="">-- Non assigné --</option>
@@ -176,16 +227,18 @@ export default function FamilyLeaderDashboard() {
             <option key={sh.id} value={sh.id}>{sh.fullName}</option>
           ))}
         </select>
-        <button
-          type="button"
-          onClick={() => handleMarkUndecided(soul)}
-          disabled={savingId === soul.id}
-          title="Signaler comme indécis(e) : le membre quittera la famille et sera suivi par l'équipe ADN"
-          className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-700 border border-amber-300 rounded-md hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span className="hidden sm:inline">Indécis(e)</span>
-        </button>
+        {member.kind === 'soul' && (
+          <button
+            type="button"
+            onClick={() => handleMarkUndecided(member)}
+            disabled={savingId === member.id}
+            title="Signaler comme indécis(e) : le membre quittera la famille et sera suivi par l'équipe ADN"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-amber-700 border border-amber-300 rounded-md hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Indécis(e)</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -284,7 +337,7 @@ export default function FamilyLeaderDashboard() {
       <div id="famille-ames" className="bg-white border rounded-lg overflow-hidden scroll-mt-4">
         <div className="px-4 py-3 border-b bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="font-semibold text-gray-900">Membres de la famille</h2>
-          {souls.length > 0 && (
+          {members.length > 0 && (
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -298,39 +351,39 @@ export default function FamilyLeaderDashboard() {
           )}
         </div>
 
-        {souls.length === 0 ? (
+        {members.length === 0 ? (
           <div className="p-6 text-center text-gray-500 text-sm">
             Aucun membre assigné à cette famille pour le moment.
           </div>
-        ) : filteredSouls.length === 0 ? (
+        ) : filteredMembers.length === 0 ? (
           <div className="p-6 text-center text-gray-500 text-sm">
             Aucun membre ne correspond à « {search} ».
           </div>
         ) : (
           <>
-            {unassignedSouls.length > 0 && (
+            {unassignedMembers.length > 0 && (
               <div>
                 <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                   <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
-                    À assigner ({unassignedSouls.length})
+                    À assigner ({unassignedMembers.length})
                   </span>
                 </div>
                 <div className="divide-y">
-                  {unassignedSouls.map(renderSoulRow)}
+                  {unassignedMembers.map(renderMemberRow)}
                 </div>
               </div>
             )}
-            {assignedSouls.length > 0 && (
+            {assignedMembers.length > 0 && (
               <div>
                 <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
                   <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Assignées ({assignedSouls.length})
+                    Assignées ({assignedMembers.length})
                   </span>
                 </div>
                 <div className="divide-y">
-                  {assignedSouls.map(renderSoulRow)}
+                  {assignedMembers.map(renderMemberRow)}
                 </div>
               </div>
             )}
