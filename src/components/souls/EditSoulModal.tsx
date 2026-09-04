@@ -184,7 +184,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
           wantsToBecomeMember: soul.wantsToBecomeMember ?? (soul.decision === 'member'),
           prayerRequest: soul.prayerRequest || '',
         },
-        spiritual: soul.spiritualProfile,
+        spiritual: soul.spiritualProfile || {},
       });
       setUserExplicitlyRemovedPhoto(false);
     }

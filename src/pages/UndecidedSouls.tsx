@@ -133,6 +133,7 @@ export default function UndecidedSouls({ embedded = false }: UndecidedSoulsProps
           shepherdId: row.shepherdId || row.shepherd_id,
           serviceFamilyId: row.serviceFamilyId || row.service_family_id || undefined,
           evangelistId: row.evangelistId || row.evangelist_id,
+          spiritualProfile: row.spiritual_profile || row.spiritualProfile || {},
           status: row.status || 'active',
           photoURL: row.photoURL || row.photo_url,
           firstVisitDate: row.firstVisitDate
