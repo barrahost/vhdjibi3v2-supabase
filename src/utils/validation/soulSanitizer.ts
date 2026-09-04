@@ -9,6 +9,7 @@ export function sanitizeSoulData(data: Partial<Soul>): Record<string, any> {
     phone: data.phone,
     first_visit_date: data.firstVisitDate ? new Date(data.firstVisitDate) : null,
     shepherd_id: data.shepherdId ?? null,
+    service_family_id: (data as any).serviceFamilyId ?? null,
     status: data.status || 'active',
     updated_at: new Date()
   };
@@ -33,10 +34,6 @@ export function sanitizeSoulData(data: Partial<Soul>): Record<string, any> {
 
   if ((data as any).originSource !== undefined) {
     sanitized.origin_source = (data as any).originSource || null;
-  }
-
-  if ((data as any).serviceFamilyId !== undefined) {
-    sanitized.service_family_id = (data as any).serviceFamilyId ?? null;
   }
 
   // Champs carte de bienvenue

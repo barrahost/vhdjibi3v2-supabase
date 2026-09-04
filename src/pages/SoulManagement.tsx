@@ -470,6 +470,7 @@ export default function SoulManagement({ embedded = false }: SoulManagementProps
           gender: row.gender || 'male',
           isUndecided: row.isUndecided ?? row.is_undecided ?? false,
           shepherdId: row.shepherdId || row.shepherd_id,
+          serviceFamilyId: row.serviceFamilyId || row.service_family_id || undefined,
           evangelistId: row.evangelistId || row.evangelist_id,
           status: row.status || 'active',
           photoURL: row.photoURL || row.photo_url,

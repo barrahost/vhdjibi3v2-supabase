@@ -533,6 +533,7 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
                                 [key]: false,
                                 isUndecided: nextUndecided,
                                 shepherdId: nextUndecided ? undefined : formData.general.shepherdId,
+                                serviceFamilyId: nextUndecided ? undefined : formData.general.serviceFamilyId,
                               } as any);
                             }}
                             className={`px-3 py-1.5 text-xs font-semibold border-l border-gray-200 transition-colors ${value === false ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
@@ -565,20 +566,27 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
                 </div>
               )}
 
-              {/* Famille de service */}
+              {/* Famille de service — sans objet pour une âme indécise, suivie par l'ADN */}
               {canEditAdnFields && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Famille de service</label>
-                  <select
-                    value={formData.general.serviceFamilyId || ''}
-                    onChange={e => updateGeneral({ serviceFamilyId: e.target.value || undefined })}
-                    disabled={loadingFamilies}
-                    className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 transition-colors bg-white"
-                  >
-                    <option value="">-- Sélectionner --</option>
-                    {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </select>
-                </div>
+                formData.general.isUndecided ? (
+                  <p className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    Âme indécise : pas de famille de service pour l'instant, elle reste suivie par l'équipe ADN.
+                  </p>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Famille de service</label>
+                    <select
+                      value={formData.general.serviceFamilyId || ''}
+                      onChange={e => updateGeneral({ serviceFamilyId: e.target.value || undefined })}
+                      disabled={loadingFamilies}
+                      className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 transition-colors bg-white"
+                    >
+                      <option value="">-- Sélectionner --</option>
+                      {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                  </div>
+                )
               )}
 
               {/* Observations */}
