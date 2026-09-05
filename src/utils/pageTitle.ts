@@ -41,6 +41,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/bug-reports': 'Signalements de bugs',
   '/churches': 'Gestion des Églises',
   '/replay': 'Replay des enseignements',
+  '/academie': 'Académie',
+  '/academie/gestion': 'Gestion Académie',
+  '/academie/parametres': 'Paramètres Académie',
 };
 
 export function getPageTitle(pathname: string): string {

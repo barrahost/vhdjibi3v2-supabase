@@ -28,6 +28,7 @@ export const PERMISSIONS = {
   MANAGE_LEAVES: 'MANAGE_LEAVES',
   MANAGE_PRAYER_REQUESTS: 'MANAGE_PRAYER_REQUESTS',
   MANAGE_CULTE_REPORTS: 'MANAGE_CULTE_REPORTS',
+  MANAGE_ACADEMIE_CONTENT: 'MANAGE_ACADEMIE_CONTENT',
   ALL: '*'
 } as const;
 
@@ -41,6 +42,7 @@ export const ROLES = {
   DEPARTMENT_LEADER: 'department_leader',
   FAMILY_LEADER: 'family_leader',
   EVANGELIST: 'evangelist',
+  ACADEMIE_MODERATOR: 'academie_moderator',
 } as const;
 
 export const ROLE_PERMISSIONS = {
@@ -71,7 +73,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS,
     PERMISSIONS.VIEW_REPLAY_TEACHINGS,
     PERMISSIONS.MANAGE_BIRTHDAYS,
-    PERMISSIONS.MANAGE_EVANGELIZED_SOULS
+    PERMISSIONS.MANAGE_EVANGELIZED_SOULS,
+    PERMISSIONS.MANAGE_ACADEMIE_CONTENT
   ],
   // Pasteur : supervision et decision (stats, conges, besoins, consultation des ames),
   // sans l'administration technique (utilisateurs, parametres, config SMS).
@@ -136,5 +139,10 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.EXPORT_DATA,
     PERMISSIONS.MANAGE_PROFILE,
     PERMISSIONS.VIEW_REPLAY_TEACHINGS
+  ],
+  // Moderateur Academie : gere le contenu (seances, ressources, devoirs) de sa/ses classe(s)
+  [ROLES.ACADEMIE_MODERATOR]: [
+    PERMISSIONS.MANAGE_ACADEMIE_CONTENT,
+    PERMISSIONS.MANAGE_PROFILE
   ]
 } as const;

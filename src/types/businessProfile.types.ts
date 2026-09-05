@@ -6,7 +6,8 @@ export type BusinessProfileType =
   | 'family_leader'
   | 'evangelist'
   | 'pasteur'
-  | 'pasteur_assistant';
+  | 'pasteur_assistant'
+  | 'academie_moderator';
 
 export interface BusinessProfile {
   type: BusinessProfileType;
@@ -14,6 +15,7 @@ export interface BusinessProfile {
   departmentId?: string;
   departmentIds?: string[]; // For department leaders — a leader can head several departments
   serviceFamilyId?: string; // For family leaders
+  classIds?: string[]; // For academie_moderator — academie_classes ids they moderate
   isActive?: boolean;
   isPrimary?: boolean; // Default profile used at login
 }
@@ -24,6 +26,11 @@ export function getProfileDepartmentIds(profile: Pick<BusinessProfile, 'departme
   const ids = new Set<string>(profile.departmentIds || []);
   if (profile.departmentId) ids.add(profile.departmentId);
   return Array.from(ids);
+}
+
+/** Returns the academie_classes ids an academie_moderator profile moderates. */
+export function getProfileClassIds(profile: Pick<BusinessProfile, 'classIds'> | undefined | null): string[] {
+  return profile?.classIds || [];
 }
 
 export interface UserBusinessProfiles {
@@ -39,7 +46,8 @@ export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
   family_leader: 'Responsable de Famille',
   evangelist: 'Évangéliste',
   pasteur: 'Pasteur',
-  pasteur_assistant: 'Pasteur Assistant'
+  pasteur_assistant: 'Pasteur Assistant',
+  academie_moderator: 'Modérateur Académie'
 };
 
 export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> = {
@@ -50,7 +58,8 @@ export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> 
   family_leader: 'Peut voir les âmes de sa famille et les assigner à ses bergers',
   evangelist: 'Peut enregistrer et suivre ses âmes évangélisées',
   pasteur: 'Supervision et décision : stats, congés, besoins signalés, consultation des âmes',
-  pasteur_assistant: 'Supervise un portefeuille de départements : rapports, B.O.S.S et besoins signalés'
+  pasteur_assistant: 'Supervise un portefeuille de départements : rapports, B.O.S.S et besoins signalés',
+  academie_moderator: 'Gère le contenu (séances, ressources, devoirs) de sa/ses classe(s) de l\'Académie'
 };
 
 // Map business profiles to permissions
@@ -112,6 +121,10 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
     'MANAGE_DEPARTMENT_SERVANTS',
     'MANAGE_PROFILE',
     'VIEW_REPLAY_TEACHINGS'
+  ],
+  academie_moderator: [
+    'MANAGE_ACADEMIE_CONTENT',
+    'MANAGE_PROFILE'
   ]
 };
 

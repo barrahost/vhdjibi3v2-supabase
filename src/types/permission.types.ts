@@ -26,9 +26,10 @@ export type Permission =
   | 'MANAGE_LEAVES'
   | 'MANAGE_PRAYER_REQUESTS'
   | 'MANAGE_CULTE_REPORTS'
+  | 'MANAGE_ACADEMIE_CONTENT'
   | '*';
 
-export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'pasteur_assistant' | 'department_leader' | 'family_leader' | 'evangelist';
+export type BaseRole = 'super_admin' | 'admin' | 'shepherd' | 'adn' | 'pasteur' | 'pasteur_assistant' | 'department_leader' | 'family_leader' | 'evangelist' | 'academie_moderator';
 
 export interface UserRoles {
   primary: BaseRole;

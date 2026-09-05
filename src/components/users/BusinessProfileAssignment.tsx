@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS, getProfileDepartmentIds } from '../../types/businessProfile.types';
+import { BusinessProfile, BusinessProfileType, BUSINESS_PROFILE_LABELS, BUSINESS_PROFILE_DESCRIPTIONS, getProfileDepartmentIds, getProfileClassIds } from '../../types/businessProfile.types';
 import { Star, ChevronDown, Check, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -12,6 +12,7 @@ interface BusinessProfileAssignmentProps {
 
 export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMultiple = true }: BusinessProfileAssignmentProps) {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -22,6 +23,12 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
       .eq('church_id', getChurchId())
       .order('name')
       .then(({ data }: { data: { id: string; name: string }[] | null }) => setDepartments(data || []));
+    supabase
+      .from('academie_classes')
+      .select('id, name')
+      .eq('church_id', getChurchId())
+      .order('name')
+      .then(({ data }: { data: { id: string; name: string }[] | null }) => setClasses(data || []));
   }, []);
 
   // Fermer le menu au clic extérieur
@@ -47,7 +54,18 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
     });
     onChange(updated);
   };
-  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'pasteur_assistant', 'pasteur', 'admin'];
+  const toggleClass = (classId: string) => {
+    const updated = selectedProfiles.map((p) => {
+      if (p.type !== 'academie_moderator') return p;
+      const current = getProfileClassIds(p);
+      const next = current.includes(classId)
+        ? current.filter((id) => id !== classId)
+        : [...current, classId];
+      return { ...p, classIds: next };
+    });
+    onChange(updated);
+  };
+  const availableProfileTypes: BusinessProfileType[] = ['shepherd', 'department_leader', 'family_leader', 'adn', 'evangelist', 'pasteur_assistant', 'pasteur', 'academie_moderator', 'admin'];
 
   const isProfileSelected = (profileType: BusinessProfileType): boolean => {
     return selectedProfiles.some(profile => profile.type === profileType);
@@ -256,6 +274,39 @@ export function BusinessProfileAssignment({ selectedProfiles, onChange, allowMul
           {getProfileDepartmentIds(selectedProfiles.find((p) => p.type === 'pasteur_assistant')).length === 0 && (
             <p className="mt-1 text-xs text-amber-600">
               Sans département supervisé, ce profil n'apportera aucun accès.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Classe(s) pour un modérateur Académie */}
+      {isProfileSelected('academie_moderator') && (
+        <div className="pl-3 border-l-2 border-emerald-100">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Classe(s) modérée(s)
+          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Le modérateur gère le contenu (séances, ressources, devoirs) de ces classes.
+          </p>
+          <div className="max-h-40 overflow-y-auto space-y-1.5 border border-gray-200 rounded-md p-2">
+            {classes.map((c) => {
+              const currentIds = getProfileClassIds(selectedProfiles.find((p) => p.type === 'academie_moderator'));
+              return (
+                <label key={c.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={currentIds.includes(c.id)}
+                    onChange={() => toggleClass(c.id)}
+                    className="h-4 w-4 text-[#00665C] border-gray-300 rounded focus:ring-[#00665C]"
+                  />
+                  {c.name}
+                </label>
+              );
+            })}
+          </div>
+          {getProfileClassIds(selectedProfiles.find((p) => p.type === 'academie_moderator')).length === 0 && (
+            <p className="mt-1 text-xs text-amber-600">
+              Sans classe assignée, ce profil n'apportera aucun accès.
             </p>
           )}
         </div>

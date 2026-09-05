@@ -38,6 +38,7 @@ import {
   Trophy,
   Eye,
   Network,
+  GraduationCap,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -378,6 +379,20 @@ export function useNavigationItems(): NavItem[] {
 
   // Organigramme de l'eglise : visible par tous
   items.push({ id: 'church-organization', label: 'Organisation', icon: <Network className="w-5 h-5" />, href: '/organisation' });
+
+  // Academie VH AGC : espace etudiant visible par tous, gestion/parametres selon permission
+  {
+    const academieChildren: NavItem[] = [
+      { id: 'academie-student', label: 'Mes cours', href: '/academie', icon: <GraduationCap className="w-5 h-5" /> },
+    ];
+    if (hasPermission(PERMISSIONS.MANAGE_ACADEMIE_CONTENT)) {
+      academieChildren.push({ id: 'academie-gestion', label: 'Gestion des cours', href: '/academie/gestion', icon: <Settings className="w-5 h-5" /> });
+    }
+    if (isAdmin) {
+      academieChildren.push({ id: 'academie-parametres', label: 'Classes & inscriptions', href: '/academie/parametres', icon: <UserCog className="w-5 h-5" /> });
+    }
+    items.push({ id: 'academie', label: 'Académie', icon: <GraduationCap className="w-5 h-5" />, children: academieChildren });
+  }
 
   // Replay (not ADN)
   if (hasPermission(PERMISSIONS.VIEW_REPLAY_TEACHINGS) && !onlyRole(ROLES.ADN) && hasModule('audio')) {

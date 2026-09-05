@@ -75,6 +75,9 @@ const LeaveManagement = lazy(() => import('./pages/LeaveManagement'));
 const PrayerRequestForm = lazy(() => import('./pages/PrayerRequestForm'));
 const EvangelizationForm = lazy(() => import('./pages/EvangelizationForm'));
 const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
+const AcademieStudent = lazy(() => import('./pages/AcademieStudent'));
+const AcademieModerator = lazy(() => import('./pages/AcademieModerator'));
+const AcademieAdmin = lazy(() => import('./pages/AcademieAdmin'));
 
 // Loading component
 function PageLoader() {
@@ -462,6 +465,29 @@ function AppContent() {
           <Route path="parametres-programme-recurrent" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <RecurringScheduleSettings />
+            </PrivateRoute>
+          } />
+
+          {/* Académie VH AGC */}
+          <Route path="academie" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieStudent />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/gestion" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_ACADEMIE_CONTENT]}>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieModerator />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/parametres" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_USERS]}>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieAdmin />
+              </Suspense>
             </PrivateRoute>
           } />
 
