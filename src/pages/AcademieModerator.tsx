@@ -35,20 +35,28 @@ export default function AcademieModerator() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'programme' | 'etudiants' | 'devoirs'>('programme');
 
-  // Onglet Etudiants : liste des inscrits + % de progression
+  // Onglet Etudiants : liste des inscrits + % de progression + inscription/desinscription
   const [students, setStudents] = useState<{ userId: string; fullName: string; completed: number }[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [studentsTotal, setStudentsTotal] = useState(0);
+  const [allChurchUsers, setAllChurchUsers] = useState<{ id: string; fullName: string; phone: string }[]>([]);
+  const [enrollSearch, setEnrollSearch] = useState('');
 
   const loadStudents = async (classId: string) => {
     if (!classId) return;
     try {
       setLoadingStudents(true);
-      const [enrollments, publishedSessions] = await Promise.all([
+      const [enrollments, publishedSessions, usersResp] = await Promise.all([
         AcademieService.getEnrollmentsByClass(classId),
         AcademieService.getPublishedSessionsByClass(classId),
+        allChurchUsers.length > 0 ? Promise.resolve(null) : supabase.from('users').select('id, full_name, phone').eq('church_id', getChurchId()).eq('status', 'active').order('full_name'),
       ]);
+      if (usersResp) {
+        setAllChurchUsers((usersResp.data || []).map((u: any) => ({ id: u.id, fullName: u.full_name || '—', phone: u.phone || '' })));
+      }
       const activeEnrollments = enrollments.filter(e => e.status === 'active');
       const userIds = activeEnrollments.map(e => e.userId);
+      setStudentsTotal(publishedSessions.length);
       if (userIds.length === 0) { setStudents([]); return; }
 
       const [{ data: users }, progress] = await Promise.all([
@@ -63,12 +71,32 @@ export default function AcademieModerator() {
       }));
       list.sort((a, b) => a.completed - b.completed); // les plus en retard d'abord
       setStudents(list);
-      setStudentsTotal(publishedSessions.length);
     } finally {
       setLoadingStudents(false);
     }
   };
-  const [studentsTotal, setStudentsTotal] = useState(0);
+
+  const enrolledUserIds = new Set(students.map(s => s.userId));
+
+  const handleEnroll = async (userId: string) => {
+    try {
+      await AcademieService.enroll(userId, selectedClassId);
+      toast.success('Étudiant inscrit');
+      loadStudents(selectedClassId);
+    } catch {
+      toast.error('Erreur lors de l\'inscription');
+    }
+  };
+
+  const handleUnenroll = async (userId: string) => {
+    try {
+      await AcademieService.unenroll(userId, selectedClassId);
+      toast.success('Étudiant retiré de la classe');
+      loadStudents(selectedClassId);
+    } catch {
+      toast.error('Erreur');
+    }
+  };
 
   const [newAssignment, setNewAssignment] = useState({ title: '', description: '', dueDate: '' });
 
@@ -683,28 +711,76 @@ export default function AcademieModerator() {
       )}
 
       {tab === 'etudiants' && (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b bg-gray-50">
-            <p className="text-sm text-gray-600">Progression de chaque étudiant inscrit — les moins avancés en premier.</p>
-          </div>
-          {loadingStudents ? (
-            <div className="p-6 text-center text-gray-500 text-sm flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Chargement...</div>
-          ) : students.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 text-sm">Aucun étudiant inscrit à cette classe pour l'instant.</div>
-          ) : (
-            <div className="divide-y">
-              {students.map(s => (
-                <div key={s.userId} className="px-4 py-3 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{s.fullName}</p>
-                  </div>
-                  <div className="w-40 flex-shrink-0">
-                    <ProgressBar completed={s.completed} total={studentsTotal} size="sm" />
-                  </div>
-                </div>
-              ))}
+        <div className="space-y-4">
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b bg-gray-50">
+              <p className="text-sm text-gray-600">Progression de chaque étudiant inscrit — les moins avancés en premier.</p>
             </div>
-          )}
+            {loadingStudents ? (
+              <div className="p-6 text-center text-gray-500 text-sm flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Chargement...</div>
+            ) : students.length === 0 ? (
+              <div className="p-6 text-center text-gray-500 text-sm">Aucun étudiant inscrit à cette classe pour l'instant.</div>
+            ) : (
+              <div className="divide-y">
+                {students.map(s => (
+                  <div key={s.userId} className="px-4 py-3 flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{s.fullName}</p>
+                    </div>
+                    <div className="w-40 flex-shrink-0">
+                      <ProgressBar completed={s.completed} total={studentsTotal} size="sm" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUnenroll(s.userId)}
+                      className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50"
+                    >
+                      <X className="w-3.5 h-3.5" /> Retirer
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b bg-gray-50">
+              <p className="text-sm font-semibold text-gray-900">Inscrire un membre à cette classe</p>
+            </div>
+            <div className="p-3 border-b">
+              <input
+                type="text"
+                placeholder="Rechercher un membre par nom ou téléphone..."
+                value={enrollSearch}
+                onChange={e => setEnrollSearch(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+              />
+            </div>
+            <div className="max-h-72 overflow-y-auto divide-y">
+              {allChurchUsers
+                .filter(u => !enrolledUserIds.has(u.id))
+                .filter(u => enrollSearch.trim() === '' ? true : (u.fullName.toLowerCase().includes(enrollSearch.toLowerCase()) || u.phone.includes(enrollSearch)))
+                .slice(0, 50)
+                .map(u => (
+                  <div key={u.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{u.fullName}</p>
+                      <p className="text-xs text-gray-500">{u.phone}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleEnroll(u.id)}
+                      className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-white bg-brand-700 rounded-md hover:bg-brand-800"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Inscrire
+                    </button>
+                  </div>
+                ))}
+              {enrollSearch.trim() !== '' && allChurchUsers.filter(u => !enrolledUserIds.has(u.id) && (u.fullName.toLowerCase().includes(enrollSearch.toLowerCase()) || u.phone.includes(enrollSearch))).length === 0 && (
+                <p className="p-4 text-center text-sm text-gray-400">Aucun résultat</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
