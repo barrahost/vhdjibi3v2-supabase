@@ -8,10 +8,11 @@ import type { AcademieClass, AcademieSession, AcademieResource, AcademieAssignme
 import { resourceUrl } from '../types/academie.types';
 import { AcademieMediaService, classNameToPrefix, friendlyNameFromKey, humanFileSize, sanitizeFileName, readMediaDuration, type AcademieMediaObject } from '../services/academieMedia.service';
 import { ProgressBar } from '../components/academie/ProgressBar';
+import { StudentProfileModal } from '../components/academie/StudentProfileModal';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Plus, Trash2, ChevronDown, ChevronUp, FileText, PlayCircle, Link as LinkIcon, FolderOpen, UploadCloud, Globe, Loader2, CheckCircle2, Pencil, Save, X, Clock, ListChecks, Users, ClipboardList } from 'lucide-react';
+import { Eye, EyeOff, Plus, Trash2, ChevronDown, ChevronUp, FileText, PlayCircle, Link as LinkIcon, FolderOpen, UploadCloud, Globe, Loader2, CheckCircle2, Pencil, Save, X, Clock, ListChecks, Users, ClipboardList, User } from 'lucide-react';
 
 /** Devine le type de ressource depuis l'extension d'un nom de fichier. */
 function guessTypeFromName(name: string): AcademieResourceType {
@@ -41,6 +42,7 @@ export default function AcademieModerator() {
   const [studentsTotal, setStudentsTotal] = useState(0);
   const [allChurchUsers, setAllChurchUsers] = useState<{ id: string; fullName: string; phone: string }[]>([]);
   const [enrollSearch, setEnrollSearch] = useState('');
+  const [viewingStudentId, setViewingStudentId] = useState<string | null>(null);
 
   const loadStudents = async (classId: string) => {
     if (!classId) return;
@@ -724,12 +726,24 @@ export default function AcademieModerator() {
               <div className="divide-y">
                 {students.map(s => (
                   <div key={s.userId} className="px-4 py-3 flex items-center gap-4">
-                    <div className="flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setViewingStudentId(s.userId)}
+                      className="flex-1 min-w-0 text-left hover:underline"
+                      title="Voir le profil"
+                    >
                       <p className="text-sm font-medium text-gray-900 truncate">{s.fullName}</p>
-                    </div>
+                    </button>
                     <div className="w-40 flex-shrink-0">
                       <ProgressBar completed={s.completed} total={studentsTotal} size="sm" />
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setViewingStudentId(s.userId)}
+                      className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50"
+                    >
+                      <User className="w-3.5 h-3.5" /> Profil
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleUnenroll(s.userId)}
@@ -811,6 +825,8 @@ export default function AcademieModerator() {
           )}
         </div>
       )}
+
+      <StudentProfileModal userId={viewingStudentId} onClose={() => setViewingStudentId(null)} />
     </div>
   );
 }
