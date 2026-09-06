@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import type {
-  AcademieClass, AcademieSession, AcademieResource, AcademieAssignment, AcademieEnrollment,
+  AcademieClass, AcademieSession, AcademieResource, AcademieAssignment, AcademieEnrollment, AcademieProgress,
 } from '../types/academie.types';
 
 function rowToClass(row: any): AcademieClass {
@@ -37,6 +37,12 @@ function rowToAssignment(row: any): AcademieAssignment {
 function rowToEnrollment(row: any): AcademieEnrollment {
   return {
     id: row.id, userId: row.user_id, classId: row.class_id, status: row.status, enrolledAt: row.enrolled_at,
+  };
+}
+
+function rowToProgress(row: any): AcademieProgress {
+  return {
+    id: row.id, userId: row.user_id, sessionId: row.session_id, status: row.status, completedAt: row.completed_at || undefined,
   };
 }
 
@@ -205,6 +211,46 @@ export class AcademieService {
   static async unenroll(userId: string, classId: string): Promise<void> {
     const { error } = await supabase.from('academie_enrollments')
       .update({ status: 'inactive' }).eq('user_id', userId).eq('class_id', classId);
+    if (error) throw error;
+  }
+
+  // ─── Progression ──────────────────────────────────────────
+  static async getProgressByUser(userId: string): Promise<AcademieProgress[]> {
+    const { data, error } = await supabase.from('academie_progress').select('*')
+      .eq('church_id', getChurchId()).eq('user_id', userId);
+    if (error) throw error;
+    return (data || []).map(rowToProgress);
+  }
+
+  static async getProgressByUserAndSessions(userId: string, sessionIds: string[]): Promise<AcademieProgress[]> {
+    if (sessionIds.length === 0) return [];
+    const { data, error } = await supabase.from('academie_progress').select('*')
+      .eq('church_id', getChurchId()).eq('user_id', userId).in('session_id', sessionIds);
+    if (error) throw error;
+    return (data || []).map(rowToProgress);
+  }
+
+  static async getProgressBySessions(sessionIds: string[]): Promise<AcademieProgress[]> {
+    if (sessionIds.length === 0) return [];
+    const { data, error } = await supabase.from('academie_progress').select('*')
+      .eq('church_id', getChurchId()).in('session_id', sessionIds);
+    if (error) throw error;
+    return (data || []).map(rowToProgress);
+  }
+
+  static async markSessionCompleted(userId: string, sessionId: string): Promise<void> {
+    const { error } = await supabase.from('academie_progress').upsert({
+      church_id: getChurchId(), user_id: userId, session_id: sessionId,
+      status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,session_id' });
+    if (error) throw error;
+  }
+
+  static async unmarkSessionCompleted(userId: string, sessionId: string): Promise<void> {
+    const { error } = await supabase.from('academie_progress').upsert({
+      church_id: getChurchId(), user_id: userId, session_id: sessionId,
+      status: 'not_started', completed_at: null, updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,session_id' });
     if (error) throw error;
   }
 }

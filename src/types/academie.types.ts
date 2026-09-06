@@ -50,6 +50,16 @@ export interface AcademieEnrollment {
   enrolledAt: string;
 }
 
+export type AcademieProgressStatus = 'not_started' | 'in_progress' | 'completed';
+
+export interface AcademieProgress {
+  id: string;
+  userId: string;
+  sessionId: string;
+  status: AcademieProgressStatus;
+  completedAt?: string;
+}
+
 export function resourceUrl(resource: Pick<AcademieResource, 'r2Key' | 'url'>): string {
   if (resource.r2Key) return `${ACADEMIE_R2_PUBLIC_URL}/${resource.r2Key}`;
   return resource.url || '';

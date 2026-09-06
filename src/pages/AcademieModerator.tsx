@@ -6,8 +6,11 @@ import { getProfileClassIds } from '../types/businessProfile.types';
 import type { AcademieClass, AcademieSession, AcademieResource, AcademieAssignment, AcademieResourceType } from '../types/academie.types';
 import { resourceUrl } from '../types/academie.types';
 import { AcademieMediaService, classNameToPrefix, friendlyNameFromKey, humanFileSize, sanitizeFileName, readMediaDuration, type AcademieMediaObject } from '../services/academieMedia.service';
+import { ProgressBar } from '../components/academie/ProgressBar';
+import { supabase } from '../lib/supabase';
+import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Plus, Trash2, ChevronDown, ChevronUp, FileText, PlayCircle, Link as LinkIcon, FolderOpen, UploadCloud, Globe, Loader2, CheckCircle2, Pencil, Save, X, Clock } from 'lucide-react';
+import { Eye, EyeOff, Plus, Trash2, ChevronDown, ChevronUp, FileText, PlayCircle, Link as LinkIcon, FolderOpen, UploadCloud, Globe, Loader2, CheckCircle2, Pencil, Save, X, Clock, ListChecks, Users, ClipboardList } from 'lucide-react';
 
 /** Devine le type de ressource depuis l'extension d'un nom de fichier. */
 function guessTypeFromName(name: string): AcademieResourceType {
@@ -29,6 +32,42 @@ export default function AcademieModerator() {
   const [assignments, setAssignments] = useState<Record<string, AcademieAssignment[]>>({});
   const [openSessionId, setOpenSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'programme' | 'etudiants' | 'devoirs'>('programme');
+
+  // Onglet Etudiants : liste des inscrits + % de progression
+  const [students, setStudents] = useState<{ userId: string; fullName: string; completed: number }[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
+  const loadStudents = async (classId: string) => {
+    if (!classId) return;
+    try {
+      setLoadingStudents(true);
+      const [enrollments, publishedSessions] = await Promise.all([
+        AcademieService.getEnrollmentsByClass(classId),
+        AcademieService.getPublishedSessionsByClass(classId),
+      ]);
+      const activeEnrollments = enrollments.filter(e => e.status === 'active');
+      const userIds = activeEnrollments.map(e => e.userId);
+      if (userIds.length === 0) { setStudents([]); return; }
+
+      const [{ data: users }, progress] = await Promise.all([
+        supabase.from('users').select('id, full_name').eq('church_id', getChurchId()).in('id', userIds),
+        AcademieService.getProgressBySessions(publishedSessions.map(s => s.id)),
+      ]);
+      const nameById = new Map<string, string>((users || []).map((u: any) => [u.id, u.full_name || '—']));
+      const list = userIds.map(userId => ({
+        userId,
+        fullName: nameById.get(userId) || '—',
+        completed: progress.filter(p => p.userId === userId && p.status === 'completed').length,
+      }));
+      list.sort((a, b) => a.completed - b.completed); // les plus en retard d'abord
+      setStudents(list);
+      setStudentsTotal(publishedSessions.length);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+  const [studentsTotal, setStudentsTotal] = useState(0);
 
   const [newAssignment, setNewAssignment] = useState({ title: '', description: '', dueDate: '' });
 
@@ -140,6 +179,11 @@ export default function AcademieModerator() {
   };
 
   useEffect(() => { loadSessions(selectedClassId); setExistingFiles(null); }, [selectedClassId]);
+
+  useEffect(() => {
+    if (tab === 'etudiants' && selectedClassId) loadStudents(selectedClassId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, selectedClassId]);
 
   useEffect(() => {
     if (openSessionId && resourceMode === 'existing' && existingFiles === null) {
@@ -281,16 +325,37 @@ export default function AcademieModerator() {
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowNewSession(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-brand-700 text-white text-sm font-medium rounded-md hover:bg-brand-800"
-        >
-          <Plus className="w-4 h-4" /> Nouvelle séance
-        </button>
+        {tab === 'programme' && (
+          <button
+            type="button"
+            onClick={() => setShowNewSession(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand-700 text-white text-sm font-medium rounded-md hover:bg-brand-800"
+          >
+            <Plus className="w-4 h-4" /> Nouvelle séance
+          </button>
+        )}
       </div>
 
-      {showNewSession && (
+      <div className="flex gap-1 border-b border-gray-200">
+        {([
+          { id: 'programme', label: 'Programme', icon: ListChecks },
+          { id: 'etudiants', label: 'Étudiants', icon: Users },
+          { id: 'devoirs', label: 'Devoirs', icon: ClipboardList },
+        ] as const).map(t => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${
+              tab === t.id ? 'border-brand-700 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <t.icon className="w-4 h-4" /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'programme' && showNewSession && (
         <div className="bg-white border-2 border-brand-700/20 rounded-lg p-4 space-y-3">
           <p className="text-sm font-semibold text-gray-900">Créer une nouvelle séance pour {currentClass?.name}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -328,6 +393,7 @@ export default function AcademieModerator() {
         </div>
       )}
 
+      {tab === 'programme' && (
       <div className="bg-white border rounded-lg divide-y">
         {sessions.sort((a, b) => a.weekNumber - b.weekNumber).map(session => {
           const isOpen = openSessionId === session.id;
@@ -598,6 +664,61 @@ export default function AcademieModerator() {
           );
         })}
       </div>
+      )}
+
+      {tab === 'etudiants' && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 border-b bg-gray-50">
+            <p className="text-sm text-gray-600">Progression de chaque étudiant inscrit — les moins avancés en premier.</p>
+          </div>
+          {loadingStudents ? (
+            <div className="p-6 text-center text-gray-500 text-sm flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Chargement...</div>
+          ) : students.length === 0 ? (
+            <div className="p-6 text-center text-gray-500 text-sm">Aucun étudiant inscrit à cette classe pour l'instant.</div>
+          ) : (
+            <div className="divide-y">
+              {students.map(s => (
+                <div key={s.userId} className="px-4 py-3 flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{s.fullName}</p>
+                  </div>
+                  <div className="w-40 flex-shrink-0">
+                    <ProgressBar completed={s.completed} total={studentsTotal} size="sm" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'devoirs' && (
+        <div className="bg-white border rounded-lg overflow-hidden divide-y">
+          {sessions
+            .filter(s => (assignments[s.id] || []).length > 0)
+            .sort((a, b) => a.weekNumber - b.weekNumber)
+            .flatMap(s => (assignments[s.id] || []).map(a => ({ ...a, session: s })))
+            .map(a => (
+              <div key={a.id} className="px-4 py-3 flex items-center gap-3">
+                <ClipboardList className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">{a.title}</p>
+                  <p className="text-xs text-gray-400">Semaine {a.session.weekNumber} — {a.session.theme}{a.dueDate ? ` · à rendre le ${new Date(a.dueDate).toLocaleDateString('fr-FR')}` : ''}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleAssignmentPublish(a)}
+                  className={`text-xs px-2.5 py-1.5 rounded-md font-medium flex-shrink-0 ${a.isPublished ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}
+                >
+                  {a.isPublished ? 'Publié' : 'Masqué'}
+                </button>
+              </div>
+            ))}
+          {sessions.every(s => (assignments[s.id] || []).length === 0) && (
+            <div className="p-6 text-center text-gray-500 text-sm">Aucun devoir créé pour cette classe pour l'instant. Ajoutez-en depuis l'onglet Programme, dans une séance.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -75,7 +75,9 @@ const LeaveManagement = lazy(() => import('./pages/LeaveManagement'));
 const PrayerRequestForm = lazy(() => import('./pages/PrayerRequestForm'));
 const EvangelizationForm = lazy(() => import('./pages/EvangelizationForm'));
 const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
-const AcademieStudent = lazy(() => import('./pages/AcademieStudent'));
+const AcademieHub = lazy(() => import('./pages/AcademieHub'));
+const AcademieCourseTimeline = lazy(() => import('./pages/AcademieCourseTimeline'));
+const AcademieSessionDetail = lazy(() => import('./pages/AcademieSessionDetail'));
 const AcademieModerator = lazy(() => import('./pages/AcademieModerator'));
 const AcademieAdmin = lazy(() => import('./pages/AcademieAdmin'));
 
@@ -472,7 +474,21 @@ function AppContent() {
           <Route path="academie" element={
             <PrivateRoute>
               <Suspense fallback={<PageLoader />}>
-                <AcademieStudent />
+                <AcademieHub />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/classe/:classId" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieCourseTimeline />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/classe/:classId/seance/:sessionId" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieSessionDetail />
               </Suspense>
             </PrivateRoute>
           } />
