@@ -493,7 +493,7 @@ function AppContent() {
             </PrivateRoute>
           } />
           <Route path="academie/gestion" element={
-            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_ACADEMIE_CONTENT]}>
+            <PrivateRoute>
               <Suspense fallback={<PageLoader />}>
                 <AcademieModerator />
               </Suspense>

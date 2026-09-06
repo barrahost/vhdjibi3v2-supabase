@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { AcademieService } from '../services/academie.service';
-import { getProfileClassIds } from '../types/businessProfile.types';
+import { getProfileClassIds, getProfileDepartmentIds } from '../types/businessProfile.types';
+import { normalizeDeptName, DEPARTMENT_TO_REPORT_TYPE } from '../types/culteReport.types';
 import type { AcademieClass, AcademieSession, AcademieResource, AcademieAssignment, AcademieResourceType } from '../types/academie.types';
 import { resourceUrl } from '../types/academie.types';
 import { AcademieMediaService, classNameToPrefix, friendlyNameFromKey, humanFileSize, sanitizeFileName, readMediaDuration, type AcademieMediaObject } from '../services/academieMedia.service';
@@ -147,8 +148,23 @@ export default function AcademieModerator() {
       try {
         setLoading(true);
         const allClasses = await AcademieService.getClasses();
+
+        let isAcademieDeptHead = false;
+        if (!isAdmin && user?.businessProfiles) {
+          const profiles = user.businessProfiles as any[];
+          const deptIds = [
+            ...getProfileDepartmentIds(profiles.find(p => p.type === 'department_leader')),
+            ...getProfileDepartmentIds(profiles.find(p => p.type === 'pasteur_assistant')),
+          ];
+          if (deptIds.length > 0) {
+            const { data: depts } = await supabase.from('departments').select('id, name')
+              .eq('church_id', getChurchId()).in('id', deptIds);
+            isAcademieDeptHead = (depts || []).some((d: any) => DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(d.name)] === 'academie');
+          }
+        }
+
         let myClassIds: string[] | null = null;
-        if (!isAdmin) {
+        if (!isAdmin && !isAcademieDeptHead) {
           const moderatorProfile = (user?.businessProfiles as any[])?.find(p => p.type === 'academie_moderator');
           myClassIds = getProfileClassIds(moderatorProfile);
         }

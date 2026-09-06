@@ -166,6 +166,30 @@ export function useNavigationItems(): NavItem[] {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Academie : responsable (ou PA supervisant) le departement Academie -> acces gestion
+  const isAcademieDeptLeader =
+    ledCulteReports.some((r) => r.reportType === 'academie') ||
+    supervisedCulteReports.some((r) => r.reportType === 'academie');
+
+  // Academie : "Mes cours" visible uniquement si l'utilisateur est inscrit (etudiant actif) a une classe
+  const [isAcademieStudent, setIsAcademieStudent] = useState(false);
+  useEffect(() => {
+    const uid = (user as any)?.id || (user as any)?.uid;
+    if (!uid) { setIsAcademieStudent(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('academie_enrollments')
+        .select('id')
+        .eq('church_id', getChurchId())
+        .eq('user_id', uid)
+        .eq('status', 'active')
+        .limit(1);
+      if (!cancelled) setIsAcademieStudent((data || []).length > 0);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   const items: NavItem[] = [
     {
       id: 'dashboard',
@@ -380,18 +404,22 @@ export function useNavigationItems(): NavItem[] {
   // Organigramme de l'eglise : visible par tous
   items.push({ id: 'church-organization', label: 'Organisation', icon: <Network className="w-5 h-5" />, href: '/organisation' });
 
-  // Academie VH AGC : espace etudiant visible par tous, gestion/parametres selon permission
+  // Academie VH AGC : "Mes cours" reserve aux etudiants inscrits, gestion au
+  // responsable du departement Academie (+ PA le supervisant) et aux admins.
   {
-    const academieChildren: NavItem[] = [
-      { id: 'academie-student', label: 'Mes cours', href: '/academie', icon: <GraduationCap className="w-5 h-5" /> },
-    ];
-    if (hasPermission(PERMISSIONS.MANAGE_ACADEMIE_CONTENT)) {
+    const academieChildren: NavItem[] = [];
+    if (isAcademieStudent) {
+      academieChildren.push({ id: 'academie-student', label: 'Mes cours', href: '/academie', icon: <GraduationCap className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_ACADEMIE_CONTENT) || isAdmin || isAcademieDeptLeader) {
       academieChildren.push({ id: 'academie-gestion', label: 'Gestion des cours', href: '/academie/gestion', icon: <Settings className="w-5 h-5" /> });
     }
     if (isAdmin) {
       academieChildren.push({ id: 'academie-parametres', label: 'Classes & inscriptions', href: '/academie/parametres', icon: <UserCog className="w-5 h-5" /> });
     }
-    items.push({ id: 'academie', label: 'Académie', icon: <GraduationCap className="w-5 h-5" />, children: academieChildren });
+    if (academieChildren.length > 0) {
+      items.push({ id: 'academie', label: 'Académie', icon: <GraduationCap className="w-5 h-5" />, children: academieChildren });
+    }
   }
 
   // Replay (not ADN)
