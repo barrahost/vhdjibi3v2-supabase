@@ -95,13 +95,16 @@ export function StudentProfileModal({ userId, onClose }: StudentProfileModalProp
       const [{ data: soulRows }, { data: servantRows }] = await Promise.all([
         supabase.from('souls').select('gender, spiritual_profile, service_family_id')
           .eq('church_id', getChurchId()).eq('phone', phone).limit(1),
-        supabase.from('servants').select('gender, department_ids')
+        supabase.from('servants').select('gender, department_ids, family_id, spiritual_profile')
           .eq('church_id', getChurchId()).eq('phone', phone).limit(1),
       ]);
       const soul = soulRows?.[0] as any;
       const servant = servantRows?.[0] as any;
       if (soul || servant) {
-        const sp = soul?.spiritual_profile || {};
+        // Le B.O.S.S reçoit une copie du profil spirituel de son âme d'origine
+        // au moment de la promotion (voir soulPromotion.service.ts) : on la
+        // préfère quand elle existe, avec repli sur la fiche âme sinon.
+        const sp = servant?.spiritual_profile || soul?.spiritual_profile || {};
         const deptHistory: { name: string; startDate: string }[] = Array.isArray(sp.departments) ? sp.departments : [];
         setSoulHint({
           gender: servant?.gender || soul?.gender || undefined,
@@ -109,7 +112,7 @@ export function StudentProfileModal({ userId, onClose }: StudentProfileModalProp
           baptismDate: sp.isBaptized && sp.baptismDate ? String(sp.baptismDate).slice(0, 10) : undefined,
           departmentName: deptHistory.length > 0 ? deptHistory[deptHistory.length - 1].name : undefined,
           departmentIdFromServant: servant?.department_ids?.[0] || undefined,
-          serviceFamilyId: soul?.service_family_id || undefined,
+          serviceFamilyId: servant?.family_id || soul?.service_family_id || undefined,
         });
       } else {
         setSoulHint(null);

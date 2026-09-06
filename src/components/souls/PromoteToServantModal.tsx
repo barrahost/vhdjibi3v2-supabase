@@ -37,12 +37,14 @@ export default function PromoteToServantModal({ isOpen, onClose, soul, onSuccess
         phone: soul.phone || '',
         email: '',
         departmentIds,
+        familyId: soul.serviceFamilyId,
         isHead: false,
         status: 'active',
         sourceType: 'soul',
         sourceId: soul.id,
         originalSoulId: soul.id,
         promotionDate: now,
+        spiritualProfile: soul.spiritualProfile,
       });
 
       // Marquer l'âme comme promue

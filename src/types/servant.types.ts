@@ -1,3 +1,5 @@
+import { SpiritualProfile } from './database.types';
+
 export type ServantSourceType = 'soul' | 'user' | 'manual';
 
 export interface Servant {
@@ -21,6 +23,9 @@ export interface Servant {
   // Rétro-compat (= sourceId quand sourceType === 'soul')
   originalSoulId?: string;
   promotionDate?: Date;
+  // Recopié depuis la soul source au moment de la promotion (né de nouveau,
+  // baptême...) — reste figé ensuite, pas resynchronisé avec la soul.
+  spiritualProfile?: SpiritualProfile;
 }
 
 export interface ServantFormData {
@@ -39,4 +44,5 @@ export interface ServantFormData {
   sourceId?: string;
   originalSoulId?: string;
   promotionDate?: Date;
+  spiritualProfile?: SpiritualProfile;
 }

@@ -31,6 +31,7 @@ function rowToServant(row: any): Servant {
     sourceId: row.source_id,
     originalSoulId: row.original_soul_id,
     promotionDate: row.promotion_date ? new Date(row.promotion_date) : undefined,
+    spiritualProfile: row.spiritual_profile || undefined,
   };
 }
 
@@ -51,6 +52,7 @@ function formToRow(data: Partial<ServantFormData>): Record<string, any> {
   if (data.sourceId !== undefined)        row.source_id        = data.sourceId;
   if (data.originalSoulId !== undefined)  row.original_soul_id = data.originalSoulId;
   if (data.promotionDate !== undefined)   row.promotion_date   = data.promotionDate?.toISOString() ?? null;
+  if (data.spiritualProfile !== undefined) row.spiritual_profile = data.spiritualProfile || null;
   return row;
 }
 
@@ -108,6 +110,7 @@ export class ServantService {
         source_id: data.sourceId || null,
         original_soul_id: data.originalSoulId || (data.sourceType === 'soul' ? data.sourceId : null) || null,
         promotion_date: data.promotionDate?.toISOString() ?? null,
+        spiritual_profile: data.spiritualProfile || null,
         status: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -461,6 +464,8 @@ export class ServantService {
             phone: soul.phone || '',
             email: soul.email?.trim() || null,
             department_ids: [departmentId],
+            family_id: soul.service_family_id || null,
+            spiritual_profile: soul.spiritual_profile || null,
             is_head: false,
             is_shepherd: false,
             shepherd_id: null,
