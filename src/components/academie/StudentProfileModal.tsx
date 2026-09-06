@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -9,7 +9,16 @@ import type { AcademieStudentProfile } from '../../types/academie.types';
 import { useDepartments } from '../../hooks/useDepartments';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import toast from 'react-hot-toast';
-import { Phone, MessageCircle, MapPin, Mail, User, BadgeCheck, Pencil, Save, X } from 'lucide-react';
+import { Phone, MessageCircle, MapPin, Mail, User, BadgeCheck, Pencil, Save, X, Info } from 'lucide-react';
+
+interface SoulHint {
+  gender?: 'male' | 'female';
+  conversionYear?: number;
+  baptismDate?: string;
+  departmentName?: string;
+  departmentIdFromServant?: string;
+  serviceFamilyId?: string;
+}
 
 interface StudentProfile {
   fullName: string;
@@ -37,6 +46,9 @@ export function StudentProfileModal({ userId, onClose }: StudentProfileModalProp
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [soulHint, setSoulHint] = useState<SoulHint | null>(null);
+  const [prefillNote, setPrefillNote] = useState(false);
+  const prefillAppliedRef = useRef(false);
   const { departments } = useDepartments();
   const { families } = useServiceFamilies();
 
@@ -74,14 +86,70 @@ export function StudentProfileModal({ userId, onClose }: StudentProfileModalProp
       departmentId: academie?.departmentId || '',
       serviceFamilyId: academie?.serviceFamilyId || '',
     });
+
+    // Pas encore de fiche Académie confirmée : on tente de retrouver un dossier
+    // existant (âme / B.O.S.S) par numéro de téléphone, pour suggérer un
+    // pré-remplissage — jamais pour l'imposer, le responsable valide ensuite.
+    if (!academie && data?.phone) {
+      const phone = data.phone;
+      const [{ data: soulRows }, { data: servantRows }] = await Promise.all([
+        supabase.from('souls').select('gender, spiritual_profile, service_family_id')
+          .eq('church_id', getChurchId()).eq('phone', phone).limit(1),
+        supabase.from('servants').select('gender, department_ids')
+          .eq('church_id', getChurchId()).eq('phone', phone).limit(1),
+      ]);
+      const soul = soulRows?.[0] as any;
+      const servant = servantRows?.[0] as any;
+      if (soul || servant) {
+        const sp = soul?.spiritual_profile || {};
+        const deptHistory: { name: string; startDate: string }[] = Array.isArray(sp.departments) ? sp.departments : [];
+        setSoulHint({
+          gender: servant?.gender || soul?.gender || undefined,
+          conversionYear: sp.bornAgainDate ? new Date(sp.bornAgainDate).getFullYear() : undefined,
+          baptismDate: sp.isBaptized && sp.baptismDate ? String(sp.baptismDate).slice(0, 10) : undefined,
+          departmentName: deptHistory.length > 0 ? deptHistory[deptHistory.length - 1].name : undefined,
+          departmentIdFromServant: servant?.department_ids?.[0] || undefined,
+          serviceFamilyId: soul?.service_family_id || undefined,
+        });
+      } else {
+        setSoulHint(null);
+      }
+    } else {
+      setSoulHint(null);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
-    if (!userId) { setProfile(null); setAcademieProfile(null); setEditing(false); return; }
+    if (!userId) { setProfile(null); setAcademieProfile(null); setEditing(false); setSoulHint(null); setPrefillNote(false); prefillAppliedRef.current = false; return; }
+    prefillAppliedRef.current = false;
+    setPrefillNote(false);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  // Applique le pré-remplissage une fois le dossier existant trouvé et la
+  // liste des départements chargée (nécessaire pour matcher un nom de
+  // département à son id) — ne touche que les champs encore vides.
+  useEffect(() => {
+    if (!soulHint || prefillAppliedRef.current) return;
+    if (soulHint.departmentName && !soulHint.departmentIdFromServant && departments.length === 0) return;
+    prefillAppliedRef.current = true;
+    const matchedDeptId = soulHint.departmentIdFromServant
+      || departments.find(d => d.name.trim().toLowerCase() === soulHint.departmentName?.trim().toLowerCase())?.id;
+    const hasHint = !!(soulHint.gender || soulHint.conversionYear || soulHint.baptismDate || matchedDeptId || soulHint.serviceFamilyId);
+    if (!hasHint) return;
+    setForm(f => ({
+      ...f,
+      gender: f.gender || soulHint.gender || f.gender,
+      conversionYear: f.conversionYear || (soulHint.conversionYear ? String(soulHint.conversionYear) : f.conversionYear),
+      baptismDate: f.baptismDate || soulHint.baptismDate || f.baptismDate,
+      departmentId: f.departmentId || matchedDeptId || f.departmentId,
+      serviceFamilyId: f.serviceFamilyId || soulHint.serviceFamilyId || f.serviceFamilyId,
+    }));
+    setPrefillNote(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soulHint, departments]);
 
   const handleSave = async () => {
     if (!userId) return;
@@ -192,6 +260,12 @@ export function StudentProfileModal({ userId, onClose }: StudentProfileModalProp
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {prefillNote && (
+                    <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                      <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                      <span>Certains champs ci-dessous ont été repris automatiquement du dossier existant (âme / B.O.S.S) retrouvé via son numéro de téléphone — vérifie-les avant d'enregistrer.</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Date de naissance</label>
