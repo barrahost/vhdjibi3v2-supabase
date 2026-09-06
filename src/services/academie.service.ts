@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import type {
   AcademieClass, AcademieSession, AcademieResource, AcademieAssignment, AcademieEnrollment, AcademieProgress,
+  AcademieStudentProfile,
 } from '../types/academie.types';
 
 function rowToClass(row: any): AcademieClass {
@@ -252,5 +253,45 @@ export class AcademieService {
       status: 'not_started', completed_at: null, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,session_id' });
     if (error) throw error;
+  }
+
+  // ─── Fiche etudiant (matricule + infos personnelles/spirituelles) ─
+  static async getStudentProfile(userId: string): Promise<AcademieStudentProfile | null> {
+    const { data, error } = await supabase.from('academie_students').select('*')
+      .eq('church_id', getChurchId()).eq('user_id', userId).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      userId: data.user_id, matricule: data.matricule || undefined,
+      birthDate: data.birth_date || undefined, gender: data.gender || undefined,
+      maritalStatus: data.marital_status || undefined, tshirtSize: data.tshirt_size || undefined,
+      conversionYear: data.conversion_year || undefined, baptismDate: data.baptism_date || undefined,
+      holySpiritBaptized: data.holy_spirit_baptized ?? undefined,
+      departmentId: data.department_id || undefined, serviceFamilyId: data.service_family_id || undefined,
+    };
+  }
+
+  /** Cree la fiche (avec matricule genere) si elle n'existe pas encore, sinon la met a jour. */
+  static async saveStudentProfile(userId: string, data: Partial<Omit<AcademieStudentProfile, 'userId' | 'matricule'>>): Promise<AcademieStudentProfile> {
+    const row: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (data.birthDate !== undefined) row.birth_date = data.birthDate || null;
+    if (data.gender !== undefined) row.gender = data.gender || null;
+    if (data.maritalStatus !== undefined) row.marital_status = data.maritalStatus || null;
+    if (data.tshirtSize !== undefined) row.tshirt_size = data.tshirtSize || null;
+    if (data.conversionYear !== undefined) row.conversion_year = data.conversionYear || null;
+    if (data.baptismDate !== undefined) row.baptism_date = data.baptismDate || null;
+    if (data.holySpiritBaptized !== undefined) row.holy_spirit_baptized = data.holySpiritBaptized;
+    if (data.departmentId !== undefined) row.department_id = data.departmentId || null;
+    if (data.serviceFamilyId !== undefined) row.service_family_id = data.serviceFamilyId || null;
+
+    const existing = await this.getStudentProfile(userId);
+    if (existing) {
+      const { error } = await supabase.from('academie_students').update(row).eq('user_id', userId).eq('church_id', getChurchId());
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('academie_students').insert({ church_id: getChurchId(), user_id: userId, ...row });
+      if (error) throw error;
+    }
+    return (await this.getStudentProfile(userId))!;
   }
 }

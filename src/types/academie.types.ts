@@ -60,6 +60,20 @@ export interface AcademieProgress {
   completedAt?: string;
 }
 
+export interface AcademieStudentProfile {
+  userId: string;
+  matricule?: string;
+  birthDate?: string;
+  gender?: 'male' | 'female';
+  maritalStatus?: string;
+  tshirtSize?: string;
+  conversionYear?: number;
+  baptismDate?: string;
+  holySpiritBaptized?: boolean;
+  departmentId?: string;
+  serviceFamilyId?: string;
+}
+
 export function resourceUrl(resource: Pick<AcademieResource, 'r2Key' | 'url'>): string {
   if (resource.r2Key) return `${ACADEMIE_R2_PUBLIC_URL}/${resource.r2Key}`;
   return resource.url || '';
