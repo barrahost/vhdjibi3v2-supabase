@@ -88,6 +88,40 @@ export class AcademieService {
     if (error) throw error;
   }
 
+  static async updateSession(id: string, data: Partial<{
+    weekNumber: number; section: string; theme: string; objectives: string;
+    duration: string; moderatorName: string; sessionDate: string;
+  }>): Promise<void> {
+    const row: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (data.weekNumber !== undefined) row.week_number = data.weekNumber;
+    if (data.section !== undefined) row.section = data.section || null;
+    if (data.theme !== undefined) row.theme = data.theme;
+    if (data.objectives !== undefined) row.objectives = data.objectives || null;
+    if (data.duration !== undefined) row.duration = data.duration || null;
+    if (data.moderatorName !== undefined) row.moderator_name = data.moderatorName || null;
+    if (data.sessionDate !== undefined) row.session_date = data.sessionDate || null;
+    const { error } = await supabase.from('academie_sessions').update(row).eq('id', id);
+    if (error) throw error;
+  }
+
+  static async createSession(data: {
+    classId: string; weekNumber: number; section?: string; theme: string;
+    objectives?: string; moderatorName?: string; sessionDate?: string;
+  }): Promise<void> {
+    const { error } = await supabase.from('academie_sessions').insert({
+      church_id: getChurchId(), class_id: data.classId, week_number: data.weekNumber,
+      section: data.section || null, theme: data.theme, objectives: data.objectives || null,
+      moderator_name: data.moderatorName || null, session_date: data.sessionDate || null,
+      is_published: false,
+    });
+    if (error) throw error;
+  }
+
+  static async deleteSession(id: string): Promise<void> {
+    const { error } = await supabase.from('academie_sessions').delete().eq('id', id);
+    if (error) throw error;
+  }
+
   // ─── Resources ────────────────────────────────────────────
   static async getResourcesBySession(sessionId: string): Promise<AcademieResource[]> {
     const { data, error } = await supabase.from('academie_resources').select('*')
