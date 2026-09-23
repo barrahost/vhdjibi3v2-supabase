@@ -13,7 +13,7 @@ import EvangelizedSoulManagement from './EvangelizedSoulManagement';
 type SoulTab = 'all' | 'undecided' | 'evangelized';
 
 const TAB_LABELS: Record<SoulTab, string> = {
-  all: 'Toutes',
+  all: 'Membres',
   undecided: 'Indécises',
   evangelized: 'Évangélisées',
 };
@@ -67,7 +67,7 @@ export default function SoulsHub({ defaultTab = 'all' }: SoulsHubProps = {}) {
     const loadCounts = async () => {
       const [allRes, undecidedRes, evangelizedRes] = await Promise.all([
         supabase.from('souls').select('id', { count: 'exact', head: true })
-          .eq('church_id', getChurchId()).eq('is_undecided', false)
+          .eq('church_id', getChurchId()).eq('is_undecided', false).eq('is_servant', false)
           .or('status.eq.active,status.is.null'),
         supabase.from('souls').select('id', { count: 'exact', head: true })
           .eq('church_id', getChurchId()).eq('is_undecided', true).eq('status', 'active'),
