@@ -70,8 +70,9 @@ export default function Login() {
         return;
       }
       toast.success('Connexion réussie');
-      // Page d'accueil par défaut de l'utilisateur (ex: rapport de son département)
-      navigate(superAdmin ? '/churches' : (loggedUser?.defaultRoute || '/'));
+      // Toujours le Tableau de bord : avec plusieurs casquettes, il s'ouvre déjà sur l'onglet
+      // du profil principal (voir Dashboard.tsx) -- pas besoin de sauter cet écran.
+      navigate(superAdmin ? '/churches' : '/');
     } catch {
       setError('Identifiant ou mot de passe incorrect. Vérifiez vos informations et réessayez.');
     } finally {
