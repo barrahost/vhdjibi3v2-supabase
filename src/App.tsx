@@ -74,6 +74,8 @@ const LeaveRequestForm = lazy(() => import('./pages/LeaveRequestForm'));
 const LeaveManagement = lazy(() => import('./pages/LeaveManagement'));
 const PrayerRequestForm = lazy(() => import('./pages/PrayerRequestForm'));
 const EvangelizationForm = lazy(() => import('./pages/EvangelizationForm'));
+const ReceptionCheckIn = lazy(() => import('./pages/ReceptionCheckIn'));
+const ReceptionQrCode = lazy(() => import('./pages/ReceptionQrCode'));
 const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
 const AcademieHub = lazy(() => import('./pages/AcademieHub'));
 const AcademieCourseTimeline = lazy(() => import('./pages/AcademieCourseTimeline'));
@@ -168,6 +170,11 @@ function AppContent() {
             <EvangelizationForm />
           </Suspense>
         } />
+        <Route path="/accueil" element={
+          <Suspense fallback={<PageLoader />}>
+            <ReceptionCheckIn />
+          </Suspense>
+        } />
         <Route path="/" element={
           <PrivateRoute>
             <Suspense fallback={<PageLoader />}>
@@ -191,7 +198,13 @@ function AppContent() {
               <SoulsHub defaultTab="undecided" />
             </PrivateRoute>
           } />
-          
+
+          <Route path="/qr-accueil" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
+              <ReceptionQrCode />
+            </PrivateRoute>
+          } />
+
           {/* Gestion des utilisateurs */}
           <Route path="users" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_USERS]}>

@@ -39,6 +39,7 @@ import {
   Eye,
   Network,
   GraduationCap,
+  QrCode,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -301,6 +302,7 @@ export function useNavigationItems(): NavItem[] {
     }
     if (hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
       children.push({ id: 'evangelized-signals', label: 'Signalements évangélistes', href: '/signalements-evangelistes', icon: <Megaphone className="w-5 h-5" /> });
+      children.push({ id: 'reception-qr', label: 'QR code accueil', href: '/qr-accueil', icon: <QrCode className="w-5 h-5" /> });
     }
     if (hasPermission(PERMISSIONS.MANAGE_USERS) && hasModule('users')) {
       children.push({ id: 'users', label: 'Utilisateurs', href: '/users', icon: <UserCog className="w-5 h-5" /> });
