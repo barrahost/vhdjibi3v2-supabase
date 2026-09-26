@@ -172,7 +172,7 @@ export default function ReceptionCheckIn() {
           </div>
         </div>
 
-        <div className="flex-1 max-w-lg mx-auto w-full px-4 py-6 space-y-5">
+        <div className="flex-1 max-w-lg mx-auto w-full px-4 py-6 space-y-5 pb-32">
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
             <h2 className="text-sm font-semibold text-gray-700">As-tu déjà rencontré quelqu'un de notre équipe ?</h2>
             <div className="relative">
