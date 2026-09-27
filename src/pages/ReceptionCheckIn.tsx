@@ -56,6 +56,7 @@ export default function ReceptionCheckIn() {
   const [results, setResults] = useState<CheckinSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [pendingPerson, setPendingPerson] = useState<CheckinSearchResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [gender, setGender] = useState<'' | 'male' | 'female'>('');
@@ -123,7 +124,7 @@ export default function ReceptionCheckIn() {
   };
 
   const handleReset = () => {
-    setSearchTerm(''); setResults([]); setShowNewForm(false);
+    setSearchTerm(''); setResults([]); setShowNewForm(false); setPendingPerson(null);
     setGender(''); setFullName(''); setPhone(''); setLocation(''); setFormError(null);
     setGaveLifeToJesus(''); setWillJoinVH(''); setAttendedCommunity(''); setPrayerTopics('');
     setDoneInfo(null);
@@ -191,19 +192,45 @@ export default function ReceptionCheckIn() {
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder="Tape ton nom..."
                 autoFocus
-                className="w-full h-12 pl-9 pr-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                disabled={!!pendingPerson}
+                className="w-full h-12 pl-9 pr-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C] disabled:bg-gray-50 disabled:text-gray-400"
               />
               {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 animate-spin" />}
             </div>
 
-            {results.length > 0 && (
+            {pendingPerson && (
+              <div className="rounded-xl border-2 border-[#00665C]/30 bg-[#00665C]/5 p-3 space-y-2.5">
+                <p className="text-sm text-gray-700">
+                  Tu es bien <span className="font-semibold">{pendingPerson.fullName}</span>
+                  {pendingPerson.location ? ` (${pendingPerson.location})` : ''} ?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleConfirm(pendingPerson)}
+                    disabled={pageState === 'submitting'}
+                    className="flex-1 h-10 bg-[#00665C] text-white text-sm font-medium rounded-xl hover:bg-[#00665C]/90 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {pageState === 'submitting' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    Oui, c'est moi
+                  </button>
+                  <button
+                    onClick={() => setPendingPerson(null)}
+                    disabled={pageState === 'submitting'}
+                    className="flex-1 h-10 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:border-gray-300 disabled:opacity-50"
+                  >
+                    Non, ce n'est pas moi
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!pendingPerson && results.length > 0 && (
               <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
                 {results.map(r => (
                   <button
                     key={r.id}
-                    onClick={() => handleConfirm(r)}
-                    disabled={pageState === 'submitting'}
-                    className="w-full text-left px-3 py-2.5 hover:bg-[#00665C]/5 transition-colors flex items-center justify-between gap-2 disabled:opacity-50"
+                    onClick={() => setPendingPerson(r)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-[#00665C]/5 transition-colors flex items-center justify-between gap-2"
                   >
                     <span>
                       <span className="text-sm text-gray-800 font-medium">{r.fullName}</span>
@@ -215,11 +242,11 @@ export default function ReceptionCheckIn() {
               </div>
             )}
 
-            {searchTerm.trim().length >= 2 && !searching && results.length === 0 && (
+            {!pendingPerson && searchTerm.trim().length >= 2 && !searching && results.length === 0 && (
               <p className="text-xs text-gray-400">Aucun résultat pour « {searchTerm.trim()} ».</p>
             )}
 
-            {!showNewForm && (
+            {!pendingPerson && !showNewForm && (
               <button
                 onClick={() => setShowNewForm(true)}
                 className="w-full flex items-center justify-center gap-1.5 h-10 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-[#00665C]/50 hover:text-[#00665C] transition-colors"
