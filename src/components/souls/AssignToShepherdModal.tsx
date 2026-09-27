@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { usePermissions } from '../../hooks/usePermissions';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { SMSService } from '../../services/sms.service';
 
 interface AssignToShepherdModalProps {
   isOpen: boolean;
@@ -78,6 +79,18 @@ export default function AssignToShepherdModal({
       toast.success(`${soulIds.length} âme(s) assignée(s) à ${shepherdName} avec succès !`);
       onSuccess?.();
       handleClose();
+
+      // Best-effort : ne doit jamais faire échouer l'attribution elle-même.
+      supabase
+        .from('souls')
+        .select('full_name, phone')
+        .in('id', soulIds)
+        .then(({ data }: any) => {
+          const soulsInfo = (data ?? []).map((r: any) => ({ fullName: r.full_name, phone: r.phone }));
+          if (soulsInfo.length > 0) {
+            SMSService.notifyShepherdOfAssignment(selectedShepherd, soulsInfo);
+          }
+        });
     } catch (error) {
       console.error("Erreur lors de l'assignation:", error);
       toast.error("Erreur lors de l'assignation des âmes");

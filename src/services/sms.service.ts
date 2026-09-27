@@ -84,6 +84,53 @@ export class SMSService {
     }
   }
 
+  // Notifie un berger par SMS quand une ou plusieurs âmes viennent de lui être
+  // confiées. Best-effort : ne bloque jamais l'attribution elle-même si l'envoi
+  // échoue (crédit insuffisant, numéro manquant, etc.) -- on log seulement.
+  // Volontairement PAS enregistré comme "interactions" (soul_id/shepherd_id) :
+  // c'est une notification système, pas un contact pastoral du berger vers
+  // l'âme -- l'inclure y fausserait le badge "Dernier contact".
+  static async notifyShepherdOfAssignment(
+    shepherdId: string,
+    souls: { fullName: string; phone?: string | null }[]
+  ): Promise<void> {
+    if (!shepherdId || souls.length === 0) return;
+    try {
+      const { data: rows, error } = await supabase
+        .from('users')
+        .select('full_name, phone')
+        .eq('church_id', getChurchId())
+        .eq('id', shepherdId)
+        .limit(1);
+      if (error || !rows || rows.length === 0) return;
+
+      const shepherdPhone = rows[0].phone as string | null;
+      if (!shepherdPhone) return;
+
+      const creditCheck = await this.checkSufficientCredits();
+      if (!creditCheck.sufficient) {
+        console.warn('Crédit SMS insuffisant — notification d\'attribution au berger non envoyée.');
+        return;
+      }
+
+      const shepherdFirstName = (rows[0].full_name || '').split(' ')[0] || '';
+
+      let message: string;
+      if (souls.length === 1) {
+        const [s] = souls;
+        const phoneSuffix = s.phone ? ` — ${s.phone.replace('+225', '')}` : '';
+        message = `Bonjour ${shepherdFirstName}, une nouvelle âme t'a été confiée : ${s.fullName}${phoneSuffix}. Pense à la contacter cette semaine.`;
+      } else {
+        const names = souls.slice(0, 5).map(s => s.fullName).join(', ') + (souls.length > 5 ? '…' : '');
+        message = `Bonjour ${shepherdFirstName}, ${souls.length} âmes te sont confiées : ${names}. Consulte "Mes âmes suivies" pour les contacter.`;
+      }
+
+      await this.sendSMS(shepherdPhone.replace('+225', ''), message);
+    } catch (error) {
+      console.error('Erreur lors de la notification SMS au berger:', error);
+    }
+  }
+
   static async getTemplates(category?: string): Promise<any[]> {
     try {
       let q = supabase

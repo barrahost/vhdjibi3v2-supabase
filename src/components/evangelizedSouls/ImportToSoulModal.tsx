@@ -157,6 +157,13 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported, e
         toast.error("SMS de bienvenue non envoyé — vous pourrez le renvoyer manuellement.");
       }
 
+      // Notifier le berger assigné (best effort, n'annule pas l'import)
+      if (data.shepherdId) {
+        SMSService.notifyShepherdOfAssignment(data.shepherdId, [
+          { fullName: data.fullName.trim(), phone: data.phone.trim() },
+        ]);
+      }
+
       toast.success('Âme reçue dans l\'église');
       onImported?.();
       onClose();
