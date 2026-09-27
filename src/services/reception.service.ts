@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { PlannedService } from '../types/evangelized.types';
+import type { PlannedService, GaveLifeToJesus, WillJoinVH } from '../types/evangelized.types';
 
 // Accueil ADN par QR code (page publique /accueil) — RPC dédiées, volontairement plus
 // restreintes que le reste de l'admin : la recherche ne renvoie jamais le téléphone.
@@ -39,7 +39,11 @@ export const ReceptionService = {
     gender: 'male' | 'female',
     phone: string,
     location: string,
-    plannedService: PlannedService | ''
+    plannedService: PlannedService | '',
+    gaveLifeToJesus: GaveLifeToJesus | '',
+    willJoinVH: WillJoinVH | '',
+    attendedCommunity: string,
+    prayerTopics: string
   ): Promise<void> {
     const { error } = await supabase.rpc('submit_reception_checkin', {
       p_church_id: churchId,
@@ -48,6 +52,10 @@ export const ReceptionService = {
       p_phone: phone,
       p_location: location,
       p_planned_service: plannedService,
+      p_gave_life_to_jesus: gaveLifeToJesus,
+      p_will_join_vh: willJoinVH,
+      p_attended_community: attendedCommunity,
+      p_prayer_topics: prayerTopics,
     });
     if (error) throw new Error(error.message);
   },

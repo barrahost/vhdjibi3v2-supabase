@@ -8,7 +8,7 @@ import { ReceptionService, CheckinSearchResult } from '../services/reception.ser
 import { RecurringScheduleService } from '../services/culteEvent.service';
 import { GenderRadioGroup } from '../components/ui/GenderRadioGroup';
 import { PhoneInput } from '../components/ui/PhoneInput';
-import { PlannedService, PLANNED_SERVICE_TO_MEETING_TYPE } from '../types/evangelized.types';
+import { PlannedService, PLANNED_SERVICE_TO_MEETING_TYPE, GaveLifeToJesus, WillJoinVH, GAVE_LIFE_OPTIONS, WILL_JOIN_VH_OPTIONS } from '../types/evangelized.types';
 
 type PageState = 'loading' | 'ready' | 'submitting' | 'done';
 type DoneKind = 'confirmed' | 'new';
@@ -62,6 +62,10 @@ export default function ReceptionCheckIn() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
+  const [gaveLifeToJesus, setGaveLifeToJesus] = useState<'' | GaveLifeToJesus>('');
+  const [willJoinVH, setWillJoinVH] = useState<'' | WillJoinVH>('');
+  const [attendedCommunity, setAttendedCommunity] = useState('');
+  const [prayerTopics, setPrayerTopics] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -106,7 +110,10 @@ export default function ReceptionCheckIn() {
     setFormError(null);
     setPageState('submitting');
     try {
-      await ReceptionService.submitNewVisitor(getChurchId(), fullName, gender, phone, location, plannedService);
+      await ReceptionService.submitNewVisitor(
+        getChurchId(), fullName, gender, phone, location, plannedService,
+        gaveLifeToJesus, willJoinVH, attendedCommunity, prayerTopics
+      );
       setDoneInfo({ kind: 'new', name: fullName.trim() });
       setPageState('done');
     } catch (e: any) {
@@ -118,6 +125,7 @@ export default function ReceptionCheckIn() {
   const handleReset = () => {
     setSearchTerm(''); setResults([]); setShowNewForm(false);
     setGender(''); setFullName(''); setPhone(''); setLocation(''); setFormError(null);
+    setGaveLifeToJesus(''); setWillJoinVH(''); setAttendedCommunity(''); setPrayerTopics('');
     setDoneInfo(null);
     setPageState('ready');
   };
@@ -254,6 +262,68 @@ export default function ReceptionCheckIn() {
                   value={location}
                   onChange={e => setLocation(e.target.value)}
                   className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Communauté fréquentée</label>
+                <input
+                  type="text"
+                  value={attendedCommunity}
+                  onChange={e => setAttendedCommunity(e.target.value)}
+                  placeholder="Église ou communauté actuelle (facultatif)"
+                  className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">As-tu donné ta vie à Jésus ?</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {GAVE_LIFE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setGaveLifeToJesus(opt.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-colors ${
+                        gaveLifeToJesus === opt.value
+                          ? 'border-[#00665C] bg-[#00665C]/5 text-[#00665C]'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Veux-tu rejoindre notre église ?</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {WILL_JOIN_VH_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setWillJoinVH(opt.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-colors ${
+                        willJoinVH === opt.value
+                          ? 'border-[#00665C] bg-[#00665C]/5 text-[#00665C]'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sujets de prière</label>
+                <textarea
+                  rows={3}
+                  value={prayerTopics}
+                  onChange={e => setPrayerTopics(e.target.value)}
+                  placeholder="Ce pour quoi tu aimerais qu'on prie avec toi (facultatif)"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C] resize-none"
                 />
               </div>
 
