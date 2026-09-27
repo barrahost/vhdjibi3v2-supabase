@@ -20,6 +20,7 @@ import { Input } from '../ui/input';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
+import { SMSService } from '../../services/sms.service';
 import {
   Check, ChevronLeft, ChevronRight,
   Heart, HelpCircle, UserCheck,
@@ -278,9 +279,10 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
         }
       }
 
+      const finalShepherdId = formData.general.isUndecided ? undefined : dataToValidate.shepherdId;
       const updateData = sanitizeSoulData({
         ...dataToValidate,
-        shepherdId: formData.general.isUndecided ? undefined : dataToValidate.shepherdId,
+        shepherdId: finalShepherdId,
         createdAt: soul.createdAt || new Date(),
         photoURL,
       });
@@ -295,6 +297,14 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
       onClose();
       if (onUpdate) onUpdate();
       success = true;
+
+      // Nouvelle attribution (berger absent ou différent auparavant) : notifier par SMS.
+      // Best-effort, après coup -- ne doit jamais bloquer l'enregistrement.
+      if (finalShepherdId && finalShepherdId !== soul.shepherdId) {
+        SMSService.notifyShepherdOfAssignment(finalShepherdId, [
+          { fullName: formData.general.fullName, phone: formData.general.phone },
+        ]);
+      }
     } catch (error) {
       console.error('Error updating soul:', error);
       toast.error('Erreur lors de la modification: Vérifiez les données saisies');
