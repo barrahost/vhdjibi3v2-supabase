@@ -4,6 +4,7 @@ import ShepherdSelect from '../souls/ShepherdSelect';
 import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { SMSTemplate } from '../../types/sms.types';
 import { SMSService } from '../../services/sms.service';
+import { PushService } from '../../services/push.service';
 import { EvangelizedSoul } from '../../types/evangelized.types';
 import { Info, Heart, UserCheck, HelpCircle } from 'lucide-react';
 import { PhoneInput } from '../ui/PhoneInput';
@@ -162,6 +163,12 @@ export default function ImportToSoulModal({ soul, isOpen, onClose, onImported, e
         SMSService.notifyShepherdOfAssignment(data.shepherdId, [
           { fullName: data.fullName.trim(), phone: data.phone.trim() },
         ]);
+        PushService.notify(
+          [data.shepherdId],
+          'Nouvelle âme confiée',
+          `${data.fullName.trim()} t'a été confiée.`,
+          '/assigned-souls'
+        );
       }
 
       toast.success('Âme reçue dans l\'église');
