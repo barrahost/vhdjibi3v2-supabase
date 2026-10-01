@@ -11,6 +11,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 import { SMSService } from '../../services/sms.service';
+import { PushService } from '../../services/push.service';
 
 interface AssignToShepherdModalProps {
   isOpen: boolean;
@@ -89,6 +90,12 @@ export default function AssignToShepherdModal({
           const soulsInfo = (data ?? []).map((r: any) => ({ fullName: r.full_name, phone: r.phone }));
           if (soulsInfo.length > 0) {
             SMSService.notifyShepherdOfAssignment(selectedShepherd, soulsInfo);
+
+            const title = soulsInfo.length === 1 ? 'Nouvelle âme confiée' : `${soulsInfo.length} âmes confiées`;
+            const body = soulsInfo.length === 1
+              ? `${soulsInfo[0].fullName} t'a été confiée.`
+              : soulsInfo.slice(0, 5).map((s: any) => s.fullName).join(', ') + (soulsInfo.length > 5 ? '…' : '');
+            PushService.notify([selectedShepherd], title, body, '/assigned-souls');
           }
         });
     } catch (error) {

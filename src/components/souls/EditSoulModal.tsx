@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 import { SMSService } from '../../services/sms.service';
+import { PushService } from '../../services/push.service';
 import {
   Check, ChevronLeft, ChevronRight,
   Heart, HelpCircle, UserCheck,
@@ -304,6 +305,12 @@ export default function EditSoulModal({ soul, isOpen, onClose, onUpdate }: EditS
         SMSService.notifyShepherdOfAssignment(finalShepherdId, [
           { fullName: formData.general.fullName, phone: formData.general.phone },
         ]);
+        PushService.notify(
+          [finalShepherdId],
+          'Nouvelle âme confiée',
+          `${formData.general.fullName} t'a été confiée.`,
+          '/assigned-souls'
+        );
       }
     } catch (error) {
       console.error('Error updating soul:', error);

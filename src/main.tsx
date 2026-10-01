@@ -16,6 +16,17 @@ window.addEventListener('vite:preloadError', (event) => {
   }
 });
 
+// Inscrit le service worker (requis pour les notifications push et pour une
+// installabilité PWA fiable). L'abonnement push lui-même reste à part,
+// déclenché seulement quand l'utilisateur l'active dans son profil.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.error('Échec de l\'inscription du service worker:', error);
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

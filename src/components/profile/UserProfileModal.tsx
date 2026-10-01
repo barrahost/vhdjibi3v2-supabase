@@ -4,6 +4,7 @@ import { User, Mail, Phone, Calendar, Shield, Save, X, Camera, Navigation, Alert
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import { StorageService } from '../../services/storage.service';
+import { PushService } from '../../services/push.service';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
  
@@ -58,35 +59,46 @@ export function UserProfileModal() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('notif_sound_enabled') === 'true');
-  const [browserNotifEnabled, setBrowserNotifEnabled] = useState(() => localStorage.getItem('notif_browser_enabled') === 'true');
+  const [browserNotifEnabled, setBrowserNotifEnabled] = useState(false);
   const [browserNotifBlocked, setBrowserNotifBlocked] = useState(false);
+  const [browserNotifLoading, setBrowserNotifLoading] = useState(false);
+
+  // Statut réel de l'abonnement push (pas un simple flag localStorage) à
+  // chaque ouverture du profil -- reflète l'état du navigateur, pas un souvenir.
+  useEffect(() => {
+    if (!isProfileModalOpen) return;
+    PushService.isSubscribed().then(setBrowserNotifEnabled);
+  }, [isProfileModalOpen]);
 
   const toggleSound = (checked: boolean) => {
     setSoundEnabled(checked);
     localStorage.setItem('notif_sound_enabled', String(checked));
   };
 
-  const toggleBrowserNotif = (checked: boolean) => {
+  const toggleBrowserNotif = async (checked: boolean) => {
     if (!checked) {
       setBrowserNotifEnabled(false);
-      localStorage.setItem('notif_browser_enabled', 'false');
+      await PushService.unsubscribe();
       return;
     }
-    if (!('Notification' in window)) {
-      toast.error("Votre navigateur ne supporte pas les notifications");
+    if (!PushService.isSupported()) {
+      toast.error("Votre navigateur ne supporte pas les notifications push");
       return;
     }
-    Notification.requestPermission().then((permission) => {
-      if (permission === 'granted') {
-        setBrowserNotifEnabled(true);
-        setBrowserNotifBlocked(false);
-        localStorage.setItem('notif_browser_enabled', 'true');
-      } else {
-        setBrowserNotifEnabled(false);
-        setBrowserNotifBlocked(true);
-        localStorage.setItem('notif_browser_enabled', 'false');
-      }
-    });
+    if (!userData) return;
+
+    setBrowserNotifLoading(true);
+    const ok = await PushService.subscribe(userData.id);
+    setBrowserNotifLoading(false);
+
+    if (ok) {
+      setBrowserNotifEnabled(true);
+      setBrowserNotifBlocked(false);
+      toast.success('Notifications activées sur cet appareil');
+    } else {
+      setBrowserNotifEnabled(false);
+      setBrowserNotifBlocked(Notification.permission === 'denied');
+    }
   };
 
   useEffect(() => {
@@ -666,15 +678,20 @@ export function UserProfileModal() {
               <label className="flex items-center justify-between cursor-pointer">
                 <span className="flex items-center gap-2 text-sm text-gray-700">
                   <Bell className="w-4 h-4 text-gray-400" />
-                  Notifications du navigateur
+                  Notifications push
                 </span>
                 <input
                   type="checkbox"
                   checked={browserNotifEnabled}
+                  disabled={browserNotifLoading}
                   onChange={(e) => toggleBrowserNotif(e.target.checked)}
-                  className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
+                  className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C] disabled:opacity-50"
                 />
               </label>
+              <p className="text-xs text-gray-400 -mt-2">
+                Reçois une alerte même appli fermée (ex. nouvelle âme confiée). Sur iPhone,
+                installe d'abord l'appli sur l'écran d'accueil.
+              </p>
 
               {browserNotifBlocked && (
                 <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
