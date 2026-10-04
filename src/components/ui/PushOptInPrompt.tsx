@@ -57,7 +57,7 @@ export function PushOptInPrompt() {
   if (!visible) return null;
 
   return (
-    <FloatingPrompt placement="app">
+    <FloatingPrompt>
       <PromptBar
         icon={
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50">

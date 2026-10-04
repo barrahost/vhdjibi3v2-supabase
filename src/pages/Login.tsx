@@ -190,6 +190,9 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-[#00665C]/10 to-[#F2B636]/10">
       <div className="flex min-h-screen flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
 
+        {/* Proposition d'installer l'appli (mobile uniquement, dès l'arrivée) */}
+        <PWAInstallBanner placement="login" />
+
         {/* Logo + titre + verset */}
         <div className="sm:mx-auto sm:w-full sm:max-w-xl">
           <div className="flex flex-col items-center gap-0">
@@ -330,7 +333,6 @@ export default function Login() {
         </div>
       </div>
 
-      <PWAInstallBanner placement="login" />
       <ChangelogModal isOpen={isChangelogOpen} onClose={() => setIsChangelogOpen(false)} />
     </div>
   );

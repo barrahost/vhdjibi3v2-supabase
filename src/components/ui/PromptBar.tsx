@@ -50,24 +50,18 @@ export function PromptBar({ icon, title, description, actionLabel, onAction, onD
 }
 
 /**
- * Positionne une invitation en bas de l'écran sans jamais décaler le contenu de la page :
- * - 'login' : tout en bas (la page de connexion n'a pas de menu) ;
- * - 'app'   : au-dessus du menu du bas sur mobile (≈53 px), dans la zone principale sur grand écran.
- * Un espace équivalent est réservé en fin de page pour que le bas reste accessible en scrollant.
+ * Positionne une invitation dans l'appli sans jamais décaler le contenu de la page :
+ * au-dessus du menu du bas sur mobile (≈53 px), dans la zone principale à droite du menu
+ * latéral sur grand écran. Un espace équivalent est réservé en fin de page pour que le bas
+ * reste accessible en scrollant.
  */
-export function FloatingPrompt({ placement, children }: { placement: 'login' | 'app'; children: ReactNode }) {
+export function FloatingPrompt({ children }: { children: ReactNode }) {
   return (
     <>
-      <div
-        className={
-          placement === 'login'
-            ? 'pointer-events-none fixed inset-x-0 bottom-0 z-40 p-3'
-            : 'pointer-events-none fixed inset-x-0 bottom-[73px] z-40 px-3 lg:bottom-4 lg:left-64'
-        }
-      >
+      <div className="pointer-events-none fixed inset-x-0 bottom-[73px] z-40 px-3 lg:bottom-4 lg:left-64">
         <div className="pointer-events-auto mx-auto max-w-lg">{children}</div>
       </div>
-      <div aria-hidden className={placement === 'login' ? 'h-28' : 'h-24 lg:h-20'} />
+      <div aria-hidden className="h-24 lg:h-20" />
     </>
   );
 }

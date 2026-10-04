@@ -11,11 +11,15 @@ import {
   isInstallPromptDismissed,
   promptInstall,
   subscribeInstallState,
+  type InstallPlatform,
 } from '../../lib/pwaInstall';
 import { FloatingPrompt, PromptBar } from './PromptBar';
 
 interface PWAInstallBannerProps {
-  /** 'login' : page de connexion (tout en bas) ; 'app' : dans l'appli (au-dessus du menu du bas). */
+  /**
+   * 'login' : carte en haut de la page de connexion, dès l'arrivée, avec les étapes visibles ;
+   * 'app'   : barre compacte flottante au-dessus du menu du bas, une fois les cookies réglés.
+   */
   placement?: 'login' | 'app';
 }
 
@@ -36,16 +40,16 @@ export function PWAInstallBanner({ placement = 'app' }: PWAInstallBannerProps) {
   const appName = church?.shortName || church?.name || 'Bergerie';
   const appLogo = church?.logoUrl || '/logo-agc-bergerie.svg';
 
-  // Pas de bandeau tant que le bandeau cookies est affiché, puis un court délai
-  // pour ne pas surgir pendant le chargement de la page.
+  // Barre flottante : pas tant que le bandeau cookies (en bas aussi) est affiché, puis un
+  // court délai pour ne pas surgir pendant le chargement. La carte du haut n'en a pas besoin.
   useEffect(() => {
-    if (!consented) return;
+    if (placement !== 'app' || !consented) return;
     const timer = setTimeout(() => setReady(true), 1200);
     return () => clearTimeout(timer);
-  }, [consented]);
+  }, [placement, consented]);
 
   // Android : l'installation vient d'être faite (via notre bouton ou le menu du navigateur).
-  // Le toast n'est émis que si le changement a lieu pendant que ce bandeau est monté :
+  // Le toast n'est émis que si le changement a lieu pendant que ce composant est monté :
   // ni au retour sur une page (connexion → appli) ni deux fois pour la même installation.
   const previousInstallState = useRef(installState);
   useEffect(() => {
@@ -75,18 +79,32 @@ export function PWAInstallBanner({ placement = 'app' }: PWAInstallBannerProps) {
     if (outcome !== 'accepted') dismiss(); // refus ou échec : on laisse tranquille 7 jours
   };
 
-  if (!available || !consented || !ready || dismissed || isSuperAdminDomain()) return null;
+  if (!available || dismissed || isSuperAdminDomain()) return null;
 
-  const alerts = placement === 'login' || receivesAlerts;
+  if (placement === 'login') {
+    return (
+      <div className="mb-5 sm:mx-auto sm:w-full sm:max-w-xl">
+        <InstallCard
+          appName={appName}
+          appLogo={appLogo}
+          platform={platform}
+          onInstall={handleInstall}
+          onDismiss={dismiss}
+        />
+      </div>
+    );
+  }
+
+  if (!consented || !ready) return null;
 
   return (
     <>
-      <FloatingPrompt placement={placement}>
+      <FloatingPrompt>
         <PromptBar
           icon={<img src={appLogo} alt="" className="h-10 w-10 rounded-lg object-contain" />}
           title="Installe l'appli"
           description={
-            alerts
+            receivesAlerts
               ? 'Reçois tes alertes, même appli fermée'
               : "Accès rapide depuis ton écran d'accueil"
           }
@@ -107,7 +125,128 @@ export function PWAInstallBanner({ placement = 'app' }: PWAInstallBannerProps) {
   );
 }
 
-// ── Guide d'installation iPhone / iPad (aucune installation automatique possible sur iOS) ──
+// ── Carte d'arrivée (page de connexion) ────────────────────────────────────────────────────
+// Android : un bouton qui ouvre la fenêtre d'installation native.
+// iPhone / iPad : aucune installation automatique possible → les étapes sont affichées tout de suite.
+function InstallCard({
+  appName,
+  appLogo,
+  platform,
+  onInstall,
+  onDismiss,
+}: {
+  appName: string;
+  appLogo: string;
+  platform: InstallPlatform;
+  onInstall: () => void;
+  onDismiss: () => void;
+}) {
+  const manualSteps = platform !== 'native';
+
+  return (
+    <div
+      role="region"
+      aria-label={`Installer ${appName}`}
+      className="animate-fade-in overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg"
+    >
+      <div className="p-4">
+        <div className="flex items-center gap-3">
+          <img
+            src={appLogo}
+            alt=""
+            className="h-12 w-12 flex-shrink-0 rounded-xl bg-brand-50 object-contain p-1"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold text-gray-900">Installer {appName}</p>
+            <p className="text-sm leading-snug text-gray-500">
+              Pour recevoir tes alertes, même appli fermée
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Plus tard"
+            title="Plus tard"
+            className="-mr-1 flex-shrink-0 self-start rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {manualSteps ? (
+          <>
+            <div className="mt-4 rounded-xl bg-gray-50 p-3">
+              <p className="mb-3 text-sm font-medium text-gray-700">Comment installer :</p>
+              <IosInstallSteps needsSafari={platform === 'ios-browser'} />
+            </div>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="mt-3 w-full rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+            >
+              J'ai compris
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={onInstall}
+            className="mt-4 w-full rounded-xl bg-[#00665C] py-2.5 text-sm font-medium text-white hover:bg-[#00665C]/90 active:bg-[#00524A]"
+          >
+            Installer
+          </button>
+        )}
+      </div>
+      {/* Barre de couleurs signature */}
+      <div className="h-1 bg-gradient-to-r from-[#00665C] via-[#F2B636] to-[#A32035]" />
+    </div>
+  );
+}
+
+// ── Étapes d'installation iPhone / iPad (partagées par la carte et le guide) ──────────────
+function IosInstallSteps({ needsSafari }: { needsSafari: boolean }) {
+  const steps = [
+    <>
+      Appuie sur{' '}
+      <span className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-xs font-medium ring-1 ring-gray-200">
+        <Share className="h-3 w-3" /> Partager
+      </span>{' '}
+      dans la barre de Safari
+    </>,
+    <>
+      Fais défiler et choisis{' '}
+      <span className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-xs font-medium ring-1 ring-gray-200">
+        <PlusSquare className="h-3 w-3" /> Sur l'écran d'accueil
+      </span>
+    </>,
+    <>
+      Confirme avec <strong>Ajouter</strong>
+    </>,
+  ];
+
+  return (
+    <>
+      {needsSafari && (
+        <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          Sur iPhone, l'installation se fait depuis <strong>Safari</strong> : ouvre cette page
+          dans Safari, puis suis les étapes ci-dessous.
+        </p>
+      )}
+      <ol className="space-y-3">
+        {steps.map((step, index) => (
+          <li key={index} className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#00665C] text-xs font-bold text-white">
+              {index + 1}
+            </span>
+            <p className="text-sm text-gray-700">{step}</p>
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
+// ── Guide en feuille modale (barre flottante de l'appli, sur iPhone / iPad) ────────────────
 function IosInstallGuide({
   appName,
   needsSafari,
@@ -124,25 +263,6 @@ function IosInstallGuide({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
-
-  const steps = [
-    <>
-      Appuie sur{' '}
-      <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium">
-        <Share className="h-3 w-3" /> Partager
-      </span>{' '}
-      dans la barre de Safari
-    </>,
-    <>
-      Fais défiler et choisis{' '}
-      <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium">
-        <PlusSquare className="h-3 w-3" /> Sur l'écran d'accueil
-      </span>
-    </>,
-    <>
-      Confirme avec <strong>Ajouter</strong>
-    </>,
-  ];
 
   return (
     <div
@@ -167,27 +287,11 @@ function IosInstallGuide({
           </button>
         </div>
 
-        <p className="mt-1 text-sm text-gray-600">
+        <p className="mb-4 mt-1 text-sm text-gray-600">
           Reçois tes alertes même appli fermée et ouvre l'appli en un geste.
         </p>
 
-        {needsSafari && (
-          <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-            Sur iPhone, l'installation se fait depuis <strong>Safari</strong> : ouvre cette page
-            dans Safari, puis suis les étapes ci-dessous.
-          </p>
-        )}
-
-        <ol className="mt-4 space-y-3">
-          {steps.map((step, index) => (
-            <li key={index} className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#00665C] text-xs font-bold text-white">
-                {index + 1}
-              </span>
-              <p className="text-sm text-gray-700">{step}</p>
-            </li>
-          ))}
-        </ol>
+        <IosInstallSteps needsSafari={needsSafari} />
 
         <p className="mt-4 text-xs text-gray-500">
           Ensuite, ouvre l'appli depuis son icône sur ton écran d'accueil : c'est là que tu
