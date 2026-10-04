@@ -6,6 +6,7 @@ import { Logo } from '../components/ui/Logo';
 import { Eye, EyeOff, FileText, Loader2, AlertCircle, Building2, ShieldCheck, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ChangelogModal } from '../components/ui/ChangelogModal';
+import { PWAInstallBanner } from '../components/ui/PWAInstallBanner';
 
 const SUPPORT_PHONE = '+225 07 57 00 02 03';
 const SUPPORT_PHONE_HREF = 'tel:+2250757000203';
@@ -329,6 +330,7 @@ export default function Login() {
         </div>
       </div>
 
+      <PWAInstallBanner placement="login" />
       <ChangelogModal isOpen={isChangelogOpen} onClose={() => setIsChangelogOpen(false)} />
     </div>
   );

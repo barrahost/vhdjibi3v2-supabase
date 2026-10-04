@@ -1,3 +1,6 @@
+// À importer AVANT App : le module s'abonne à `beforeinstallprompt` (émis une seule fois,
+// très tôt) pour que le bandeau d'installation puisse l'utiliser plus tard.
+import './lib/pwaInstall';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';

@@ -93,8 +93,12 @@ export function UserProfileModal() {
       setBrowserNotifBlocked(false);
       toast.success('Notifications activées sur cet appareil');
     } else {
+      const denied = Notification.permission === 'denied';
       setBrowserNotifEnabled(false);
-      setBrowserNotifBlocked(Notification.permission === 'denied');
+      setBrowserNotifBlocked(denied);
+      // Refus de permission : l'indication « bloquées » s'affiche déjà sous l'interrupteur.
+      // Autre échec (réseau, configuration…) : sans message, l'interrupteur reviendrait en silence.
+      if (!denied) toast.error("Impossible d'activer les notifications pour le moment.");
     }
   };
 
