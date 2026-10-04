@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PrivacyPreferencesModal } from '../gdpr/PrivacyPreferencesModal';
+import { notifyCookieConsentChanged } from '../../lib/cookieConsent';
 
 export function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
@@ -21,6 +22,7 @@ export function CookieBanner() {
       timestamp: new Date().toISOString()
     }));
     setIsVisible(false);
+    notifyCookieConsentChanged();
   };
 
   const acceptNecessary = () => {
@@ -32,6 +34,7 @@ export function CookieBanner() {
       timestamp: new Date().toISOString()
     }));
     setIsVisible(false);
+    notifyCookieConsentChanged();
   };
 
   if (!isVisible) return null;
@@ -80,6 +83,7 @@ export function CookieBanner() {
       onSave={() => {
         setShowPreferences(false);
         setIsVisible(false);
+        notifyCookieConsentChanged();
       }}
     />
     </>

@@ -8,6 +8,7 @@ import { Footer } from './Footer';
 import { OfflineIndicator } from './OfflineIndicator';
 import { BackToTop } from './BackToTop';
 import { PWAInstallBanner } from './PWAInstallBanner';
+import { PushOptInPrompt } from './PushOptInPrompt';
 import BugReportButton from './BugReportButton';
 import { MobileBottomNav } from './MobileBottomNav';
 import { SMSStatusBanner } from '../sms/SMSStatusBanner';
@@ -51,7 +52,8 @@ export default function Layout() {
       {/* Utility overlays */}
       <OfflineIndicator />
       <BackToTop />
-      <PWAInstallBanner />
+      <PWAInstallBanner placement="app" />
+      <PushOptInPrompt />
       <BugReportButton />
 
     </div>
