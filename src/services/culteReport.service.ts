@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
+import { probeCulteModule } from '../lib/culteModule';
 import {
   CulteReport,
   CulteReportType,
@@ -260,6 +261,16 @@ export const CulteReportService = {
   },
 
   async deleteReport(id: string): Promise<void> {
+    // Module « Cultes » : les besoins du rapport supprimé suivent le rapport (comme avant), sauf ceux déjà pris en
+    // charge dans le plan d'actions (responsable désigné, action démarrée ou terminée), qui survivent sans rapport.
+    if (await probeCulteModule()) {
+      const { error: keepError } = await supabase
+        .from('culte_report_needs')
+        .update({ culte_report_id: null })
+        .eq('culte_report_id', id)
+        .or('responsible_id.not.is.null,status.neq.todo');
+      if (keepError) throw keepError;
+    }
     const { error } = await supabase.from('culte_reports').delete().eq('id', id);
     if (error) throw error;
   },

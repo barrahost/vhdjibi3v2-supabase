@@ -8,7 +8,6 @@ import { useCulteModule } from '../hooks/useCulteModule';
 import { capitalize, daysFromToday, formatDayFr, formatRangeFr, isEventFinished, todayISO } from '../lib/culteTiming';
 import { CulteCockpitService, type EventSummary } from '../services/culteBrief.service';
 import { CulteActionService, summarizeActions } from '../services/culteAction.service';
-import { CulteDirectory } from '../services/culteDirectory.service';
 import type { CulteAction, CulteEventInfo } from '../types/culteBrief.types';
 
 function dayBadge(iso: string): { text: string; tone: 'brand' | 'gray' } {
@@ -65,6 +64,7 @@ function EventRow({ event, summary, past }: { event: CulteEventInfo; summary?: E
 export default function CulteHub() {
   const { enabled, loading: moduleLoading } = useCulteModule();
   const access = useCulteAccess();
+  const { canManageAction } = access;
   const [events, setEvents] = useState<CulteEventInfo[]>([]);
   const [summaries, setSummaries] = useState<Record<string, EventSummary>>({});
   const [actions, setActions] = useState<CulteAction[]>([]);
@@ -74,25 +74,19 @@ export default function CulteHub() {
     try {
       const list = await CulteCockpitService.listHubEvents();
       setEvents(list);
-      const [sums, openActions, departments] = await Promise.all([
+      const [sums, openActions] = await Promise.all([
         CulteCockpitService.getSummaries(list.map((e) => e.id)),
         CulteActionService.list({ scope: 'open' }),
-        CulteDirectory.departments(),
       ]);
       setSummaries(sums);
-      const managedNames = new Set(departments.filter((d) => access.managedDepartmentIds.includes(d.id)).map((d) => d.name));
-      setActions(
-        access.isManager
-          ? openActions
-          : openActions.filter((a) => a.responsibleId === access.userId || managedNames.has(a.departmentName))
-      );
+      setActions(openActions.filter((a) => canManageAction(a)));
     } catch (error) {
       console.error('Error loading culte hub:', error);
       toast.error('Erreur lors du chargement des cultes');
     } finally {
       setLoading(false);
     }
-  }, [access.isManager, access.managedDepartmentIds, access.userId]);
+  }, [canManageAction]);
 
   useEffect(() => {
     if (enabled && !access.loading) load();

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
+import { todayISO } from '../lib/culteTiming';
 import { CulteEvent, CulteRecurringSchedule, CulteReportType, DayOfWeek } from '../types/culteReport.types';
 
 function mapEvent(row: any): CulteEvent {
@@ -62,11 +63,13 @@ export const CulteEventService = {
     return (data ?? []).map(mapEvent);
   },
 
+  /** Cultes passés ou du jour (le module « Cultes » crée d'avance ceux des prochains jours : on ne rapporte pas un culte à venir). */
   async getRecentEvents(limitCount = 30): Promise<CulteEvent[]> {
     const { data, error } = await supabase
       .from('culte_events')
       .select('*')
       .eq('church_id', getChurchId())
+      .lte('service_date', todayISO())
       .order('service_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(limitCount);

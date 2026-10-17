@@ -5,14 +5,16 @@ import toast from 'react-hot-toast';
 import { BRIEF_REGIE_QUESTION } from '../../data/culteGuide';
 import { supabase } from '../../lib/supabase';
 import { addDaysISO, compareEventsInDay, formatRangeFr, formatTimeFr, getPreparationWindow, shortServiceLabel } from '../../lib/culteTiming';
+import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { checklistProgress, CulteChecklistService } from '../../services/culteChecklist.service';
 import { CulteActionService } from '../../services/culteAction.service';
 import { CulteDirectory } from '../../services/culteDirectory.service';
 import { CulteNotifyService } from '../../services/culteNotify.service';
 import type { ChecklistItem, ChecklistStatus, CulteAction } from '../../types/culteBrief.types';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { ActionEditorModal, type ActionDraft } from './ActionEditorModal';
 import type { CockpitTabProps } from './tabTypes';
-import { Card, EmptyState, Pill, ProgressBar, Spinner, inputCls } from './ui';
+import { Card, EmptyState, Pill, ProgressBar, Spinner, inputBaseCls, inputCls } from './ui';
 
 interface DepartmentGroup {
   name: string;
@@ -33,15 +35,19 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
   const containerRef = useRef<HTMLDivElement>(null);
 
   const actor = useMemo(() => ({ id: access.userId, name: access.userName }), [access.userId, access.userName]);
+  const { canManageAction } = access;
   const earlier = useMemo(
     () => dayEvents.filter((e) => e.id !== event.id && compareEventsInDay(e, event) < 0),
     [dayEvents, event]
   );
   const previous = earlier[earlier.length - 1] ?? null;
+  const hasEarlier = earlier.length > 0;
   const prepWindow = useMemo(() => getPreparationWindow(event, previous), [event, previous]);
 
+  const { confirm, confirmModalProps } = useConfirmModal();
+
   const load = useCallback(
-    async (ensure = false) => {
+    async (ensure = false, silent = false) => {
       try {
         if (ensure) await CulteChecklistService.ensureForEvent(event, dayEvents);
         const list = await CulteChecklistService.list(event.id);
@@ -54,19 +60,20 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
             CulteActionService.list({ scope: 'open', eventIds: earlierIds }),
           ]);
           setCarryItems(nok);
-          setCarryActions(actions);
+          setCarryActions(actions.filter((a) => canManageAction(a)));
         } else {
           setCarryItems([]);
           setCarryActions([]);
         }
       } catch (error) {
         console.error('Error loading checklist:', error);
-        toast.error('Erreur lors du chargement du contrôle');
+        // Les actualisations automatiques (temps réel, sondage) ne dérangent pas : hors connexion, pas un toast toutes les 30 s
+        if (!silent) toast.error('Erreur lors du chargement du contrôle');
       } finally {
         setLoading(false);
       }
     },
-    [event, dayEvents, earlier]
+    [event, dayEvents, earlier, canManageAction]
   );
 
   useEffect(() => {
@@ -81,7 +88,8 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
     const refresh = () => {
       const active = document.activeElement;
       if (active && containerRef.current?.contains(active) && /^(INPUT|TEXTAREA)$/.test(active.tagName)) return;
-      load(false);
+      // Au 2e culte, on rejoue aussi la reprise des points « une fois par jour » : le 1er culte a pu être contrôlé entre-temps
+      load(hasEarlier, true);
     };
     const channel = supabase
       .channel(`culte-checklist-${event.id}`)
@@ -94,7 +102,7 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
       window.clearInterval(poll);
       supabase.removeChannel(channel);
     };
-  }, [event.id, load]);
+  }, [event.id, load, hasEarlier]);
 
   const groups = useMemo<DepartmentGroup[]>(() => {
     const map = new Map<string, DepartmentGroup>();
@@ -131,17 +139,29 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
     try {
       patchItem(await CulteChecklistService.setStatus(item.id, next, actor));
       onChanged?.();
-      if (next === 'nok' && before.status !== 'nok') {
-        const audience = await CulteDirectory.managersAudience();
-        void CulteNotifyService.notifyUsers(
-          audience.map((u) => u.id),
-          { title: 'Point de contrôle non OK', body: `${item.departmentName} : ${item.task}`, url: `/cultes/${event.id}?tab=controle` },
-          { excludeUserId: access.userId }
-        );
-      }
     } catch (error: any) {
       patchItem(before);
       toast.error(error?.message || 'Erreur lors de la mise à jour du point');
+      return;
+    }
+    // Le point est enregistré : un souci d'alerte ne doit ni l'annuler à l'écran ni afficher une erreur
+    if (next === 'nok' && before.status !== 'nok') void alertManagers(item);
+  };
+
+  const alertManagers = async (item: ChecklistItem) => {
+    try {
+      const audience = await CulteDirectory.managersAudience();
+      await CulteNotifyService.notifyUsers(
+        audience.map((u) => u.id),
+        {
+          title: 'Point de contrôle non OK',
+          body: `${item.departmentName} : ${item.task} (${shortServiceLabel(event.meetingTypeName)})`,
+          url: `/cultes/${event.id}?tab=controle`,
+        },
+        { excludeUserId: access.userId }
+      );
+    } catch (error) {
+      console.error('Erreur lors de l\'alerte du point non OK:', error);
     }
   };
 
@@ -167,6 +187,8 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
   };
 
   const handleDelete = async (item: ChecklistItem) => {
+    const ok = await confirm(`Retirer « ${item.task} » du contrôle de ce culte ?`, { title: 'Retirer ce point', confirmLabel: 'Retirer' });
+    if (!ok) return;
     try {
       await CulteChecklistService.remove(item.id);
       setItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -275,7 +297,7 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
                 <div className="border-t border-gray-100 divide-y divide-gray-100">
                   {group.items.map((item) => (
                     <ChecklistRow
-                      key={`${item.id}-${item.status}-${item.observation ?? ''}-${item.responsibleName ?? ''}`}
+                      key={item.id}
                       item={item}
                       canEdit={canEdit}
                       inheritedFrom={previous ? shortServiceLabel(previous.meetingTypeName) : 'culte précédent'}
@@ -299,8 +321,16 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
                         value={newTask[group.name] ?? ''}
                         onChange={(e) => setNewTask((prev) => ({ ...prev, [group.name]: e.target.value }))}
                         placeholder="Ajouter un point pour ce culte seulement…"
-                        className={inputCls}
+                        aria-label={`Ajouter un point de contrôle pour ${group.name}`}
+                        className={`${inputBaseCls} min-w-0 flex-1`}
                       />
+                      <button
+                        type="submit"
+                        disabled={!(newTask[group.name] ?? '').trim()}
+                        className="flex-shrink-0 px-3 py-2 text-sm font-medium text-[#00665C] border border-[#00665C]/30 rounded-md hover:bg-[#00665C]/5 disabled:opacity-40"
+                      >
+                        Ajouter
+                      </button>
                     </form>
                   )}
                 </div>
@@ -309,6 +339,8 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
           );
         })
       )}
+
+      <ConfirmModal {...confirmModalProps} />
 
       <ActionEditorModal
         isOpen={!!actionDraft}
@@ -320,6 +352,7 @@ export function ChecklistTab({ event, dayEvents, access, onChanged }: CockpitTab
         actor={{ id: access.userId, name: access.userName }}
         draft={actionDraft ?? undefined}
         nextServiceDate={addDaysISO(event.serviceDate, 7)}
+        allowedDepartmentNames={access.allowedActionDepartments}
       />
     </div>
   );
@@ -339,6 +372,20 @@ interface ChecklistRowProps {
 function ChecklistRow({ item, canEdit, inheritedFrom, onStatus, onUpdate, onCreateAction, onDelete }: ChecklistRowProps) {
   const isNok = item.status === 'nok';
   const showDetails = isNok || !!item.observation || !!item.responsibleName;
+
+  // Observation et responsable sont enregistrés à la sortie du champ. Leur état local ne reprend la valeur
+  // du serveur (autre utilisateur, actualisation) que si le champ n'est pas en cours de saisie : la ligne
+  // n'est jamais remontée, sinon passer d'un champ à l'autre effaçait ce qu'on venait de taper.
+  const [observation, setObservation] = useState(item.observation ?? '');
+  const [responsible, setResponsible] = useState(item.responsibleName ?? '');
+  const observationRef = useRef<HTMLTextAreaElement>(null);
+  const responsibleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (document.activeElement !== observationRef.current) setObservation(item.observation ?? '');
+  }, [item.observation]);
+  useEffect(() => {
+    if (document.activeElement !== responsibleRef.current) setResponsible(item.responsibleName ?? '');
+  }, [item.responsibleName]);
 
   return (
     <div className={`px-4 py-3 ${isNok ? 'bg-red-50/50' : ''}`}>
@@ -383,21 +430,25 @@ function ChecklistRow({ item, canEdit, inheritedFrom, onStatus, onUpdate, onCrea
       {showDetails && (
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
           <textarea
+            ref={observationRef}
             rows={2}
-            defaultValue={item.observation ?? ''}
+            value={observation}
+            onChange={(e) => setObservation(e.target.value)}
             disabled={!canEdit}
             placeholder="Observation / action immédiate"
             aria-label="Observation"
-            onBlur={(e) => e.target.value !== (item.observation ?? '') && onUpdate({ observation: e.target.value })}
+            onBlur={() => observation !== (item.observation ?? '') && onUpdate({ observation })}
             className={inputCls}
           />
           <input
+            ref={responsibleRef}
             type="text"
-            defaultValue={item.responsibleName ?? ''}
+            value={responsible}
+            onChange={(e) => setResponsible(e.target.value)}
             disabled={!canEdit}
             placeholder="Responsable"
             aria-label="Responsable"
-            onBlur={(e) => e.target.value !== (item.responsibleName ?? '') && onUpdate({ responsibleName: e.target.value })}
+            onBlur={() => responsible !== (item.responsibleName ?? '') && onUpdate({ responsibleName: responsible })}
             className={inputCls}
           />
         </div>
@@ -406,12 +457,12 @@ function ChecklistRow({ item, canEdit, inheritedFrom, onStatus, onUpdate, onCrea
       {(isNok || onDelete) && canEdit && (
         <div className="mt-2 flex items-center gap-3">
           {isNok && (
-            <button type="button" onClick={onCreateAction} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#00665C] hover:underline">
+            <button type="button" onClick={onCreateAction} className="inline-flex items-center gap-1.5 py-2 text-sm font-medium text-[#00665C] hover:underline">
               <ClipboardPlus className="w-4 h-4" /> Créer une action
             </button>
           )}
           {onDelete && (
-            <button type="button" onClick={onDelete} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 ml-auto">
+            <button type="button" onClick={onDelete} className="inline-flex items-center gap-1 py-2 pl-3 text-sm text-gray-500 hover:text-red-600 ml-auto">
               <Trash2 className="w-3.5 h-3.5" /> Retirer ce point
             </button>
           )}

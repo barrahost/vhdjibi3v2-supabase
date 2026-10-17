@@ -4,7 +4,6 @@ import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { addDaysISO, formatDayFr } from '../../lib/culteTiming';
 import { CulteActionService, summarizeActions } from '../../services/culteAction.service';
-import { CulteDirectory } from '../../services/culteDirectory.service';
 import type { CulteAction } from '../../types/culteBrief.types';
 import { ActionEditorModal } from './ActionEditorModal';
 import { ActionList } from './ActionList';
@@ -17,7 +16,6 @@ export function ActionsTab({ event, access, onChanged }: CockpitTabProps) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CulteAction | null>(null);
   const [creating, setCreating] = useState(false);
-  const [managedNames, setManagedNames] = useState<string[]>([]);
 
   const actor = useMemo(() => ({ id: access.userId, name: access.userName }), [access.userId, access.userName]);
 
@@ -37,16 +35,9 @@ export function ActionsTab({ event, access, onChanged }: CockpitTabProps) {
     load();
   }, [load]);
 
-  useEffect(() => {
-    CulteDirectory.departments()
-      .then((departments) => setManagedNames(departments.filter((d) => access.managedDepartmentIds.includes(d.id)).map((d) => d.name)))
-      .catch(() => undefined);
-  }, [access.managedDepartmentIds]);
-
-  const canManage = (action: CulteAction) =>
-    access.isManager || action.responsibleId === access.userId || managedNames.includes(action.departmentName);
-
-  const summary = summarizeActions(actions);
+  // Même règle que le plan d'actions : les non-responsables du culte ne voient que leurs départements et ce qui leur est confié
+  const visibleActions = useMemo(() => actions.filter((a) => access.canManageAction(a)), [actions, access]);
+  const summary = summarizeActions(visibleActions);
   const eventLabels = { [event.id]: formatDayFr(event.serviceDate) };
 
   if (loading) return <Spinner />;
@@ -67,13 +58,13 @@ export function ActionsTab({ event, access, onChanged }: CockpitTabProps) {
         </div>
       </div>
 
-      {actions.length === 0 ? (
+      {visibleActions.length === 0 ? (
         <EmptyState>Aucune action liée à ce culte pour l'instant. Elles naissent d'un point « non OK » du contrôle ou d'une décision du débrief.</EmptyState>
       ) : (
         <ActionList
-          actions={actions}
+          actions={visibleActions}
           actor={actor}
-          canManage={canManage}
+          canManage={access.canManageAction}
           eventLabels={eventLabels}
           onEdit={setEditing}
           onChanged={() => {
@@ -97,6 +88,7 @@ export function ActionsTab({ event, access, onChanged }: CockpitTabProps) {
         action={editing}
         draft={{ eventId: event.id, source: 'manuel' }}
         nextServiceDate={addDaysISO(event.serviceDate, 7)}
+        allowedDepartmentNames={access.allowedActionDepartments}
       />
     </div>
   );

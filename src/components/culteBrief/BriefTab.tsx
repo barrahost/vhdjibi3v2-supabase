@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Copy, Plus, Video, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BRIEF_FIELDS } from '../../data/culteGuide';
@@ -42,7 +42,7 @@ function ReadBlock({ label, text }: { label: string; text?: string }) {
   );
 }
 
-export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProps) {
+export function BriefTab({ event, dayEvents, access, onChanged, active = true, onDirtyChange }: CockpitTabProps) {
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<CulteMeeting<BriefContent> | null>(null);
   const [content, setContent] = useState<BriefContent>({});
@@ -55,14 +55,26 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
   const [saving, setSaving] = useState(false);
   const { confirm, confirmModalProps } = useConfirmModal();
 
+  // Ce que cet écran a réellement modifié : on n'enregistre que cela, par-dessus la dernière version
+  // du serveur (un autre responsable a pu compléter le brief entre-temps).
+  const dirtyFields = useRef<Set<keyof BriefContent>>(new Set());
+  const rowsDirty = useRef(false);
+  const baselineRows = useRef<RunSheetItem[]>([]);
+  const dirtyRef = useRef(false);
+  const loadedFor = useRef<string | null>(null);
+  const markDirty = () => {
+    dirtyRef.current = true;
+    setDirty(true);
+  };
+
   const actor = useMemo(() => ({ id: access.userId, name: access.userName }), [access.userId, access.userName]);
   const previous = useMemo(
     () => [...dayEvents].filter((e) => e.id !== event.id && compareEventsInDay(e, event) < 0).pop() ?? null,
     [dayEvents, event]
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [brief, runSheet, savedInstr, depts] = await Promise.all([
         CulteMeetingService.get<BriefContent>(event.id, 'brief'),
@@ -77,18 +89,32 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
       setInstructions(Object.fromEntries(savedInstr.map((i) => [i.departmentName, i.instructions])));
       setOpenInstructionDepts(savedInstr.filter((i) => i.instructions.trim()).map((i) => i.departmentName));
       setDepartments(depts);
+      baselineRows.current = runSheet;
+      dirtyFields.current = new Set();
+      rowsDirty.current = false;
+      dirtyRef.current = false;
       setDirty(false);
     } catch (error) {
       console.error('Error loading brief:', error);
-      toast.error('Erreur lors du chargement du brief');
+      if (!silent) toast.error('Erreur lors du chargement du brief');
     } finally {
       setLoading(false);
     }
   }, [event.id]);
 
+  // Chargement à l'ouverture et à chaque changement de culte ; au retour sur l'onglet, mise à jour
+  // discrète — sauf s'il y a une saisie en cours, qu'on ne remplace jamais.
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!active) return;
+    const sameEvent = loadedFor.current === event.id;
+    if (sameEvent && dirtyRef.current) return;
+    load(sameEvent);
+    loadedFor.current = event.id;
+  }, [active, event.id, load]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const myDepartmentNames = useMemo(
     () => departments.filter((d) => access.managedDepartmentIds.includes(d.id)).map((d) => d.name),
@@ -97,16 +123,23 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
 
   const setField = (key: keyof BriefContent, value: string) => {
     setContent((prev) => ({ ...prev, [key]: value }));
-    setDirty(true);
+    dirtyFields.current.add(key);
+    markDirty();
   };
 
-  /** Enregistre le contenu, le conducteur et les consignes modifiées. */
+  /** Enregistre ce qui a été modifié ici : champs du cadre, conducteur, consignes. */
   const persist = async (): Promise<void> => {
-    await CulteMeetingService.save<BriefContent>(event.id, 'brief', content, actor);
-    await CulteRunSheetService.sync(
-      event.id,
-      rows.filter((row) => row.title.trim())
-    );
+    if (dirtyFields.current.size > 0) {
+      const patch = Object.fromEntries(Array.from(dirtyFields.current).map((key) => [key, content[key] ?? '']));
+      await CulteMeetingService.savePatch<BriefContent>(event.id, 'brief', patch, actor);
+    }
+    if (rowsDirty.current) {
+      await CulteRunSheetService.sync(
+        event.id,
+        rows.filter((row) => row.title.trim()),
+        baselineRows.current
+      );
+    }
     const unchanged = new Map(savedInstructions.map((i) => [i.departmentName, i.instructions]));
     await Promise.all(
       Object.entries(instructions)
@@ -137,7 +170,7 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
     if (!ok) return;
     setSaving(true);
     try {
-      await persist();
+      if (dirty) await persist();
       await CulteMeetingService.setStatus(event.id, 'brief', 'ready', actor);
       const audience = await CulteDirectory.briefAudience();
       const result = await CulteNotifyService.notifyUsers(
@@ -298,7 +331,8 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
             rows={rows}
             onChange={(next) => {
               setRows(next);
-              setDirty(true);
+              rowsDirty.current = true;
+              markDirty();
             }}
             departmentNames={departments.map((d) => d.name)}
             eventStart={event.startTime}
@@ -319,7 +353,7 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
                   onClick={() => {
                     setOpenInstructionDepts((prev) => prev.filter((n) => n !== name));
                     setInstructions((prev) => ({ ...prev, [name]: '' }));
-                    setDirty(true);
+                    markDirty();
                   }}
                   className="p-1 text-gray-400 hover:text-red-600"
                 >
@@ -332,7 +366,7 @@ export function BriefTab({ event, dayEvents, access, onChanged }: CockpitTabProp
                 value={instructions[name] ?? ''}
                 onChange={(e) => {
                   setInstructions((prev) => ({ ...prev, [name]: e.target.value }));
-                  setDirty(true);
+                  markDirty();
                 }}
                 className={inputCls}
               />

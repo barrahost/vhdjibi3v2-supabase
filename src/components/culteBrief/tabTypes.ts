@@ -9,4 +9,8 @@ export interface CockpitTabProps {
   access: CulteAccess;
   /** Le cockpit recharge ses compteurs (badges des onglets) après une modification. */
   onChanged?: () => void;
+  /** L'onglet reste monté quand on change d'onglet (pour ne pas perdre une saisie) : faux quand il est masqué. */
+  active?: boolean;
+  /** Prévient le cockpit qu'il y a une saisie non enregistrée (garde-fou avant de changer de culte). */
+  onDirtyChange?: (dirty: boolean) => void;
 }

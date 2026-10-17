@@ -29,7 +29,7 @@ interface ActionEditorModalProps {
   draft?: ActionDraft;
   /** Date proposée comme échéance « avant le prochain culte ». */
   nextServiceDate?: string;
-  /** Départements que l'utilisateur peut choisir (tous si absent). */
+  /** Départements que l'utilisateur peut choisir : tous si absent, aucun si la liste est vide. */
   allowedDepartmentNames?: string[];
 }
 
@@ -64,7 +64,7 @@ export function ActionEditorModal({ isOpen, onClose, onSaved, actor, action, dra
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, action?.id]);
 
-  const departmentOptions = allowedDepartmentNames?.length
+  const departmentOptions = allowedDepartmentNames
     ? departments.filter((d) => allowedDepartmentNames.includes(d.name))
     : departments;
   const departmentId = departments.find((d) => d.name === departmentName)?.id ?? null;

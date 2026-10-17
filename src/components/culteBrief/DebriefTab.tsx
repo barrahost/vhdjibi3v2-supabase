@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -28,11 +28,22 @@ const toValues = (sheet?: DepartmentDebrief | null): DebriefSheetValues =>
     ? { positives: sheet.positives, difficulties: sheet.difficulties, causes: sheet.causes, needs: sheet.needs, solutions: sheet.solutions }
     : blankDebriefSheet();
 
-export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
+export function DebriefTab({ event, access, onChanged, active = true, onDirtyChange }: CockpitTabProps) {
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<CulteMeeting<DebriefContent> | null>(null);
   const [general, setGeneral] = useState<DebriefContent>({});
   const [generalDirty, setGeneralDirty] = useState(false);
+  // Champs du débrief général modifiés ici : seuls ceux-là sont enregistrés, par-dessus la dernière version du serveur
+  const dirtyGeneralFields = useRef<Set<keyof DebriefContent>>(new Set());
+  const generalDirtyRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const loadedFor = useRef<string | null>(null);
+  const editGeneral = (key: keyof DebriefContent, value: string) => {
+    setGeneral((prev) => ({ ...prev, [key]: value }));
+    dirtyGeneralFields.current.add(key);
+    generalDirtyRef.current = true;
+    setGeneralDirty(true);
+  };
   const [sheets, setSheets] = useState<DepartmentDebrief[]>([]);
   const [forms, setForms] = useState<Record<string, DebriefSheetValues>>({});
   const [items, setItems] = useState<ChecklistItem[]>([]);
@@ -44,8 +55,10 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
   const [actionEditor, setActionEditor] = useState<{ action?: CulteAction; draft?: ActionDraft } | null>(null);
 
   const actor = useMemo(() => ({ id: access.userId, name: access.userName }), [access.userId, access.userName]);
+  const { canManageAction } = access;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [debriefMeeting, sheetList, checklist, actionList, depts] = await Promise.all([
         CulteMeetingService.get<DebriefContent>(event.id, 'debrief'),
@@ -55,8 +68,8 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
         CulteDirectory.departments(),
       ]);
       setMeeting(debriefMeeting);
-      setGeneral(debriefMeeting?.content ?? {});
-      setGeneralDirty(false);
+      // Une saisie en cours dans le débrief général n'est jamais remplacée par une actualisation
+      if (!generalDirtyRef.current) setGeneral(debriefMeeting?.content ?? {});
       setSheets(sheetList);
       setForms((prev) => {
         const next: Record<string, DebriefSheetValues> = {};
@@ -64,20 +77,29 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
         return { ...next, ...Object.fromEntries(Object.entries(prev).filter(([name]) => !(name in next))) };
       });
       setItems(checklist);
-      setActions(actionList);
+      setActions(actionList.filter((a) => canManageAction(a)));
       setDepartments(depts);
     } catch (error) {
       console.error('Error loading debrief:', error);
-      toast.error('Erreur lors du chargement du débrief');
+      if (!silent) toast.error('Erreur lors du chargement du débrief');
     } finally {
       setLoading(false);
     }
-  }, [event.id]);
+  }, [event.id, canManageAction]);
 
+  // Chargement à l'ouverture et à chaque changement de culte ; au retour sur l'onglet, mise à jour discrète
   useEffect(() => {
-    setLoading(true);
-    load();
-  }, [load]);
+    if (!active) return;
+    const sameEvent = loadedFor.current === event.id;
+    if (!sameEvent) {
+      dirtyGeneralFields.current = new Set();
+      generalDirtyRef.current = false;
+      setGeneralDirty(false);
+      setForms({});
+    }
+    load(sameEvent);
+    loadedFor.current = event.id;
+  }, [active, event.id, load]);
 
   const departmentNames = useMemo(() => {
     const names = new Set<string>([
@@ -97,9 +119,13 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
   const saveGeneral = async (status?: 'done' | 'draft') => {
     setSaving('general');
     try {
-      await CulteMeetingService.save<DebriefContent>(event.id, 'debrief', general, actor, status);
+      const patch = Object.fromEntries(Array.from(dirtyGeneralFields.current).map((key) => [key, general[key] ?? '']));
+      await CulteMeetingService.savePatch<DebriefContent>(event.id, 'debrief', patch, actor, status);
+      dirtyGeneralFields.current = new Set();
+      generalDirtyRef.current = false;
+      setGeneralDirty(false);
       toast.success(status === 'done' ? 'Débrief clôturé' : 'Débrief enregistré');
-      await load();
+      await load(true);
       onChanged?.();
     } catch (error: any) {
       toast.error(error?.message || "Erreur lors de l'enregistrement");
@@ -113,10 +139,14 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
     const department = departments.find((d) => d.name === name);
     setSaving(name);
     try {
+      const previousNeeds = sheets.find((s) => s.departmentName === name)?.needs ?? '';
       await CulteDebriefService.save(event.id, { id: department?.id, name }, values, actor);
-      const created = await CulteActionService.createNeedsFromLines({ eventId: event.id, departmentName: name, text: values.needs }, actor);
+      const created = await CulteActionService.createNeedsFromLines(
+        { eventId: event.id, departmentName: name, text: values.needs, previousText: previousNeeds },
+        actor
+      );
       toast.success(created > 0 ? `Fiche enregistrée — ${created} action(s) ajoutée(s) au plan` : 'Fiche enregistrée');
-      await load();
+      await load(true);
       onChanged?.();
     } catch (error: any) {
       toast.error(error?.message || "Erreur lors de l'enregistrement de la fiche");
@@ -124,6 +154,17 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
       setSaving(null);
     }
   };
+
+  // Saisie non enregistrée : débrief général, ou fiche d'un département modifiée par rapport à la dernière version enregistrée
+  const sheetsDirty = Object.entries(forms).some(([name, values]) => {
+    const saved = toValues(sheets.find((s) => s.departmentName === name));
+    return JSON.stringify(values) !== JSON.stringify(saved);
+  });
+  const hasUnsaved = generalDirty || sheetsDirty;
+  dirtyRef.current = hasUnsaved;
+  useEffect(() => {
+    onDirtyChange?.(hasUnsaved);
+  }, [hasUnsaved, onDirtyChange]);
 
   const arbitration = actions.filter((a) => a.needsArbitration && !isActionClosed(a.status));
   const isClosed = meeting?.status === 'done';
@@ -150,10 +191,7 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
                     id={`general-${q.key}`}
                     rows={2}
                     value={general[q.key] ?? ''}
-                    onChange={(e) => {
-                      setGeneral((prev) => ({ ...prev, [q.key]: e.target.value }));
-                      setGeneralDirty(true);
-                    }}
+                    onChange={(e) => editGeneral(q.key, e.target.value)}
                     className={inputCls}
                   />
                 ) : (
@@ -166,11 +204,11 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
               <>
                 <div>
                   <label htmlFor="general-arbitration" className={labelCls}>Points nécessitant un arbitrage</label>
-                  <textarea id="general-arbitration" rows={2} value={general.arbitration ?? ''} onChange={(e) => { setGeneral((p) => ({ ...p, arbitration: e.target.value })); setGeneralDirty(true); }} className={inputCls} />
+                  <textarea id="general-arbitration" rows={2} value={general.arbitration ?? ''} onChange={(e) => editGeneral('arbitration', e.target.value)} className={inputCls} />
                 </div>
                 <div>
                   <label htmlFor="general-conclusion" className={labelCls}>Conclusion</label>
-                  <textarea id="general-conclusion" rows={2} value={general.conclusion ?? ''} onChange={(e) => { setGeneral((p) => ({ ...p, conclusion: e.target.value })); setGeneralDirty(true); }} className={inputCls} />
+                  <textarea id="general-conclusion" rows={2} value={general.conclusion ?? ''} onChange={(e) => editGeneral('conclusion', e.target.value)} className={inputCls} />
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <button type="button" onClick={() => saveGeneral()} disabled={saving === 'general' || !generalDirty} className={secondaryBtn}>
@@ -343,6 +381,7 @@ export function DebriefTab({ event, access, onChanged }: CockpitTabProps) {
         action={actionEditor?.action}
         draft={actionEditor?.draft}
         nextServiceDate={addDaysISO(event.serviceDate, 7)}
+        allowedDepartmentNames={access.allowedActionDepartments}
       />
     </div>
   );

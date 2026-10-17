@@ -12,11 +12,14 @@ import { CulteChecklistTemplateService } from '../services/culteChecklist.servic
 import { CulteDirectory, type DirectoryDepartment } from '../services/culteDirectory.service';
 import type { ChecklistScope, ChecklistTemplate } from '../types/culteBrief.types';
 
+type TemplatePatch = { task?: string; indicator?: string | null; scope?: ChecklistScope; isActive?: boolean };
+
 interface TemplateRowProps {
   template: ChecklistTemplate;
   index: number;
   total: number;
-  onSave: (template: ChecklistTemplate) => void;
+  /** Seuls les champs modifiés sont envoyés : deux modifications rapprochées ne s'écrasent pas. */
+  onSave: (patch: TemplatePatch) => void;
   onMove: (delta: number) => void;
   onDelete: () => void;
 }
@@ -25,19 +28,18 @@ function TemplateRow({ template, index, total, onSave, onMove, onDelete }: Templ
   const [task, setTask] = useState(template.task);
   const [indicator, setIndicator] = useState(template.indicator ?? '');
 
-  useEffect(() => {
-    setTask(template.task);
-    setIndicator(template.indicator ?? '');
-  }, [template.task, template.indicator]);
+  useEffect(() => setTask(template.task), [template.task]);
+  useEffect(() => setIndicator(template.indicator ?? ''), [template.indicator]);
 
   const commit = () => {
     if (!task.trim()) {
       setTask(template.task);
       return;
     }
-    if (task.trim() !== template.task || indicator.trim() !== (template.indicator ?? '')) {
-      onSave({ ...template, task: task.trim(), indicator: indicator.trim() || null });
-    }
+    const patch: TemplatePatch = {};
+    if (task.trim() !== template.task) patch.task = task.trim();
+    if (indicator.trim() !== (template.indicator ?? '')) patch.indicator = indicator.trim() || null;
+    if (Object.keys(patch).length > 0) onSave(patch);
   };
 
   return (
@@ -52,13 +54,13 @@ function TemplateRow({ template, index, total, onSave, onMove, onDelete }: Templ
           className={`${inputCls} font-medium`}
         />
         <div className="flex flex-shrink-0">
-          <button type="button" aria-label="Monter" onClick={() => onMove(-1)} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+          <button type="button" aria-label="Monter" onClick={() => onMove(-1)} disabled={index === 0} className="p-2.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
             <ArrowUp className="w-4 h-4" />
           </button>
-          <button type="button" aria-label="Descendre" onClick={() => onMove(1)} disabled={index === total - 1} className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+          <button type="button" aria-label="Descendre" onClick={() => onMove(1)} disabled={index === total - 1} className="p-2.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
             <ArrowDown className="w-4 h-4" />
           </button>
-          <button type="button" aria-label="Supprimer le point" onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-600">
+          <button type="button" aria-label="Supprimer le point" onClick={onDelete} className="p-2.5 ml-1 text-gray-400 hover:text-red-600">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -77,7 +79,7 @@ function TemplateRow({ template, index, total, onSave, onMove, onDelete }: Templ
           <input
             type="checkbox"
             checked={template.scope === 'day'}
-            onChange={(e) => onSave({ ...template, scope: e.target.checked ? 'day' : 'service' })}
+            onChange={(e) => onSave({ scope: e.target.checked ? 'day' : 'service' })}
             className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
           />
           Une seule fois par jour <span className="text-xs text-gray-400">(repris au 2e culte)</span>
@@ -86,7 +88,7 @@ function TemplateRow({ template, index, total, onSave, onMove, onDelete }: Templ
           <input
             type="checkbox"
             checked={template.isActive}
-            onChange={(e) => onSave({ ...template, isActive: e.target.checked })}
+            onChange={(e) => onSave({ isActive: e.target.checked })}
             className="rounded border-gray-300 text-[#00665C] focus:ring-[#00665C]"
           />
           Actif
@@ -134,9 +136,9 @@ export default function CulteChecklistSettings() {
   );
   const countFor = (d: DirectoryDepartment) => templates.filter((t) => t.departmentId === d.id || (!t.departmentId && t.departmentName === d.name)).length;
 
-  const save = async (template: ChecklistTemplate) => {
+  const save = async (template: ChecklistTemplate, patch: TemplatePatch) => {
     try {
-      const updated = await CulteChecklistTemplateService.save(template);
+      const updated = await CulteChecklistTemplateService.update(template.id, patch);
       setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     } catch (error: any) {
       toast.error(error?.message || "Erreur lors de l'enregistrement");
@@ -253,7 +255,7 @@ export default function CulteChecklistSettings() {
                     template={template}
                     index={index}
                     total={rows.length}
-                    onSave={save}
+                    onSave={(patch) => save(template, patch)}
                     onMove={(delta) => move(index, delta)}
                     onDelete={() => remove(template)}
                   />
