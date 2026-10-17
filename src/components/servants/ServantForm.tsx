@@ -4,6 +4,7 @@ import { validatePhoneNumber } from '../../utils/phoneValidation';
 import { GenderRadioGroup } from '../../components/ui/GenderRadioGroup';
 import { PhoneInput } from '../../components/ui/PhoneInput';
 import { useDepartments } from '../../hooks/useDepartments';
+import { useServiceFamilies } from '../../hooks/useServiceFamilies';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { AutomaticSyncService } from '../../services/automaticSync.service';
@@ -22,19 +23,23 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
     phone: '',
     email: '',
     departmentIds: [] as string[],
+    familyId: '',
     isHead: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; deptNames: string[] } | null>(null);
   const { departments, loading: loadingDepartments } = useDepartments();
+  const { families, loading: loadingFamilies } = useServiceFamilies();
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
-  // Responsable de département (non admin) : le formulaire est restreint à SES département(s).
+  // Responsable de département ou pasteur assistant (non admin) : formulaire restreint à SES département(s).
   const isDeptLeaderView = !(hasPermission('*') || hasPermission('MANAGE_SERVANTS'))
-    && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader');
+    && !!(user?.businessProfiles as any[])?.some((p: any) => p?.type === 'department_leader' || p?.type === 'pasteur_assistant');
   const lockedDepartmentIds = isDeptLeaderView
-    ? getProfileDepartmentIds(user?.businessProfiles?.find((p: any) => p.type === 'department_leader'))
+    ? Array.from(new Set(((user?.businessProfiles || []) as any[])
+        .filter((p: any) => p.type === 'department_leader' || p.type === 'pasteur_assistant')
+        .flatMap((p: any) => getProfileDepartmentIds(p))))
     : [];
   const lockedDepartmentId = lockedDepartmentIds.length === 1 ? lockedDepartmentIds[0] : '';
   const isDeptLocked = lockedDepartmentIds.length === 1;
@@ -116,6 +121,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         phone: phoneValidation.formattedNumber || '',
         email: formData.email.trim(),
         departmentIds: formData.departmentIds,
+        familyId: formData.familyId || undefined,
         isHead: formData.isHead,
         sourceType: 'manual',
       });
@@ -134,6 +140,7 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
         phone: '',
         email: '',
         departmentIds: lockedDepartmentId ? [lockedDepartmentId] : [],
+        familyId: '',
         isHead: false
       });
 
@@ -237,6 +244,26 @@ export default function ServantForm({ onSuccess }: { onSuccess?: () => void }) {
               </label>
             ))}
           </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Famille de service (optionnel)
+        </label>
+        {loadingFamilies ? (
+          <p className="text-sm text-gray-500">Chargement...</p>
+        ) : (
+          <select
+            value={formData.familyId}
+            onChange={(e) => setFormData(prev => ({ ...prev, familyId: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C]"
+          >
+            <option value="">-- Aucune --</option>
+            {families.map(f => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
         )}
       </div>
 

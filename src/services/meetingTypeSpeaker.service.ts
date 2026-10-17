@@ -1,9 +1,17 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
-import { CulteReportMeetingType, CulteReportSpeaker } from '../types/culteReport.types';
+import { CulteReportMeetingType, CulteReportSpeaker, CulteReportType } from '../types/culteReport.types';
 
 function mapMeetingType(row: any): CulteReportMeetingType {
-  return { id: row.id, churchId: row.church_id, name: row.name, description: row.description ?? undefined };
+  return {
+    id: row.id,
+    churchId: row.church_id,
+    name: row.name,
+    description: row.description ?? undefined,
+    eligibleReportTypes: Array.isArray(row.eligible_report_types) && row.eligible_report_types.length > 0
+      ? row.eligible_report_types
+      : null,
+  };
 }
 
 function mapSpeaker(row: any): CulteReportSpeaker {
@@ -21,20 +29,29 @@ export const MeetingTypeService = {
     return (data ?? []).map(mapMeetingType);
   },
 
-  async create(name: string, description?: string): Promise<CulteReportMeetingType> {
+  async create(name: string, description?: string, eligibleReportTypes?: CulteReportType[]): Promise<CulteReportMeetingType> {
     const { data, error } = await supabase
       .from('culte_report_meeting_types')
-      .insert({ church_id: getChurchId(), name: name.trim(), description: description?.trim() || null })
+      .insert({
+        church_id: getChurchId(),
+        name: name.trim(),
+        description: description?.trim() || null,
+        eligible_report_types: eligibleReportTypes?.length ? eligibleReportTypes : null,
+      })
       .select()
       .single();
     if (error) throw error;
     return mapMeetingType(data);
   },
 
-  async update(id: string, name: string, description?: string): Promise<void> {
+  async update(id: string, name: string, description?: string, eligibleReportTypes?: CulteReportType[]): Promise<void> {
     const { error } = await supabase
       .from('culte_report_meeting_types')
-      .update({ name: name.trim(), description: description?.trim() || null })
+      .update({
+        name: name.trim(),
+        description: description?.trim() || null,
+        eligible_report_types: eligibleReportTypes?.length ? eligibleReportTypes : null,
+      })
       .eq('id', id);
     if (error) throw error;
   },

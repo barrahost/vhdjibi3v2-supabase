@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
-import { CulteEvent, CulteRecurringSchedule, DayOfWeek } from '../types/culteReport.types';
+import { CulteEvent, CulteRecurringSchedule, CulteReportType, DayOfWeek } from '../types/culteReport.types';
 
 function mapEvent(row: any): CulteEvent {
   return {
@@ -20,6 +20,9 @@ function mapSchedule(row: any): CulteRecurringSchedule {
     dayOfWeek: row.day_of_week,
     isActive: row.is_active,
     startTime: row.start_time,
+    // Colonnes ajoutees par supabase_culte_brief_debrief.sql : absentes tant qu'il n'est pas execute
+    endTime: row.end_time ?? null,
+    briefEnabled: row.brief_enabled ?? false,
   };
 }
 
@@ -85,6 +88,50 @@ export const CulteEventService = {
     if (error) throw error;
     return mapEvent(data);
   },
+
+  /** Corrige la date/le nom d'un evenement deja cree (ex: erreur de saisie manuelle) --
+   * n'importe quel departement peut la corriger, meme apres qu'un rapport y soit rattache :
+   * les rapports deja soumis pour cet event_id sont resynchronises (date/nom denormalises). */
+  async updateEvent(id: string, serviceDate: string, meetingTypeName: string): Promise<CulteEvent> {
+    const { data, error } = await supabase
+      .from('culte_events')
+      .update({ service_date: serviceDate, meeting_type_name: meetingTypeName.trim() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    const { error: syncErr } = await supabase
+      .from('culte_reports')
+      .update({ service_date: serviceDate, meeting_type_name: meetingTypeName.trim() })
+      .eq('event_id', id);
+    if (syncErr) throw syncErr;
+
+    return mapEvent(data);
+  },
+
+  /** Evenements qu'un departement a retires de sa propre liste "Culte du jour" (trop ancien,
+   * pas de rapport a faire) -- n'affecte que ce departement : l'evenement et les rapports deja
+   * soumis par d'autres departements restent intacts. */
+  async getDismissedEventIds(reportType: CulteReportType): Promise<Set<string>> {
+    const { data, error } = await supabase
+      .from('culte_event_dismissals')
+      .select('event_id')
+      .eq('church_id', getChurchId())
+      .eq('report_type', reportType);
+    if (error) throw error;
+    return new Set((data ?? []).map((r: any) => r.event_id));
+  },
+
+  async dismissEvent(eventId: string, reportType: CulteReportType, dismissedBy?: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('culte_event_dismissals')
+      .upsert(
+        { church_id: getChurchId(), event_id: eventId, report_type: reportType, dismissed_by: dismissedBy ?? null },
+        { onConflict: 'event_id,report_type' }
+      );
+    if (error) throw error;
+  },
 };
 
 export const RecurringScheduleService = {
@@ -98,20 +145,46 @@ export const RecurringScheduleService = {
     return (data ?? []).map(mapSchedule);
   },
 
-  async create(meetingTypeName: string, dayOfWeek: DayOfWeek, startTime: string | null = null): Promise<CulteRecurringSchedule> {
+  /** `extras` (heure de fin, brief active) n'est transmis que si le module « Cultes » est actif :
+   * ces colonnes n'existent qu'apres supabase_culte_brief_debrief.sql. */
+  async create(
+    meetingTypeName: string,
+    dayOfWeek: DayOfWeek,
+    startTime: string | null = null,
+    extras?: { endTime: string | null; briefEnabled: boolean }
+  ): Promise<CulteRecurringSchedule> {
     const { data, error } = await supabase
       .from('culte_recurring_schedules')
-      .insert({ church_id: getChurchId(), meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, start_time: startTime })
+      .insert({
+        church_id: getChurchId(),
+        meeting_type_name: meetingTypeName.trim(),
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        ...(extras ? { end_time: extras.endTime, brief_enabled: extras.briefEnabled } : {}),
+      })
       .select()
       .single();
     if (error) throw error;
     return mapSchedule(data);
   },
 
-  async update(id: string, meetingTypeName: string, dayOfWeek: DayOfWeek, isActive: boolean, startTime: string | null = null): Promise<void> {
+  async update(
+    id: string,
+    meetingTypeName: string,
+    dayOfWeek: DayOfWeek,
+    isActive: boolean,
+    startTime: string | null = null,
+    extras?: { endTime: string | null; briefEnabled: boolean }
+  ): Promise<void> {
     const { error } = await supabase
       .from('culte_recurring_schedules')
-      .update({ meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, is_active: isActive, start_time: startTime })
+      .update({
+        meeting_type_name: meetingTypeName.trim(),
+        day_of_week: dayOfWeek,
+        is_active: isActive,
+        start_time: startTime,
+        ...(extras ? { end_time: extras.endTime, brief_enabled: extras.briefEnabled } : {}),
+      })
       .eq('id', id);
     if (error) throw error;
   },

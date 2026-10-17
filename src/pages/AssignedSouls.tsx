@@ -188,6 +188,7 @@ export default function AssignedSouls() {
             coordinates: row.coordinates || null,
             firstVisitDate: row.first_visit_date ? new Date(row.first_visit_date) : (row.firstVisitDate ? new Date(row.firstVisitDate) : new Date()),
             shepherdId: row.shepherd_id || row.shepherdId,
+            serviceFamilyId: row.service_family_id || row.serviceFamilyId || undefined,
             evangelistId: row.evangelist_id || row.evangelistId,
             spiritualProfile: row.spiritual_profile || row.spiritualProfile || {},
             createdAt: row.created_at ? new Date(row.created_at) : new Date(),

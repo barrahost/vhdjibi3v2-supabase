@@ -36,7 +36,13 @@ import {
   Wheat,
   Clock,
   Trophy,
+  Eye,
+  Network,
+  GraduationCap,
   QrCode,
+  ClipboardCheck,
+  ClipboardList,
+  ListChecks,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,6 +50,7 @@ import { useChurch } from '../contexts/ChurchContext';
 import { ROLES, PERMISSIONS } from '../constants/roles';
 import { usePermissions } from './usePermissions';
 import { useAdminNotifications } from './useAdminNotifications';
+import { useCulteModule } from './useCulteModule';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { getProfileDepartmentIds } from '../types/businessProfile.types';
@@ -82,6 +89,14 @@ export function useNavigationItems(): NavItem[] {
   const { hasPermission } = usePermissions();
   const { hasModule } = useChurch();
   const { alerts } = useAdminNotifications();
+  // Module « Cultes » (brief, contrôle, débrief, plan d'actions) : actif une fois le SQL exécuté
+  const { enabled: culteModule } = useCulteModule({ skip: !hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) });
+  const cultesNavItem: NavItem = { id: 'cultes', label: 'Cultes', href: '/cultes', icon: <ClipboardCheck className="w-5 h-5" /> };
+  // « Besoins signalés » devient le plan d'actions (mêmes données, avec responsable et échéance)
+  const needsNavItem = (id: string): NavItem =>
+    culteModule
+      ? { id, label: "Plan d'actions", href: '/plan-actions', icon: <ClipboardList className="w-5 h-5" /> }
+      : { id, label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> };
 
   // Plus de bascule de profil : le menu montre l'union de toutes les casquettes détenues.
   const heldRoles = new Set<string>(availableRoles as string[]);
@@ -94,6 +109,7 @@ export function useNavigationItems(): NavItem[] {
     alerts.find(a => a.type === type)?.count ?? 0;
 
   const [ledCulteReports, setLedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
+  const [supervisedCulteReports, setSupervisedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
 
   useEffect(() => {
     if (!hasRole(ROLES.DEPARTMENT_LEADER) || !user?.businessProfiles) {
@@ -125,6 +141,66 @@ export function useNavigationItems(): NavItem[] {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Pasteur Assistant : departements supervises ayant une page de rapports,
+  // hors ceux qu'il dirige deja lui-meme (deja listes dans son groupe Rapport).
+  useEffect(() => {
+    if (!hasRole(ROLES.PASTEUR_ASSISTANT) || !user?.businessProfiles) {
+      setSupervisedCulteReports([]);
+      return;
+    }
+    const profiles = user.businessProfiles as any[];
+    const ownIds = new Set(getProfileDepartmentIds(profiles.find((p) => p.type === 'department_leader')));
+    const paIds = getProfileDepartmentIds(profiles.find((p) => p.type === 'pasteur_assistant'))
+      .filter((id) => !ownIds.has(id));
+    if (paIds.length === 0) {
+      setSupervisedCulteReports([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('church_id', getChurchId())
+        .in('id', paIds);
+      const mapped = (data || [])
+        .map((d: { id: string; name: string }) => {
+          const reportType = DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(d.name)];
+          return reportType ? { reportType } : null;
+        })
+        .filter((d: { reportType: CulteReportType } | null): d is { reportType: CulteReportType } => d !== null);
+      if (!cancelled) setSupervisedCulteReports(mapped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Academie : responsable (ou PA supervisant) le departement Academie -> acces gestion
+  const isAcademieDeptLeader =
+    ledCulteReports.some((r) => r.reportType === 'academie') ||
+    supervisedCulteReports.some((r) => r.reportType === 'academie');
+
+  // Academie : "Mes cours" visible uniquement si l'utilisateur est inscrit (etudiant actif) a une classe
+  const [isAcademieStudent, setIsAcademieStudent] = useState(false);
+  useEffect(() => {
+    const uid = (user as any)?.id || (user as any)?.uid;
+    if (!uid) { setIsAcademieStudent(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('academie_enrollments')
+        .select('id')
+        .eq('church_id', getChurchId())
+        .eq('user_id', uid)
+        .eq('status', 'active')
+        .limit(1);
+      if (!cancelled) setIsAcademieStudent((data || []).length > 0);
+    })();
+    return () => { cancelled = true; };
   }, [user]);
 
   const items: NavItem[] = [
@@ -169,8 +245,10 @@ export function useNavigationItems(): NavItem[] {
   ) {
     const children: NavItem[] = [];
 
-    // Rapport(s) de culte en premier : c'est l'action la plus frequente d'un responsable de
-    // departement, et le menu mobile (bottom nav) prend le premier enfant comme raccourci direct.
+    // Cultes (brief, controle, debrief) puis rapport(s) de culte en premier : ce sont les actions les
+    // plus frequentes d'un responsable de departement, et le menu mobile (bottom nav) prend le
+    // premier enfant comme raccourci direct.
+    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(cultesNavItem);
     if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
       if (ledCulteReports.length > 0) {
         ledCulteReports.forEach(({ reportType }) => {
@@ -185,6 +263,7 @@ export function useNavigationItems(): NavItem[] {
         children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
       }
     }
+    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(needsNavItem('leader-plan-actions'));
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
       children.push({ id: 'servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
     }
@@ -203,9 +282,26 @@ export function useNavigationItems(): NavItem[] {
     }
   }
 
-  // Souls management (ADN + admin, not family leaders)
+  // Pasteur Assistant : espace Supervision de son portefeuille de departements
+  if (hasRole(ROLES.PASTEUR_ASSISTANT) && !isAdmin) {
+    const children: NavItem[] = [];
+    if (culteModule) children.push(cultesNavItem);
+    supervisedCulteReports.forEach(({ reportType }) => {
+      children.push({
+        id: `pa-report-${reportType}`,
+        label: CULTE_REPORT_NAV_LABEL[reportType],
+        href: `/rapports/${reportType}`,
+        icon: CULTE_REPORT_NAV_ICON[reportType],
+      });
+    });
+    children.push({ id: 'pa-servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
+    children.push(needsNavItem('pa-needs'));
+    items.push({ id: 'pa-supervision', label: 'Supervision', icon: <Eye className="w-5 h-5" />, children });
+  }
+
+  // Souls management (ADN + admin + pasteur, not family leaders)
   if (
-    (hasRole(ROLES.ADN) || isAdmin) &&
+    (hasRole(ROLES.ADN) || isAdmin || hasRole(ROLES.PASTEUR)) &&
     (hasPermission(PERMISSIONS.MANAGE_SOULS) || hasPermission(PERMISSIONS.MANAGE_USERS))
   ) {
     const children: NavItem[] = [];
@@ -265,9 +361,9 @@ export function useNavigationItems(): NavItem[] {
     items.push({ id: 'family-management', label: 'Ma famille de service', icon: <UsersRound className="w-5 h-5" />, children });
   }
 
-  // Admin tracking & interactions
+  // Admin tracking & interactions (pasteur : consultation du suivi)
   if (
-    hasPermission(PERMISSIONS.MANAGE_USERS) &&
+    (hasPermission(PERMISSIONS.MANAGE_USERS) || hasRole(ROLES.PASTEUR)) &&
     hasPermission(PERMISSIONS.VIEW_STATS) &&
     (hasModule('interactions') || hasModule('attendance') || hasModule('spiritual_progression'))
   ) {
@@ -285,10 +381,10 @@ export function useNavigationItems(): NavItem[] {
     });
   }
 
-  // Statistics (admin only, not ADN)
+  // Statistics (admin + pasteur)
   if (
     hasPermission(PERMISSIONS.VIEW_STATS) &&
-    isAdmin &&
+    (isAdmin || hasRole(ROLES.PASTEUR)) &&
     hasModule('statistics')
   ) {
     items.push({
@@ -321,6 +417,27 @@ export function useNavigationItems(): NavItem[] {
     }
 
     items.push({ id: 'evangelization', label: 'Évangélisation', icon: <Megaphone className="w-5 h-5" />, children });
+  }
+
+  // Organigramme de l'eglise : visible par tous
+  items.push({ id: 'church-organization', label: 'Organisation', icon: <Network className="w-5 h-5" />, href: '/organisation' });
+
+  // Academie VH AGC : "Mes cours" reserve aux etudiants inscrits, gestion au
+  // responsable du departement Academie (+ PA le supervisant) et aux admins.
+  {
+    const academieChildren: NavItem[] = [];
+    if (isAcademieStudent) {
+      academieChildren.push({ id: 'academie-student', label: 'Mes cours', href: '/academie', icon: <GraduationCap className="w-5 h-5" /> });
+    }
+    if (hasPermission(PERMISSIONS.MANAGE_ACADEMIE_CONTENT) || isAdmin || isAcademieDeptLeader) {
+      academieChildren.push({ id: 'academie-gestion', label: 'Gestion des cours', href: '/academie/gestion', icon: <Settings className="w-5 h-5" /> });
+    }
+    if (isAdmin) {
+      academieChildren.push({ id: 'academie-parametres', label: 'Classes & inscriptions', href: '/academie/parametres', icon: <UserCog className="w-5 h-5" /> });
+    }
+    if (academieChildren.length > 0) {
+      items.push({ id: 'academie', label: 'Académie', icon: <GraduationCap className="w-5 h-5" />, children: academieChildren });
+    }
   }
 
   // Replay (not ADN)
@@ -384,12 +501,13 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Rapports de culte (admin / super_admin) : tableau de bord + une page par département + besoins
-  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || !hasRole(ROLES.DEPARTMENT_LEADER))) {
+  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT)))) {
     items.push({
       id: 'culte-reports',
       label: 'Rapports de culte',
       icon: <History className="w-5 h-5" />,
       children: [
+        ...(culteModule ? [{ ...cultesNavItem, id: 'culte-reports-cultes', label: 'Cultes : brief & débrief' }] : []),
         { id: 'culte-reports-dashboard', label: 'Tableau de bord', href: '/tableau-de-bord-rapports', icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: 'culte-reports-worship', label: 'Gestion de Culte', href: '/rapports/worship', icon: <Presentation className="w-5 h-5" /> },
         { id: 'culte-reports-adn', label: 'ADN', href: '/rapports/adn', icon: <Users className="w-5 h-5" /> },
@@ -397,7 +515,7 @@ export function useNavigationItems(): NavItem[] {
         { id: 'culte-reports-academie', label: 'Académie', href: '/rapports/academie', icon: <BookOpen className="w-5 h-5" /> },
         { id: 'culte-reports-sainte-cene', label: 'Sainte Cène', href: '/rapports/sainte_cene', icon: <Wheat className="w-5 h-5" /> },
         { id: 'culte-reports-sono', label: 'Communication & Sono', href: '/rapports/sono', icon: <Radio className="w-5 h-5" /> },
-        { id: 'culte-reports-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> },
+        needsNavItem('culte-reports-needs'),
       ],
     });
   }
@@ -421,10 +539,13 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)) {
       children.push({ id: 'settings', label: 'Paramètres', href: '/parametres', icon: <Settings className="w-5 h-5" /> });
     }
-    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || !hasRole(ROLES.DEPARTMENT_LEADER))) {
+    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT)))) {
       children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
       children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
       children.push({ id: 'recurring-schedule', label: 'Programme récurrent', href: '/parametres-programme-recurrent', icon: <CalendarRange className="w-5 h-5" /> });
+      if (culteModule) {
+        children.push({ id: 'checklist-templates', label: 'Modèles de contrôle', href: '/parametres-controle', icon: <ListChecks className="w-5 h-5" /> });
+      }
     }
 
     const hostname = window.location.hostname;

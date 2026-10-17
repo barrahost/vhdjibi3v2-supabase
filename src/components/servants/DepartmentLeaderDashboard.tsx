@@ -15,6 +15,8 @@ import { DepartmentActivityService } from '../../services/departmentActivity.ser
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 import { getProfileDepartmentIds } from '../../types/businessProfile.types';
+import { useCulteModule } from '../../hooks/useCulteModule';
+import { ActionPlanDashboardCard, UpcomingCultesDashboardCard } from '../culteBrief/CulteDashboardCards';
 
 interface Department {
   id: string;
@@ -50,6 +52,8 @@ export default function DepartmentLeaderDashboard() {
   const [participationRates, setParticipationRates] = useState<ServantParticipationRate[]>([]);
 
   const canManageDepartmentServants = hasPermission('MANAGE_DEPARTMENT_SERVANTS');
+  // Module « Cultes » : prochains cultes (brief, contrôle) et actions du département
+  const { enabled: culteModule } = useCulteModule({ skip: !hasPermission('MANAGE_CULTE_REPORTS') });
 
   // Récupérer le département de l'utilisateur via business profiles
   useEffect(() => {
@@ -225,6 +229,13 @@ export default function DepartmentLeaderDashboard() {
           </p>
         </div>
       </div>
+
+      {culteModule && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <UpcomingCultesDashboardCard />
+          <ActionPlanDashboardCard departmentNames={[department.name]} />
+        </div>
+      )}
 
       {/* Statistiques */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

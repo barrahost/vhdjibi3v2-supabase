@@ -37,6 +37,8 @@ export class SoulPromotionService {
         phone: servantData.phone || soulDataCurrent.phone,
         email: servantData.email,
         department_ids: servantData.departmentIds || [],
+        family_id: soulDataCurrent.service_family_id || null,
+        spiritual_profile: soulDataCurrent.spiritual_profile || null,
         is_head: servantData.isHead || false,
         is_shepherd: servantData.isShepherd || false,
         shepherd_id: servantData.shepherdId || null,

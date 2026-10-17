@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Trash2, HandHeart, FileSpreadsheet, Phone, MessageCircle, UserCircle2 } from 'lucide-react';
+import { Search, Trash2, HandHeart, FileSpreadsheet, FileText, Phone, MessageCircle, UserCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
@@ -10,8 +10,10 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useConfirmModal } from '../hooks/useConfirmModal';
 import { DateRangePicker, DateRange } from '../components/ui/DateRangePicker';
 import { exportPrayerRequests } from '../utils/export/prayerRequests';
+import { exportPrayerRequestsTxt } from '../utils/export/prayerRequestsTxt';
 import { Modal } from '../components/ui/Modal';
 import { telHref, whatsappHref } from '../utils/phoneValidation';
+import { useChurch } from '../contexts/ChurchContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -20,6 +22,14 @@ function toDateStr(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// La semaine de prière démarre le mardi à 00h : mardi le plus récent (aujourd'hui
+// inclus si on est mardi). Ex. : lundi 17 août -> mardi 11 août.
+function lastTuesdayStr(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() - 2 + 7) % 7));
+  return toDateStr(d);
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -45,12 +55,14 @@ const STATUS_COLORS: Record<PrayerStatus, string> = {
 
 export default function PrayerRequestsManagement() {
   const { confirm, confirmModalProps } = useConfirmModal();
+  const { church } = useChurch();
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | PrayerStatus>('all');
-  const [dateRange, setDateRange] = useState<DateRange>({ startDate: '', endDate: '' });
+  // Période par défaut = semaine de prière en cours (mardi -> aujourd'hui), ajustable
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: lastTuesdayStr(), endDate: toDateStr(new Date()) });
   const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<PrayerRequest | null>(null);
 
@@ -116,7 +128,20 @@ export default function PrayerRequestsManagement() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleExport = () => {
+  const handleExportTxt = () => {
+    if (filtered.length === 0) {
+      toast.error('Aucun sujet à exporter');
+      return;
+    }
+    exportPrayerRequestsTxt(filtered, {
+      churchName: church?.name,
+      startDate: dateRange.startDate || undefined,
+      endDate: dateRange.endDate || undefined,
+    });
+    toast.success('Téléchargement généré');
+  };
+
+  const handleExportExcel = () => {
     if (filtered.length === 0) {
       toast.error('Aucun sujet à exporter');
       return;
@@ -230,13 +255,23 @@ export default function PrayerRequestsManagement() {
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Chaîne de prière</h1>
           <p className="text-sm text-gray-400">{requests.length} sujet{requests.length !== 1 ? 's' : ''}</p>
         </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10 self-start"
-        >
-          <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-          Exporter ({filtered.length})
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          <button
+            onClick={handleExportTxt}
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-white bg-[#00665C] rounded-md hover:bg-[#00665C]/90"
+          >
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+            Télécharger ({filtered.length})
+          </button>
+          <button
+            onClick={handleExportExcel}
+            title="Exporter en Excel (avec contacts)"
+            className="flex items-center px-2.5 py-1.5 text-xs sm:text-sm font-medium sm:px-4 sm:py-2 text-[#00665C] border border-[#00665C] rounded-md hover:bg-[#00665C]/10"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+            Excel
+          </button>
+        </div>
       </div>
 
       {/* Filtres catégorie */}

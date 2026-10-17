@@ -29,6 +29,7 @@ const SoulsHub = lazy(() => import('./pages/SoulsHub'));
 const EvangelistRelances = lazy(() => import('./pages/EvangelistRelances'));
 const EvangelistAttendus = lazy(() => import('./pages/EvangelistAttendus'));
 const EvangelistWonSouls = lazy(() => import('./pages/EvangelistWonSouls'));
+const ChurchOrganization = lazy(() => import('./pages/ChurchOrganization'));
 const EvangelizedSignals = lazy(() => import('./pages/EvangelizedSignals'));
 const InteractionsManagement = lazy(() => import('./pages/InteractionsManagement'));
 const AssignedSouls = lazy(() => import('./pages/AssignedSouls'));
@@ -39,8 +40,13 @@ const DepartmentManagement = lazy(() => import('./pages/DepartmentManagement'));
 const ServiceFamilyManagement = lazy(() => import('./pages/ServiceFamilyManagement'));
 const ShepherdFamilyManagement = lazy(() => import('./pages/ShepherdFamilyManagement'));
 const CulteReportForm = lazy(() => import('./pages/CulteReportForm'));
-const CulteNeedsManagement = lazy(() => import('./pages/CulteNeedsManagement'));
 const CulteReportsDashboard = lazy(() => import('./pages/CulteReportsDashboard'));
+const CulteHub = lazy(() => import('./pages/CulteHub'));
+const CulteCockpit = lazy(() => import('./pages/CulteCockpit'));
+const CulteChecklistSettings = lazy(() => import('./pages/CulteChecklistSettings'));
+const CulteActionsPlan = lazy(() => import('./pages/CulteActionsPlan'));
+// « Besoins signalés » devient le plan d'actions dès que le module est actif (SQL exécuté)
+const CulteNeedsOrPlan = lazy(() => import('./pages/CulteActionsPlan').then((m) => ({ default: m.CulteNeedsOrPlan })));
 const CulteReportDepartmentView = lazy(() => import('./pages/CulteReportDepartmentView'));
 
 /** Remonte CulteReportDepartmentView a chaque changement de type de rapport, sinon React reutilise
@@ -76,6 +82,11 @@ const EvangelizationForm = lazy(() => import('./pages/EvangelizationForm'));
 const ReceptionCheckIn = lazy(() => import('./pages/ReceptionCheckIn'));
 const ReceptionQrCode = lazy(() => import('./pages/ReceptionQrCode'));
 const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
+const AcademieHub = lazy(() => import('./pages/AcademieHub'));
+const AcademieCourseTimeline = lazy(() => import('./pages/AcademieCourseTimeline'));
+const AcademieSessionDetail = lazy(() => import('./pages/AcademieSessionDetail'));
+const AcademieModerator = lazy(() => import('./pages/AcademieModerator'));
+const AcademieAdmin = lazy(() => import('./pages/AcademieAdmin'));
 
 // Loading component
 function PageLoader() {
@@ -241,6 +252,12 @@ function AppContent() {
           <Route path="evangelisation/attendus" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
               <EvangelistAttendus />
+            </PrivateRoute>
+          } />
+          {/* Organigramme de l'eglise : visible par tous les utilisateurs connectes */}
+          <Route path="organisation" element={
+            <PrivateRoute>
+              <ChurchOrganization />
             </PrivateRoute>
           } />
           <Route path="evangelisation/gagnees" element={
@@ -447,7 +464,28 @@ function AppContent() {
           } />
           <Route path="besoins-rapports" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
-              <CulteNeedsManagement />
+              <CulteNeedsOrPlan />
+            </PrivateRoute>
+          } />
+          {/* Brief & débrief des cultes */}
+          <Route path="cultes" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteHub />
+            </PrivateRoute>
+          } />
+          <Route path="cultes/:eventId" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteCockpit />
+            </PrivateRoute>
+          } />
+          <Route path="plan-actions" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteActionsPlan />
+            </PrivateRoute>
+          } />
+          <Route path="parametres-controle" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteChecklistSettings />
             </PrivateRoute>
           } />
           <Route path="rapports/:reportType" element={
@@ -468,6 +506,43 @@ function AppContent() {
           <Route path="parametres-programme-recurrent" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <RecurringScheduleSettings />
+            </PrivateRoute>
+          } />
+
+          {/* Académie VH AGC */}
+          <Route path="academie" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieHub />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/classe/:classId" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieCourseTimeline />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/classe/:classId/seance/:sessionId" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieSessionDetail />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/gestion" element={
+            <PrivateRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieModerator />
+              </Suspense>
+            </PrivateRoute>
+          } />
+          <Route path="academie/parametres" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_USERS]}>
+              <Suspense fallback={<PageLoader />}>
+                <AcademieAdmin />
+              </Suspense>
             </PrivateRoute>
           } />
 

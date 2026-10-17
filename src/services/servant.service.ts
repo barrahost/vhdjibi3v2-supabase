@@ -20,6 +20,7 @@ function rowToServant(row: any): Servant {
     phone: row.phone,
     email: row.email,
     departmentIds: row.department_ids || [],
+    familyId: row.family_id || undefined,
     isHead: row.is_head,
     isShepherd: row.is_shepherd,
     shepherdId: row.shepherd_id,
@@ -30,6 +31,7 @@ function rowToServant(row: any): Servant {
     sourceId: row.source_id,
     originalSoulId: row.original_soul_id,
     promotionDate: row.promotion_date ? new Date(row.promotion_date) : undefined,
+    spiritualProfile: row.spiritual_profile || undefined,
   };
 }
 
@@ -41,6 +43,7 @@ function formToRow(data: Partial<ServantFormData>): Record<string, any> {
   if (data.phone !== undefined)           row.phone            = data.phone;
   if (data.email !== undefined)           row.email            = data.email?.trim() || null;
   if (data.departmentIds !== undefined)   row.department_ids   = data.departmentIds;
+  if (data.familyId !== undefined)        row.family_id        = data.familyId || null;
   if (data.isHead !== undefined)          row.is_head          = data.isHead;
   if (data.isShepherd !== undefined)      row.is_shepherd      = data.isShepherd;
   if (data.shepherdId !== undefined)      row.shepherd_id      = data.shepherdId;
@@ -49,6 +52,7 @@ function formToRow(data: Partial<ServantFormData>): Record<string, any> {
   if (data.sourceId !== undefined)        row.source_id        = data.sourceId;
   if (data.originalSoulId !== undefined)  row.original_soul_id = data.originalSoulId;
   if (data.promotionDate !== undefined)   row.promotion_date   = data.promotionDate?.toISOString() ?? null;
+  if (data.spiritualProfile !== undefined) row.spiritual_profile = data.spiritualProfile || null;
   return row;
 }
 
@@ -65,7 +69,7 @@ export class ServantService {
       // Vérifier si la personne existe déjà (même téléphone) → upsert
       const { data: existing } = await supabase
         .from('servants')
-        .select('id, department_ids')
+        .select('id, department_ids, family_id')
         .eq('church_id', getChurchId())
         .eq('phone', data.phone)
         .limit(1);
@@ -78,6 +82,7 @@ export class ServantService {
           .from('servants')
           .update({
             department_ids: merged,
+            family_id: existing[0].family_id || data.familyId || null,
             is_head: data.isHead || false,
             updated_at: new Date().toISOString(),
           })
@@ -97,6 +102,7 @@ export class ServantService {
         phone: data.phone,
         email: data.email?.trim() || null,
         department_ids: deptIds,
+        family_id: data.familyId || null,
         is_head: data.isHead,
         is_shepherd: data.isShepherd || false,
         shepherd_id: data.shepherdId || null,
@@ -104,6 +110,7 @@ export class ServantService {
         source_id: data.sourceId || null,
         original_soul_id: data.originalSoulId || (data.sourceType === 'soul' ? data.sourceId : null) || null,
         promotion_date: data.promotionDate?.toISOString() ?? null,
+        spiritual_profile: data.spiritualProfile || null,
         status: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -457,6 +464,8 @@ export class ServantService {
             phone: soul.phone || '',
             email: soul.email?.trim() || null,
             department_ids: [departmentId],
+            family_id: soul.service_family_id || null,
+            spiritual_profile: soul.spiritual_profile || null,
             is_head: false,
             is_shepherd: false,
             shepherd_id: null,

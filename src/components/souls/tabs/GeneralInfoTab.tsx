@@ -277,30 +277,41 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
         </p>
       </div>
 
-      {/* Famille de service */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Famille de service
-        </label>
-        <select
-          value={data.serviceFamilyId || ''}
-          onChange={(e) => onChange({ ...data, serviceFamilyId: e.target.value || undefined })}
-          disabled={loadingFamilies || !canEditAdnFields}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C] ${!canEditAdnFields ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-        >
-          <option value="">-- Sélectionner une famille --</option>
-          {families.map(f => (
-            <option key={f.id} value={f.id}>{f.name}</option>
-          ))}
-        </select>
-        <p className="mt-1 text-sm text-gray-500">
-          {!canEditAdnFields
-            ? "Défini par l'ADN — lecture seule"
-            : isAdnOnly
-              ? "Le responsable de famille assignera ensuite l'âme à un berger"
-              : "Optionnel : assigner l'âme à une famille de service"}
-        </p>
-      </div>
+      {/* Famille de service — sans objet pour une âme indécise, suivie par l'ADN */}
+      {data.isUndecided ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Famille de service
+          </label>
+          <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            Âme indécise : pas de famille de service pour l'instant, elle reste suivie par l'équipe ADN.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Famille de service
+          </label>
+          <select
+            value={data.serviceFamilyId || ''}
+            onChange={(e) => onChange({ ...data, serviceFamilyId: e.target.value || undefined })}
+            disabled={loadingFamilies || !canEditAdnFields}
+            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#00665C] focus:border-[#00665C] ${!canEditAdnFields ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+          >
+            <option value="">-- Sélectionner une famille --</option>
+            {families.map(f => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-gray-500">
+            {!canEditAdnFields
+              ? "Défini par l'ADN — lecture seule"
+              : isAdnOnly
+                ? "Le responsable de famille assignera ensuite l'âme à un berger"
+                : "Optionnel : assigner l'âme à une famille de service"}
+          </p>
+        </div>
+      )}
 
       {/* Ma décision aujourd'hui (pilote isUndecided) */}
       <div>
@@ -330,6 +341,7 @@ export function GeneralInfoTab({ data, onChange, isShepherd, currentShepherdId }
                     decision: opt.value,
                     isUndecided,
                     shepherdId: isUndecided ? undefined : data.shepherdId,
+                    serviceFamilyId: isUndecided ? undefined : data.serviceFamilyId,
                   });
                 }}
                 className="text-[#00665C] focus:ring-[#00665C]"
