@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Copy, Plus, Video, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BRIEF_FIELDS } from '../../data/culteGuide';
+import { useChurch } from '../../contexts/ChurchContext';
+import { ficheBranding, sanitizeBriefContent, type FicheDefaults } from '../../lib/timingSheet';
 import { compareEventsInDay, formatDayFr, formatRangeFr, formatTimeFr, shortServiceLabel } from '../../lib/culteTiming';
 import {
   CulteBriefCopyService,
@@ -11,11 +13,12 @@ import {
 } from '../../services/culteBrief.service';
 import { CulteDirectory, type DirectoryDepartment } from '../../services/culteDirectory.service';
 import { CulteNotifyService } from '../../services/culteNotify.service';
-import type { BriefContent, BriefInstruction, CulteMeeting, RunSheetItem } from '../../types/culteBrief.types';
+import type { BriefContent, BriefInstruction, CulteMeeting, RunSheetItem, TimingMoment } from '../../types/culteBrief.types';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { RunSheetEditor, type RunSheetRow } from './RunSheetEditor';
 import type { CockpitTabProps } from './tabTypes';
+import { TimingSheetCard } from './TimingSheetCard';
 import { Card, CardHeader, EmptyState, Pill, Spinner, inputCls, labelCls, primaryBtn, secondaryBtn } from './ui';
 
 const toRows = (items: RunSheetItem[]): RunSheetRow[] =>
@@ -31,6 +34,11 @@ const toRows = (items: RunSheetItem[]): RunSheetRow[] =>
     durationMin: item.durationMin,
     notes: item.notes,
   }));
+
+/** Champs du brief qui sont du texte (les moments de la fiche de timing sont une liste). */
+type TextKey = Exclude<keyof BriefContent, 'moments'>;
+
+const hasContent = (value: unknown) => (typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) && value.length > 0);
 
 function ReadBlock({ label, text }: { label: string; text?: string }) {
   if (!text?.trim()) return null;
@@ -51,9 +59,12 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
   const [instructions, setInstructions] = useState<Record<string, string>>({});
   const [openInstructionDepts, setOpenInstructionDepts] = useState<string[]>([]);
   const [departments, setDepartments] = useState<DirectoryDepartment[]>([]);
+  const [ficheDefaults, setFicheDefaults] = useState<FicheDefaults>({});
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const { confirm, confirmModalProps } = useConfirmModal();
+  const { church } = useChurch();
+  const branding = useMemo(() => ficheBranding(church), [church]);
 
   // Ce que cet écran a réellement modifié : on n'enregistre que cela, par-dessus la dernière version
   // du serveur (un autre responsable a pu compléter le brief entre-temps).
@@ -76,19 +87,22 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [brief, runSheet, savedInstr, depts] = await Promise.all([
+      const [brief, runSheet, savedInstr, depts, defaults] = await Promise.all([
         CulteMeetingService.get<BriefContent>(event.id, 'brief'),
         CulteRunSheetService.list(event.id),
         CulteInstructionService.list(event.id),
         CulteDirectory.departments(),
+        // simple confort (titre et note de la dernière fiche) : son échec ne doit pas empêcher d'ouvrir le brief
+        CulteMeetingService.latestFicheDefaults({ id: event.id, serviceDate: event.serviceDate }).catch((): FicheDefaults => ({})),
       ]);
       setMeeting(brief);
-      setContent(brief?.content ?? {});
+      setContent(sanitizeBriefContent(brief?.content));
       setRows(toRows(runSheet));
       setSavedInstructions(savedInstr);
       setInstructions(Object.fromEntries(savedInstr.map((i) => [i.departmentName, i.instructions])));
       setOpenInstructionDepts(savedInstr.filter((i) => i.instructions.trim()).map((i) => i.departmentName));
       setDepartments(depts);
+      setFicheDefaults(defaults);
       baselineRows.current = runSheet;
       dirtyFields.current = new Set();
       rowsDirty.current = false;
@@ -100,7 +114,7 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
     } finally {
       setLoading(false);
     }
-  }, [event.id]);
+  }, [event.id, event.serviceDate]);
 
   // Chargement à l'ouverture et à chaque changement de culte ; au retour sur l'onglet, mise à jour
   // discrète — sauf s'il y a une saisie en cours, qu'on ne remplace jamais.
@@ -121,16 +135,22 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
     [departments, access.managedDepartmentIds]
   );
 
-  const setField = (key: keyof BriefContent, value: string) => {
+  const setField = (key: TextKey, value: string) => {
     setContent((prev) => ({ ...prev, [key]: value }));
     dirtyFields.current.add(key);
+    markDirty();
+  };
+
+  const setMoments = (moments: TimingMoment[]) => {
+    setContent((prev) => ({ ...prev, moments }));
+    dirtyFields.current.add('moments');
     markDirty();
   };
 
   /** Enregistre ce qui a été modifié ici : champs du cadre, conducteur, consignes. */
   const persist = async (): Promise<void> => {
     if (dirtyFields.current.size > 0) {
-      const patch = Object.fromEntries(Array.from(dirtyFields.current).map((key) => [key, content[key] ?? '']));
+      const patch = Object.fromEntries(Array.from(dirtyFields.current).map((key) => [key, content[key] ?? (key === 'moments' ? [] : '')]));
       await CulteMeetingService.savePatch<BriefContent>(event.id, 'brief', patch, actor);
     }
     if (rowsDirty.current) {
@@ -220,7 +240,7 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
   if (loading) return <Spinner />;
 
   const isReady = meeting?.status === 'ready';
-  const isEmpty = !Object.values(content).some((v) => v?.trim()) && rows.length === 0 && savedInstructions.length === 0;
+  const isEmpty = !Object.values(content).some(hasContent) && rows.length === 0 && savedInstructions.length === 0;
 
   // ── Lecture seule (responsables de département) ────────────────────────────────────────────
   if (!access.isManager) {
@@ -270,6 +290,21 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
               ))}
             </ol>
           </Card>
+        )}
+
+        {rows.length > 0 && (
+          <TimingSheetCard
+            content={content}
+            defaults={ficheDefaults}
+            rows={rows}
+            event={event}
+            churchName={church?.name ?? 'Bergerie'}
+            branding={branding}
+            canEdit={false}
+            dirty={false}
+            onField={setField}
+            onMoments={setMoments}
+          />
         )}
 
         {others.length > 0 && (
@@ -405,6 +440,19 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
           ))}
         </div>
       </Card>
+
+      <TimingSheetCard
+        content={content}
+        defaults={ficheDefaults}
+        rows={rows}
+        event={event}
+        churchName={church?.name ?? 'Bergerie'}
+        branding={branding}
+        canEdit
+        dirty={dirty}
+        onField={setField}
+        onMoments={setMoments}
+      />
 
       {/* Barre d'actions, toujours accessible au pouce */}
       <div className="fixed inset-x-0 bottom-[53px] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-3">
