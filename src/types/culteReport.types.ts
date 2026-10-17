@@ -239,4 +239,8 @@ export interface CulteRecurringSchedule {
   isActive: boolean;
   /** Heure de debut (HH:MM:SS), optionnelle -- utilisee pour les liens de reception d'ames ADN. */
   startTime: string | null;
+  /** Heure de fin (HH:MM:SS), optionnelle -- fenetre « point entre les cultes » du brief/debrief. */
+  endTime: string | null;
+  /** Brief, controle de preparation et debrief actives pour ce rendez-vous (module « Cultes »). */
+  briefEnabled: boolean;
 }

@@ -20,6 +20,9 @@ function mapSchedule(row: any): CulteRecurringSchedule {
     dayOfWeek: row.day_of_week,
     isActive: row.is_active,
     startTime: row.start_time,
+    // Colonnes ajoutees par supabase_culte_brief_debrief.sql : absentes tant qu'il n'est pas execute
+    endTime: row.end_time ?? null,
+    briefEnabled: row.brief_enabled ?? false,
   };
 }
 
@@ -142,20 +145,46 @@ export const RecurringScheduleService = {
     return (data ?? []).map(mapSchedule);
   },
 
-  async create(meetingTypeName: string, dayOfWeek: DayOfWeek, startTime: string | null = null): Promise<CulteRecurringSchedule> {
+  /** `extras` (heure de fin, brief active) n'est transmis que si le module « Cultes » est actif :
+   * ces colonnes n'existent qu'apres supabase_culte_brief_debrief.sql. */
+  async create(
+    meetingTypeName: string,
+    dayOfWeek: DayOfWeek,
+    startTime: string | null = null,
+    extras?: { endTime: string | null; briefEnabled: boolean }
+  ): Promise<CulteRecurringSchedule> {
     const { data, error } = await supabase
       .from('culte_recurring_schedules')
-      .insert({ church_id: getChurchId(), meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, start_time: startTime })
+      .insert({
+        church_id: getChurchId(),
+        meeting_type_name: meetingTypeName.trim(),
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        ...(extras ? { end_time: extras.endTime, brief_enabled: extras.briefEnabled } : {}),
+      })
       .select()
       .single();
     if (error) throw error;
     return mapSchedule(data);
   },
 
-  async update(id: string, meetingTypeName: string, dayOfWeek: DayOfWeek, isActive: boolean, startTime: string | null = null): Promise<void> {
+  async update(
+    id: string,
+    meetingTypeName: string,
+    dayOfWeek: DayOfWeek,
+    isActive: boolean,
+    startTime: string | null = null,
+    extras?: { endTime: string | null; briefEnabled: boolean }
+  ): Promise<void> {
     const { error } = await supabase
       .from('culte_recurring_schedules')
-      .update({ meeting_type_name: meetingTypeName.trim(), day_of_week: dayOfWeek, is_active: isActive, start_time: startTime })
+      .update({
+        meeting_type_name: meetingTypeName.trim(),
+        day_of_week: dayOfWeek,
+        is_active: isActive,
+        start_time: startTime,
+        ...(extras ? { end_time: extras.endTime, brief_enabled: extras.briefEnabled } : {}),
+      })
       .eq('id', id);
     if (error) throw error;
   },
