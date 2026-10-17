@@ -12,6 +12,7 @@ import type {
   RunSheetItem,
 } from '../types/culteBrief.types';
 import { RecurringScheduleService } from './culteEvent.service';
+import { normalizeMoments, pickFicheDefaults, sanitizeBriefContent, type FicheDefaults } from '../lib/timingSheet';
 import {
   addDaysISO,
   compareEventsInDay,
@@ -257,6 +258,37 @@ export const CulteMeetingService = {
     return data && data.length > 0 ? mapMeeting<C>(data[0]) : null;
   },
 
+  /**
+   * Titre et note de bas de page de la dernière fiche de timing, parmi les cultes jusqu'à la date de celui-ci (hors lui) :
+   * ils sont proposés d'office sur la fiche d'un nouveau culte, pour ne pas les retaper chaque semaine. Les cultes
+   * suivants n'y changent rien, donc une fiche déjà imprimée ne bouge pas quand on prépare les semaines à venir.
+   */
+  async latestFicheDefaults(event: { id: string; serviceDate: string }): Promise<FicheDefaults> {
+    const churchId = getChurchId();
+    const { data: events, error: eventsError } = await supabase
+      .from('culte_events')
+      .select('id, service_date')
+      .eq('church_id', churchId)
+      .lte('service_date', event.serviceDate)
+      .order('service_date', { ascending: false })
+      .limit(30);
+    if (eventsError) throw eventsError;
+    const dates = new Map<string, string>((events ?? []).filter((e: any) => e.id !== event.id).map((e: any) => [e.id as string, String(e.service_date)]));
+    if (dates.size === 0) return {};
+    const { data, error } = await supabase
+      .from('culte_meetings')
+      .select('event_id, content, updated_at')
+      .eq('church_id', churchId)
+      .eq('kind', 'brief')
+      .in('event_id', Array.from(dates.keys()));
+    if (error) throw error;
+    // du culte le plus récent au plus ancien ; à date égale, la fiche modifiée en dernier
+    const newestFirst = [...(data ?? [])].sort(
+      (a: any, b: any) => (dates.get(b.event_id) ?? '').localeCompare(dates.get(a.event_id) ?? '') || String(b.updated_at).localeCompare(String(a.updated_at))
+    );
+    return pickFicheDefaults(newestFirst.map((row: any) => sanitizeBriefContent(row.content)));
+  },
+
   /** Enregistre le contenu sans toucher au statut (sauf si `status` est précisé). */
   async save<C>(eventId: string, kind: MeetingKind, content: C, actor: Actor, status?: MeetingStatus): Promise<CulteMeeting<C>> {
     const row: Record<string, any> = {
@@ -470,7 +502,15 @@ export const CulteBriefCopyService = {
     const toStart = toMinutes(to.startTime);
     const shift = fromStart !== null && toStart !== null ? toStart - fromStart : 0;
 
-    await CulteMeetingService.save<BriefContent>(to.id, 'brief', meeting?.content ?? {}, actor);
+    // Les moments de la fiche de timing suivent le décalage des horaires du conducteur
+    const content: BriefContent = meeting?.content ?? {};
+    const moments = Array.isArray(content.moments)
+      ? normalizeMoments(content.moments).map((moment) => {
+          const at = toMinutes(moment.from);
+          return at !== null && shift ? { ...moment, from: fromMinutes(at + shift) } : moment;
+        })
+      : undefined;
+    await CulteMeetingService.save<BriefContent>(to.id, 'brief', moments ? { ...content, moments } : content, actor);
     await CulteRunSheetService.insertMany(
       to.id,
       items.map((item) => ({

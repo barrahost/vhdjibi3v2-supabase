@@ -54,6 +54,33 @@ export interface BriefContent {
   exceptional?: string;
   /** À retenir / à archiver : résumés, points clés, vidéos. */
   toRemember?: string;
+
+  // ── Fiche de timing imprimable (PDF) : le brief en porte les informations, sans table supplémentaire ──
+  /** Titre en tête de la fiche (nom de l'église) ; à défaut, celui de la dernière fiche puis le nom de l'église. */
+  ficheTitle?: string;
+  /** Prédicateur, tel qu'il s'affiche sous la bannière (« Pasteur Prénom NOM »). */
+  preacher?: string;
+  /** Dirigeant du culte. */
+  leader?: string;
+  /** Responsables de la Sainte Cène. */
+  communionLeads?: string;
+  /** Moments du culte (« Moment 1 : Contemplation »…) : chacun regroupe les séquences à partir de son heure. */
+  moments?: TimingMoment[];
+  /** Annonces du pasteur : une annonce par bloc, séparées par une ligne vide (voir parseAnnouncements). */
+  pastorAnnouncements?: string;
+  /** Annonces du dirigeant, même écriture. */
+  leaderAnnouncements?: string;
+  /** Verset du culte, en pied de page. */
+  verse?: string;
+  /** Note en pied de page (« NB : … » est ajouté devant). */
+  footerNote?: string;
+}
+
+/** Un moment du culte sur la fiche de timing : il commence à l'heure `from` et court jusqu'au moment suivant. */
+export interface TimingMoment {
+  label: string;
+  /** HH:MM */
+  from: string;
 }
 
 export interface DebriefContent {
