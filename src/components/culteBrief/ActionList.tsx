@@ -100,29 +100,29 @@ export function ActionList({ actions, actor, canManage, onEdit, onChanged, event
               {editable && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {action.status === 'todo' && (
-                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'in_progress')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md">
+                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'in_progress')} className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md">
                       <Play className="w-3.5 h-3.5" /> Démarrer
                     </button>
                   )}
                   {!closed && (
-                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'done')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md">
+                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'done')} className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 rounded-md">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Terminer
                     </button>
                   )}
                   {!closed && (
-                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'dropped')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md">
+                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'dropped')} className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md">
                       <XCircle className="w-3.5 h-3.5" /> Abandonner
                     </button>
                   )}
                   {closed && (
-                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'todo')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md">
+                    <button type="button" disabled={busyId === action.id} onClick={() => changeStatus(action, 'todo')} className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md">
                       <RotateCcw className="w-3.5 h-3.5" /> Rouvrir
                     </button>
                   )}
-                  <button type="button" onClick={() => onEdit(action)} aria-label="Modifier l'action" className="ml-auto p-1.5 text-gray-400 hover:text-[#00665C]">
+                  <button type="button" onClick={() => onEdit(action)} aria-label="Modifier l'action" className="ml-auto p-2.5 text-gray-400 hover:text-[#00665C]">
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button type="button" disabled={busyId === action.id} onClick={() => remove(action)} aria-label="Supprimer l'action" className="p-1.5 text-gray-400 hover:text-red-600">
+                  <button type="button" disabled={busyId === action.id} onClick={() => remove(action)} aria-label="Supprimer l'action" className="p-2.5 ml-1 text-gray-400 hover:text-red-600">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

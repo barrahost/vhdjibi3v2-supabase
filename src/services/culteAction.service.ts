@@ -89,6 +89,9 @@ const toRow = (input: Partial<ActionInput>) => {
   return row;
 };
 
+/** Coupe un texte destiné à un SMS (points de suspension en ASCII : trois caractères, comptés tels quels). */
+const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 3).trimEnd()}...` : text);
+
 /** Prévient la personne qui reçoit une action (push, SMS de secours). Ne lève jamais. */
 async function notifyAssignee(action: CulteAction, actor: Actor): Promise<void> {
   if (!action.responsibleId || action.responsibleId === actor.id) return;
@@ -98,11 +101,15 @@ async function notifyAssignee(action: CulteAction, actor: Actor): Promise<void> 
     const firstName = (person?.fullName || action.responsibleName || '').split(' ')[0];
     const title = actionTitle(action);
     const due = action.dueDate ? ` — pour le ${formatDateFr(action.dueDate)}` : '';
+    // SMS : un seul segment (160 caractères) ; le titre prend la place qui reste pour ne pas couper « Plan d'actions »
+    const smsStart = `Bonjour ${firstName}, action confiée (${action.departmentName}) : `;
+    const smsEnd = `${due.replace('—', '-')}. Voir Plan d'actions sur Bergerie.`;
+    const smsTitle = truncate(title, Math.max(20, 160 - smsStart.length - smsEnd.length));
     await CulteNotifyService.notifyUsers([action.responsibleId], {
       title: 'Une action t\'est confiée',
       body: `${title}${due}`,
       url: '/plan-actions',
-      sms: `Bonjour ${firstName}, une action t'est confiée (${action.departmentName}) : ${title}${due}. Détails dans « Plan d'actions » sur Bergerie.`,
+      sms: `${smsStart}${smsTitle}${smsEnd}`,
     });
   } catch (error) {
     console.error('Erreur lors de la notification de l\'action:', error);
@@ -180,13 +187,25 @@ export const CulteActionService = {
 
   /** Crée une action par ligne de besoin pas encore enregistrée pour ce culte et ce département. */
   async createNeedsFromLines(
-    params: { eventId: string; reportId?: string | null; departmentName: string; text: string; source?: 'debrief' | 'rapport'; priority?: ActionPriority },
+    params: {
+      eventId: string;
+      reportId?: string | null;
+      departmentName: string;
+      text: string;
+      /** Besoins déjà enregistrés dans la fiche : ces lignes-là ont déjà été converties (ou supprimées volontairement du plan). */
+      previousText?: string;
+      source?: 'debrief' | 'rapport';
+      priority?: ActionPriority;
+    },
     actor: Actor
   ): Promise<number> {
-    const lines = params.text
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const toLines = (text: string) =>
+      text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    const alreadyConverted = new Set(toLines(params.previousText ?? '').map((line) => line.toLowerCase()));
+    const lines = toLines(params.text).filter((line) => !alreadyConverted.has(line.toLowerCase()));
     if (lines.length === 0) return 0;
 
     const existing = await this.list({ eventId: params.eventId, scope: 'all' });

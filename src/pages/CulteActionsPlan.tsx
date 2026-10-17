@@ -9,7 +9,6 @@ import { useCulteAccess } from '../hooks/useCulteAccess';
 import { useCulteModule } from '../hooks/useCulteModule';
 import { CulteCockpitService } from '../services/culteBrief.service';
 import { CulteActionService, isOverdue, summarizeActions } from '../services/culteAction.service';
-import { CulteDirectory } from '../services/culteDirectory.service';
 import { isActionClosed, type CulteAction } from '../types/culteBrief.types';
 import CulteNeedsManagement from './CulteNeedsManagement';
 
@@ -28,7 +27,6 @@ export default function CulteActionsPlan() {
   const access = useCulteAccess();
   const [actions, setActions] = useState<CulteAction[]>([]);
   const [eventLabels, setEventLabels] = useState<Record<string, string>>({});
-  const [managedNames, setManagedNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('all');
   const [status, setStatus] = useState<StatusFilter>('open');
@@ -42,9 +40,8 @@ export default function CulteActionsPlan() {
 
   const load = useCallback(async () => {
     try {
-      const [list, departments] = await Promise.all([CulteActionService.list({ scope: 'all' }), CulteDirectory.departments()]);
+      const list = await CulteActionService.list({ scope: 'all' });
       setActions(list);
-      setManagedNames(departments.filter((d) => access.managedDepartmentIds.includes(d.id)).map((d) => d.name));
       setEventLabels(await CulteCockpitService.getEventLabels(list.map((a) => a.eventId ?? '')));
     } catch (error) {
       console.error('Error loading actions:', error);
@@ -52,17 +49,14 @@ export default function CulteActionsPlan() {
     } finally {
       setLoading(false);
     }
-  }, [access.managedDepartmentIds]);
+  }, []);
 
   useEffect(() => {
     if (enabled && !access.loading) load();
   }, [enabled, access.loading, load]);
 
   // Direction : tout le plan. Responsable de département / assistant : ses départements + ce qui lui est confié.
-  const visible = useMemo(
-    () => actions.filter((a) => access.isManager || a.responsibleId === access.userId || managedNames.includes(a.departmentName)),
-    [actions, access.isManager, access.userId, managedNames]
-  );
+  const visible = useMemo(() => actions.filter((a) => access.canManageAction(a)), [actions, access]);
 
   const filtered = useMemo(
     () =>
@@ -82,9 +76,6 @@ export default function CulteActionsPlan() {
   const summary = summarizeActions(visible);
   const mineOpen = visible.filter((a) => a.responsibleId === access.userId && !isActionClosed(a.status)).length;
   const departmentNames = useMemo(() => Array.from(new Set(visible.map((a) => a.departmentName))).sort((a, b) => a.localeCompare(b, 'fr')), [visible]);
-
-  const canManage = (action: CulteAction) =>
-    access.isManager || action.responsibleId === access.userId || managedNames.includes(action.departmentName);
 
   if (moduleLoading) return <Spinner />;
   if (!enabled) return <ModuleNotReady />;
@@ -153,7 +144,7 @@ export default function CulteActionsPlan() {
         <ActionList
           actions={filtered}
           actor={actor}
-          canManage={canManage}
+          canManage={access.canManageAction}
           eventLabels={eventLabels}
           onEdit={setEditing}
           onChanged={load}
@@ -169,7 +160,7 @@ export default function CulteActionsPlan() {
         onSaved={load}
         actor={actor}
         action={editing}
-        allowedDepartmentNames={access.isManager ? undefined : managedNames}
+        allowedDepartmentNames={access.allowedActionDepartments}
       />
     </div>
   );

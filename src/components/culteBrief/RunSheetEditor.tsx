@@ -86,17 +86,17 @@ export function RunSheetEditor({ rows, onChange, departmentNames, eventStart }: 
                   aria-label={open ? 'Masquer les détails' : 'Afficher les détails'}
                   aria-expanded={open}
                   onClick={() => setExpanded((prev) => ({ ...prev, [row.key]: !open }))}
-                  className="p-1.5 text-gray-400 hover:text-gray-700"
+                  className="p-2.5 text-gray-400 hover:text-gray-700"
                 >
                   {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
-                <button type="button" aria-label="Monter" onClick={() => move(index, -1)} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                <button type="button" aria-label="Monter" onClick={() => move(index, -1)} disabled={index === 0} className="p-2.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
                   <ArrowUp className="w-4 h-4" />
                 </button>
-                <button type="button" aria-label="Descendre" onClick={() => move(index, 1)} disabled={index === rows.length - 1} className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                <button type="button" aria-label="Descendre" onClick={() => move(index, 1)} disabled={index === rows.length - 1} className="p-2.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
                   <ArrowDown className="w-4 h-4" />
                 </button>
-                <button type="button" aria-label="Supprimer la séquence" onClick={() => onChange(rows.filter((r) => r.key !== row.key))} className="p-1.5 text-gray-400 hover:text-red-600">
+                <button type="button" aria-label="Supprimer la séquence" onClick={() => onChange(rows.filter((r) => r.key !== row.key))} className="p-2.5 ml-3 text-gray-400 hover:text-red-600">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

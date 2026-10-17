@@ -281,6 +281,21 @@ export const CulteMeetingService = {
     return mapMeeting<C>(data);
   },
 
+  /**
+   * Enregistre seulement les champs modifiés par cet écran, par-dessus la dernière version enregistrée :
+   * un autre responsable qui a complété le document entre-temps n'est pas écrasé par une version périmée.
+   */
+  async savePatch<C extends object>(
+    eventId: string,
+    kind: MeetingKind,
+    patch: Partial<C>,
+    actor: Actor,
+    status?: MeetingStatus
+  ): Promise<CulteMeeting<C>> {
+    const latest = await CulteMeetingService.get<C>(eventId, kind);
+    return CulteMeetingService.save<C>(eventId, kind, { ...(latest?.content ?? {}), ...patch } as C, actor, status);
+  },
+
   async setStatus(eventId: string, kind: MeetingKind, status: MeetingStatus, actor: Actor): Promise<void> {
     const existing = await this.get(eventId, kind);
     await this.save(eventId, kind, existing?.content ?? {}, actor, status);
@@ -360,25 +375,32 @@ export const CulteRunSheetService = {
   },
 
   /**
-   * Aligne le conducteur enregistré sur la liste fournie (ordre inclus) : met à jour les séquences
-   * existantes, crée les nouvelles, supprime celles qui ont disparu.
+   * Aligne le conducteur enregistré sur la liste fournie (ordre inclus), en ne touchant qu'à ce que cet
+   * écran a réellement modifié par rapport à `baseline` (le conducteur tel qu'il l'avait chargé) :
+   * séquences créées, modifiées, déplacées ou retirées ici. Une séquence ajoutée entre-temps par un autre
+   * responsable n'est jamais supprimée.
    */
-  async sync(eventId: string, items: RunSheetInput[]): Promise<RunSheetItem[]> {
-    const existing = await this.list(eventId);
+  async sync(eventId: string, items: RunSheetInput[], baseline: RunSheetItem[]): Promise<RunSheetItem[]> {
+    const base = new Map(baseline.map((item) => [item.id, item]));
     const keep = new Set(items.map((item) => item.id).filter(Boolean));
-    const removed = existing.filter((item) => !keep.has(item.id)).map((item) => item.id);
+    const removed = baseline.filter((item) => !keep.has(item.id)).map((item) => item.id);
     if (removed.length > 0) {
       const { error } = await supabase.from('culte_run_sheet_items').delete().in('id', removed);
       if (error) throw error;
     }
     const now = new Date().toISOString();
-    const results = await Promise.all(
-      items.map((item, index) =>
-        item.id
-          ? supabase.from('culte_run_sheet_items').update({ ...toRunSheetRow(item), position: index, updated_at: now }).eq('id', item.id)
-          : supabase.from('culte_run_sheet_items').insert({ church_id: getChurchId(), event_id: eventId, position: index, ...toRunSheetRow(item) })
-      )
-    );
+    const operations = items.flatMap((item, index) => {
+      if (!item.id) {
+        return [supabase.from('culte_run_sheet_items').insert({ church_id: getChurchId(), event_id: eventId, position: index, ...toRunSheetRow(item) })];
+      }
+      const before = base.get(item.id);
+      const contentChanged = !before || JSON.stringify(toRunSheetRow(before)) !== JSON.stringify(toRunSheetRow(item));
+      const moved = !before || before.position !== index;
+      if (!contentChanged && !moved) return [];
+      const fields = contentChanged ? { ...toRunSheetRow(item), position: index, updated_at: now } : { position: index };
+      return [supabase.from('culte_run_sheet_items').update(fields).eq('id', item.id)];
+    });
+    const results = await Promise.all(operations);
     const failed = results.find((r) => r.error);
     if (failed?.error) throw failed.error;
     return this.list(eventId);

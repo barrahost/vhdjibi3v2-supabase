@@ -3,6 +3,10 @@ import { getChurchId } from '../lib/churchId';
 import { PushService } from './push.service';
 import { SMSService } from './sms.service';
 import { CulteDirectory } from './culteDirectory.service';
+import { toSmsText } from '../lib/smsText';
+
+/** Garde-fou : un SMS coûte de l'argent, jamais d'envoi en masse depuis ce module. */
+const MAX_SMS_PER_CALL = 5;
 
 export interface NotifyPayload {
   title: string;
@@ -28,11 +32,19 @@ export const CulteNotifyService = {
     if (ids.length === 0) return { pushed: 0, sms: 0 };
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('push_subscriptions')
         .select('user_id')
         .eq('church_id', getChurchId())
         .in('user_id', ids);
+
+      if (error) {
+        // On ne sait pas qui est abonné : push à tout le monde (les non-abonnés sont ignorés côté serveur),
+        // mais jamais de SMS « par défaut ».
+        console.error('Abonnés push introuvables, pas de SMS de secours :', error);
+        await PushService.notify(ids, payload.title, payload.body, payload.url);
+        return { pushed: ids.length, sms: 0 };
+      }
       const subscribed = new Set<string>((data ?? []).map((row: any) => row.user_id));
 
       const toPush = ids.filter((id) => subscribed.has(id));
@@ -41,7 +53,8 @@ export const CulteNotifyService = {
       let sms = 0;
       if (payload.sms) {
         const toSms = ids.filter((id) => !subscribed.has(id));
-        if (toSms.length > 0) sms = await sendSmsTo(toSms, payload.sms);
+        if (toSms.length > MAX_SMS_PER_CALL) console.warn(`SMS de secours limité à ${MAX_SMS_PER_CALL} destinataires.`);
+        if (toSms.length > 0) sms = await sendSmsTo(toSms.slice(0, MAX_SMS_PER_CALL), toSmsText(payload.sms));
       }
       return { pushed: toPush.length, sms };
     } catch (error) {

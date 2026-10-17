@@ -40,12 +40,24 @@ export function UserPicker({ value, onChange, placeholder = 'Choisir une personn
   const [query, setQuery] = useState(value.name ?? '');
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Dernier nom que ce composant a lui-même transmis : on ne réécrit pas la zone de saisie pendant la frappe
+  const emitted = useRef<string | null>(value.name ?? null);
 
   useEffect(() => {
-    CulteDirectory.users().then(setUsers).catch(() => setUsers([]));
+    CulteDirectory.assignableUsers().then(setUsers).catch(() => setUsers([]));
   }, []);
 
-  useEffect(() => setQuery(value.name ?? ''), [value.name]);
+  useEffect(() => {
+    if ((value.name ?? null) !== emitted.current) {
+      emitted.current = value.name ?? null;
+      setQuery(value.name ?? '');
+    }
+  }, [value.name]);
+
+  const emit = (next: PickedUser) => {
+    emitted.current = next.name ?? null;
+    onChange(next);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -65,19 +77,19 @@ export function UserPicker({ value, onChange, placeholder = 'Choisir une personn
   }, [users, query, suggestedDepartmentId]);
 
   const pick = (user: DirectoryUser) => {
-    onChange({ id: user.id, name: user.fullName });
+    emit({ id: user.id, name: user.fullName });
     setQuery(user.fullName);
     setOpen(false);
   };
 
-  const commitFreeText = () => {
-    const typed = query.trim();
-    if (!typed) {
-      if (value.id || value.name) onChange({ id: null, name: null });
-    } else if (typed !== value.name) {
-      const exact = users.find((u) => normalize(u.fullName) === normalize(typed));
-      onChange(exact ? { id: exact.id, name: exact.fullName } : { id: null, name: typed });
-    }
+  // Chaque frappe est transmise tout de suite : un nom qui ne correspond à personne reste un responsable « hors appli »
+  const handleType = (text: string) => {
+    setQuery(text);
+    setOpen(true);
+    const typed = text.trim();
+    if (!typed) return emit({ id: null, name: null });
+    const exact = users.find((u) => normalize(u.fullName) === normalize(typed));
+    emit(exact ? { id: exact.id, name: exact.fullName } : { id: null, name: typed });
   };
 
   return (
@@ -90,12 +102,8 @@ export function UserPicker({ value, onChange, placeholder = 'Choisir une personn
           disabled={disabled}
           placeholder={placeholder}
           onFocus={() => setOpen(true)}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onBlur={() => window.setTimeout(commitFreeText, 150)}
-          className={`${inputCls} pr-8`}
+          onChange={(e) => handleType(e.target.value)}
+          className={`${inputCls} pr-10`}
           autoComplete="off"
         />
         {query && !disabled && (
@@ -105,9 +113,9 @@ export function UserPicker({ value, onChange, placeholder = 'Choisir une personn
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               setQuery('');
-              onChange({ id: null, name: null });
+              emit({ id: null, name: null });
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+            className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 text-gray-400 hover:text-gray-600"
           >
             <X className="w-4 h-4" />
           </button>
@@ -135,6 +143,8 @@ export function UserPicker({ value, onChange, placeholder = 'Choisir une personn
         </ul>
       )}
 
+      {/* Affiché dès la frappe (et non à la fermeture de la liste) : une ligne qui apparaîtrait au moment où l'on
+          touche « Ajouter » décalerait le bouton entre l'appui et le relâchement, et le clic serait perdu */}
       {!value.id && value.name && (
         <p className="mt-1 text-xs text-gray-400">Hors appli : cette personne ne sera pas notifiée.</p>
       )}

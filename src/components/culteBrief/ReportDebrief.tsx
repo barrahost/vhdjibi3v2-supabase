@@ -19,12 +19,15 @@ export function useReportDebrief(eventId: string | null, departmentName: string)
   const { enabled } = useCulteModule();
   const [values, setValues] = useState<DebriefSheetValues>(blankDebriefSheet());
   const [preloaded, setPreloaded] = useState(false);
+  // Besoins déjà enregistrés dans la fiche : seuls les ajouts deviennent de nouvelles actions du plan
+  const [savedNeeds, setSavedNeeds] = useState('');
 
   // Une fiche déjà commencée depuis l'onglet Débrief du culte est reprise, pas écrasée
   useEffect(() => {
     if (!enabled || !eventId) {
       setValues(blankDebriefSheet());
       setPreloaded(false);
+      setSavedNeeds('');
       return;
     }
     let cancelled = false;
@@ -33,6 +36,7 @@ export function useReportDebrief(eventId: string | null, departmentName: string)
         if (cancelled) return;
         const mine = sheets.find((s) => s.departmentName === departmentName);
         setPreloaded(!!mine);
+        setSavedNeeds(mine?.needs ?? '');
         setValues(
           mine
             ? { positives: mine.positives, difficulties: mine.difficulties, causes: mine.causes, needs: mine.needs, solutions: mine.solutions }
@@ -48,6 +52,7 @@ export function useReportDebrief(eventId: string | null, departmentName: string)
   const reset = useCallback(() => {
     setValues(blankDebriefSheet());
     setPreloaded(false);
+    setSavedNeeds('');
   }, []);
 
   /** À appeler une fois le rapport enregistré : fiche + actions issues des besoins. */
@@ -56,12 +61,13 @@ export function useReportDebrief(eventId: string | null, departmentName: string)
       if (isDebriefSheetEmpty(values)) return { actions: 0 };
       await CulteDebriefService.save(params.eventId, { id: params.departmentId, name: departmentName }, values, params.actor);
       const actions = await CulteActionService.createNeedsFromLines(
-        { eventId: params.eventId, reportId: params.reportId, departmentName, text: values.needs, source: 'debrief' },
+        { eventId: params.eventId, reportId: params.reportId, departmentName, text: values.needs, previousText: savedNeeds, source: 'debrief' },
         params.actor
       );
+      setSavedNeeds(values.needs);
       return { actions };
     },
-    [values, departmentName]
+    [values, departmentName, savedNeeds]
   );
 
   return { enabled, values, setValues, preloaded, notes: debriefToNotes(values), reset, persist };

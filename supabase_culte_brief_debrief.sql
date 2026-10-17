@@ -88,6 +88,9 @@ BEGIN
   ELSIF NEW.status IN ('done', 'dropped') THEN
     NEW.is_addressed := true;
     NEW.addressed_at := COALESCE(NEW.addressed_at, now());
+  ELSIF NEW.is_addressed THEN
+    NEW.status := 'done';
+    NEW.addressed_at := COALESCE(NEW.addressed_at, now());
   END IF;
   NEW.updated_at := now();
   RETURN NEW;

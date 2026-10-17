@@ -23,6 +23,9 @@ export interface DirectoryUser {
   supervisedDepartmentIds: string[];
 }
 
+/** Casquettes qui donnent accès au module (permission MANAGE_CULTE_REPORTS) : un responsable doit pouvoir ouvrir son action. */
+export const CULTE_ACCESS_ROLES = ['admin', 'super_admin', 'pasteur', 'pasteur_assistant', 'department_leader'];
+
 const TTL_MS = 5 * 60_000;
 
 interface CacheEntry<T> {
@@ -80,6 +83,12 @@ export const CulteDirectory = {
       .sort((a: DirectoryUser, b: DirectoryUser) => a.fullName.localeCompare(b.fullName, 'fr'));
     usersCache = { churchId: getChurchId(), at: Date.now(), data: list };
     return list;
+  },
+
+  /** Personnes à qui confier une action : celles qui ont accès au plan d'actions (sinon la notification mènerait nulle part). */
+  async assignableUsers(): Promise<DirectoryUser[]> {
+    const users = await this.users();
+    return users.filter((u) => u.profileTypes.some((t) => CULTE_ACCESS_ROLES.includes(t)));
   },
 
   /** Utilisateurs à prévenir pour un brief : responsables de département, assistants et pasteurs. */

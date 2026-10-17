@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getProfileDepartmentIds } from '../types/businessProfile.types';
 import { DEPARTMENT_NAME_BY_REPORT_TYPE, normalizeDeptName } from '../types/culteReport.types';
-import { CulteDirectory } from '../services/culteDirectory.service';
+import { CulteDirectory, type DirectoryDepartment } from '../services/culteDirectory.service';
 
 export interface CulteAccess {
   loading: boolean;
@@ -13,6 +13,12 @@ export interface CulteAccess {
   isManager: boolean;
   /** Départements dirigés ou supervisés (responsable de département, pasteur assistant). */
   managedDepartmentIds: string[];
+  /** Leurs noms (les actions sont rattachées à un département par son nom). */
+  managedDepartmentNames: string[];
+  /** Départements où l'on peut créer une action : tous (undefined) pour la direction, sinon les siens (liste vide = aucun). */
+  allowedActionDepartments: string[] | undefined;
+  /** Voir et gérer une action : la direction toutes ; les autres, celles de leurs départements ou qui leur sont confiées. */
+  canManageAction: (action: { responsibleId?: string | null; departmentName: string }) => boolean;
   /** Peut-il cocher le contrôle / écrire le débrief de ce département ? */
   canEditDepartment: (departmentId?: string | null) => boolean;
 }
@@ -20,7 +26,7 @@ export interface CulteAccess {
 /** Droits du module « Cultes », déduits des casquettes de l'utilisateur (même logique que les rapports de culte). */
 export function useCulteAccess(): CulteAccess {
   const { user, userRole } = useAuth();
-  const [culteDepartmentId, setCulteDepartmentId] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<DirectoryDepartment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const profiles = useMemo(() => (((user as any)?.businessProfiles || []) as any[]), [user]);
@@ -38,10 +44,8 @@ export function useCulteAccess(): CulteAccess {
   useEffect(() => {
     let cancelled = false;
     CulteDirectory.departments()
-      .then((departments) => {
-        if (cancelled) return;
-        const wanted = normalizeDeptName(DEPARTMENT_NAME_BY_REPORT_TYPE.worship);
-        setCulteDepartmentId(departments.find((d) => normalizeDeptName(d.name) === wanted)?.id ?? null);
+      .then((list) => {
+        if (!cancelled) setDepartments(list);
       })
       .catch(() => undefined)
       .finally(() => !cancelled && setLoading(false));
@@ -50,7 +54,23 @@ export function useCulteAccess(): CulteAccess {
     };
   }, []);
 
+  const culteDepartmentId = useMemo(() => {
+    const wanted = normalizeDeptName(DEPARTMENT_NAME_BY_REPORT_TYPE.worship);
+    return departments.find((d) => normalizeDeptName(d.name) === wanted)?.id ?? null;
+  }, [departments]);
+  const managedDepartmentNames = useMemo(
+    () => departments.filter((d) => managedDepartmentIds.includes(d.id)).map((d) => d.name),
+    [departments, managedDepartmentIds]
+  );
+  const userId: string | null = (user as any)?.id ?? null;
+
   const isManager = isAdmin || isPasteur || (!!culteDepartmentId && managedDepartmentIds.includes(culteDepartmentId));
+
+  const canManageAction = useCallback(
+    (action: { responsibleId?: string | null; departmentName: string }) =>
+      isManager || (!!userId && action.responsibleId === userId) || managedDepartmentNames.includes(action.departmentName),
+    [isManager, userId, managedDepartmentNames]
+  );
 
   const canEditDepartment = useCallback(
     (departmentId?: string | null) => isManager || (!!departmentId && managedDepartmentIds.includes(departmentId)),
@@ -59,10 +79,13 @@ export function useCulteAccess(): CulteAccess {
 
   return {
     loading,
-    userId: (user as any)?.id ?? null,
+    userId,
     userName: (user as any)?.fullName || 'Inconnu',
     isManager,
     managedDepartmentIds,
+    managedDepartmentNames,
+    allowedActionDepartments: isManager ? undefined : managedDepartmentNames,
+    canManageAction,
     canEditDepartment,
   };
 }

@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { CulteReportService } from '../../services/culteReport.service';
 import { MeetingTypeService, SpeakerService } from '../../services/meetingTypeSpeaker.service';
-import { CulteEventService } from '../../services/culteEvent.service';
+import { CulteEventService, RecurringScheduleService } from '../../services/culteEvent.service';
+import { useCulteModule } from '../../hooks/useCulteModule';
 import {
   CulteReportType,
   CulteReportMeetingType,
@@ -45,6 +46,8 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [notes, setNotes] = useState('');
   const [needsNotes, setNeedsNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Rapport déjà enregistré dont la fiche de débrief a échoué : on réessaie la fiche, sans recréer le rapport
+  const [savedReport, setSavedReport] = useState<{ id: string; eventId: string } | null>(null);
   const [values, setValues] = useState<CulteReportFormValues>(blankFormValues());
 
   // Culte du jour, partage entre tous les departements (worship inclus) -- plus de dependance
@@ -53,6 +56,16 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [selectedEventId, setSelectedEventId] = useState('');
   const [loadingEvents, setLoadingEvents] = useState(true);
   const selectedEvent = events.find((ev) => ev.id === selectedEventId) || null;
+  // Les cultes suivis dans « Cultes » (brief activé) sont rattachés à leur horaire par leur nom : on ne les renomme pas d'ici
+  const { enabled: culteModule } = useCulteModule();
+  const [briefedNames, setBriefedNames] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!culteModule) return;
+    RecurringScheduleService.list()
+      .then((list) => setBriefedNames(new Set(list.filter((s) => s.briefEnabled).map((s) => s.meetingTypeName))))
+      .catch(() => undefined);
+  }, [culteModule]);
+  const canEditSelected = !!selectedEvent && !briefedNames.has(selectedEvent.meetingTypeName);
   // Fiche de débrief du département (module « Cultes ») : remplace « Notes » et « Besoins à signaler »
   const debrief = useReportDebrief(selectedEventId || null, departmentName);
 
@@ -225,42 +238,48 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
 
     setIsSubmitting(true);
     try {
-      const data = buildCulteReportData(reportType, values);
-      if (!data) throw new Error('Type de rapport inconnu');
+      let reportId = savedReport && savedReport.eventId === selectedEvent.id ? savedReport.id : null;
+      if (!reportId) {
+        const data = buildCulteReportData(reportType, values);
+        if (!data) throw new Error('Type de rapport inconnu');
 
-      const report = await CulteReportService.submitReport({
-        reportType,
-        departmentId,
-        departmentName,
-        worshipReportId: null,
-        eventId: selectedEvent.id,
-        serviceDate: selectedEvent.serviceDate,
-        meetingTypeId: null,
-        meetingTypeName: selectedEvent.meetingTypeName,
-        submittedBy: user?.id || null,
-        submittedByName: user?.fullName || 'Inconnu',
-        data,
-        notes: (debrief.enabled ? debrief.notes : notes) || undefined,
-        needsNotes: debrief.enabled ? undefined : needsNotes || undefined,
-      });
-
-      toast.success('Rapport enregistré avec succès');
+        const report = await CulteReportService.submitReport({
+          reportType,
+          departmentId,
+          departmentName,
+          worshipReportId: null,
+          eventId: selectedEvent.id,
+          serviceDate: selectedEvent.serviceDate,
+          meetingTypeId: null,
+          meetingTypeName: selectedEvent.meetingTypeName,
+          submittedBy: user?.id || null,
+          submittedByName: user?.fullName || 'Inconnu',
+          data,
+          notes: (debrief.enabled ? debrief.notes : notes) || undefined,
+          needsNotes: debrief.enabled ? undefined : needsNotes || undefined,
+        });
+        reportId = report.id;
+        setSavedReport({ id: report.id, eventId: selectedEvent.id });
+        toast.success('Rapport enregistré avec succès');
+      }
       if (debrief.enabled) {
-        // Le rapport est enregistré : un échec de la fiche ne doit pas le remettre en cause
         try {
           const { actions } = await debrief.persist({
             eventId: selectedEvent.id,
-            reportId: report.id,
+            reportId,
             departmentId,
             actor: { id: user?.id || null, name: user?.fullName || 'Inconnu' },
           });
           if (actions > 0) toast.success(`${actions} besoin(s) ajouté(s) au plan d'actions`);
         } catch (debriefError) {
+          // Le rapport est enregistré mais la fiche non : on garde les réponses à l'écran pour réessayer
           console.error('Error saving department debrief:', debriefError);
-          toast.error("Rapport enregistré, mais la fiche de débrief n'a pas pu l'être : rouvrez-la depuis « Cultes ».");
+          toast.error("Le rapport est enregistré, mais la fiche de débrief n'a pas pu l'être. Vos réponses sont conservées : réessayez.");
+          return;
         }
         debrief.reset();
       }
+      setSavedReport(null);
       setValues(blankFormValues());
       setNotes(''); setNeedsNotes(''); setSelectedEventId('');
       onSuccess?.();
@@ -307,7 +326,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
             >
               + Créer ce culte (s'il n'apparaît pas dans la liste)
             </button>
-            {selectedEvent && (
+            {canEditSelected && (
               <button
                 type="button"
                 onClick={openEditEvent}
@@ -494,7 +513,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
           disabled={isSubmitting}
           className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#00665C] hover:bg-[#00665C]/90 disabled:opacity-50"
         >
-          {isSubmitting ? 'Enregistrement...' : 'Enregistrer le rapport'}
+          {isSubmitting ? 'Enregistrement...' : savedReport ? 'Réessayer la fiche de débrief' : 'Enregistrer le rapport'}
         </button>
       </div>
     </form>

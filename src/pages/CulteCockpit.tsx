@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BriefTab } from '../components/culteBrief/BriefTab';
@@ -7,6 +7,8 @@ import { ChecklistTab } from '../components/culteBrief/ChecklistTab';
 import { DebriefTab } from '../components/culteBrief/DebriefTab';
 import { ActionsTab } from '../components/culteBrief/ActionsTab';
 import { EmptyState, ModuleNotReady, Spinner } from '../components/culteBrief/ui';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { useConfirmModal } from '../hooks/useConfirmModal';
 import { useCulteAccess } from '../hooks/useCulteAccess';
 import { useCulteModule } from '../hooks/useCulteModule';
 import { capitalize, formatDayFr, formatRangeFr, formatTimeFr, getEventPhase, shortServiceLabel } from '../lib/culteTiming';
@@ -34,6 +36,39 @@ export default function CulteCockpit() {
   const [dayEvents, setDayEvents] = useState<CulteEventInfo[]>([]);
   const [summary, setSummary] = useState<EventSummary | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Brief et Débrief contiennent de la saisie : une fois ouverts, ils restent montés (masqués) quand on passe à
+  // un autre onglet, et le cockpit sait s'il reste une saisie non enregistrée avant de changer de culte.
+  const navigate = useNavigate();
+  const { confirm, confirmModalProps } = useConfirmModal();
+  const [visited, setVisited] = useState<Record<string, boolean>>({});
+  const [dirtyTabs, setDirtyTabs] = useState({ brief: false, debrief: false });
+  const anyDirty = dirtyTabs.brief || dirtyTabs.debrief;
+  const setBriefDirty = useCallback((dirty: boolean) => setDirtyTabs((prev) => (prev.brief === dirty ? prev : { ...prev, brief: dirty })), []);
+  const setDebriefDirty = useCallback((dirty: boolean) => setDirtyTabs((prev) => (prev.debrief === dirty ? prev : { ...prev, debrief: dirty })), []);
+
+  useEffect(() => {
+    if (!anyDirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [anyDirty]);
+
+  /** Quitte l'écran (autre culte, retour au hub) en demandant confirmation s'il reste une saisie non enregistrée. */
+  const guardedNavigate = async (to: string) => {
+    if (anyDirty) {
+      const ok = await confirm('Vous avez des modifications non enregistrées. Quitter sans les enregistrer ?', {
+        title: 'Modifications non enregistrées',
+        confirmLabel: 'Quitter sans enregistrer',
+        variant: 'warning',
+      });
+      if (!ok) return;
+    }
+    navigate(to);
+  };
 
   const loadSummary = useCallback(async () => {
     if (!eventId) return;
@@ -86,6 +121,10 @@ export default function CulteCockpit() {
     setSearchParams(next, { replace: true });
   };
 
+  useEffect(() => {
+    if (tab === 'brief' || tab === 'debrief') setVisited((prev) => (prev[tab] ? prev : { ...prev, [tab]: true }));
+  }, [tab]);
+
   if (moduleLoading) return <Spinner />;
   if (!enabled) return <ModuleNotReady />;
   if (loading || access.loading) return <Spinner />;
@@ -109,7 +148,15 @@ export default function CulteCockpit() {
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/cultes" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#00665C]">
+        <Link
+          to="/cultes"
+          onClick={(e) => {
+            if (!anyDirty) return;
+            e.preventDefault();
+            void guardedNavigate('/cultes');
+          }}
+          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#00665C]"
+        >
           <ArrowLeft className="w-4 h-4" /> Cultes
         </Link>
         <h1 className="mt-1 text-xl sm:text-2xl font-bold text-gray-900">{event.meetingTypeName}</h1>
@@ -124,6 +171,11 @@ export default function CulteCockpit() {
               <Link
                 key={e.id}
                 to={`/cultes/${e.id}?tab=${tab}`}
+                onClick={(click) => {
+                  if (!anyDirty || e.id === event.id) return;
+                  click.preventDefault();
+                  void guardedNavigate(`/cultes/${e.id}?tab=${tab}`);
+                }}
                 role="tab"
                 aria-selected={e.id === event.id}
                 className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
@@ -159,12 +211,28 @@ export default function CulteCockpit() {
         })}
       </div>
 
-      <div role="tabpanel">
-        {tab === 'brief' && <BriefTab {...tabProps} />}
-        {tab === 'controle' && <ChecklistTab {...tabProps} />}
-        {tab === 'debrief' && <DebriefTab {...tabProps} />}
-        {tab === 'actions' && <ActionsTab {...tabProps} />}
-      </div>
+      {(visited.brief || tab === 'brief') && (
+        <div role="tabpanel" hidden={tab !== 'brief'}>
+          <BriefTab {...tabProps} active={tab === 'brief'} onDirtyChange={setBriefDirty} />
+        </div>
+      )}
+      {tab === 'controle' && (
+        <div role="tabpanel">
+          <ChecklistTab {...tabProps} />
+        </div>
+      )}
+      {(visited.debrief || tab === 'debrief') && (
+        <div role="tabpanel" hidden={tab !== 'debrief'}>
+          <DebriefTab {...tabProps} active={tab === 'debrief'} onDirtyChange={setDebriefDirty} />
+        </div>
+      )}
+      {tab === 'actions' && (
+        <div role="tabpanel">
+          <ActionsTab {...tabProps} />
+        </div>
+      )}
+
+      <ConfirmModal {...confirmModalProps} />
     </div>
   );
 }

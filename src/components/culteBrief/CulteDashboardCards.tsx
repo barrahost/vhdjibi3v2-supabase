@@ -19,6 +19,7 @@ interface ActionPlanCardProps {
 
 export function ActionPlanDashboardCard({ departmentNames }: ActionPlanCardProps) {
   const [summary, setSummary] = useState<ActionsSummary | null>(null);
+  const [failed, setFailed] = useState(false);
   const scopeKey = departmentNames ? departmentNames.join('|') : '*';
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export function ActionPlanDashboardCard({ departmentNames }: ActionPlanCardProps
       })
       .catch((error) => {
         console.error('Error loading action plan summary:', error);
-        if (!cancelled) setSummary({ open: 0, overdue: 0, toArbitrate: 0, highPriority: 0 });
+        if (!cancelled) setFailed(true);
       });
     return () => {
       cancelled = true;
@@ -53,7 +54,9 @@ export function ActionPlanDashboardCard({ departmentNames }: ActionPlanCardProps
           Gérer <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
-      {!summary ? (
+      {failed ? (
+        <p className="text-sm text-gray-400">Impossible de charger le plan d'actions pour le moment.</p>
+      ) : !summary ? (
         <p className="text-sm text-gray-400">Chargement…</p>
       ) : summary.open === 0 ? (
         <p className="text-sm text-gray-400">Aucune action en cours. 👍</p>
@@ -152,6 +155,7 @@ function groupByDay(events: CulteEventInfo[], now: Date): CulteGroup[] {
  */
 export function UpcomingCultesDashboardCard() {
   const [groups, setGroups] = useState<CulteGroup[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, EventSummary>>({});
 
   useEffect(() => {
@@ -170,7 +174,7 @@ export function UpcomingCultesDashboardCard() {
         setGroups([toDebrief, next ?? null].filter((g): g is CulteGroup => !!g));
       } catch (error) {
         console.error('Error loading upcoming cultes:', error);
-        if (!cancelled) setGroups([]);
+        if (!cancelled) setFailed(true);
       }
     })();
     return () => {
@@ -188,7 +192,9 @@ export function UpcomingCultesDashboardCard() {
           Ouvrir <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
-      {groups === null ? (
+      {failed ? (
+        <p className="text-sm text-gray-400">Impossible de charger les cultes pour le moment.</p>
+      ) : groups === null ? (
         <p className="text-sm text-gray-400">Chargement…</p>
       ) : groups.length === 0 ? (
         <p className="text-sm text-gray-400">Aucun culte suivi à venir.</p>

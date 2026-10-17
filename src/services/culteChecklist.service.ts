@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
-import { compareEventsInDay } from '../lib/culteTiming';
+import { compareEventsInDay, todayISO } from '../lib/culteTiming';
 import type {
   ChecklistItem,
   ChecklistProgress,
@@ -100,6 +100,18 @@ export const CulteChecklistTemplateService = {
     return mapTemplate(data);
   },
 
+  /** Modifie seulement les champs donnés : deux modifications rapprochées ne s'écrasent pas. */
+  async update(id: string, patch: { task?: string; indicator?: string | null; scope?: ChecklistScope; isActive?: boolean }): Promise<ChecklistTemplate> {
+    const fields: Record<string, any> = {};
+    if (patch.task !== undefined) fields.task = patch.task.trim();
+    if (patch.indicator !== undefined) fields.indicator = patch.indicator?.trim() || null;
+    if (patch.scope !== undefined) fields.scope = patch.scope;
+    if (patch.isActive !== undefined) fields.is_active = patch.isActive;
+    const { data, error } = await supabase.from('culte_checklist_templates').update(fields).eq('id', id).select().single();
+    if (error) throw error;
+    return mapTemplate(data);
+  },
+
   /** Ajoute plusieurs points à la suite des existants du département (suggestions du guide). */
   async addMany(rows: TemplateInput[], startPosition: number): Promise<void> {
     if (rows.length === 0) return;
@@ -150,16 +162,23 @@ export const CulteChecklistService = {
   /**
    * Crée les points de contrôle du culte à partir des modèles (une seule fois, sans écraser ce qui
    * existe). Les points « une fois par jour » sont repris du culte précédent du même jour : ce qui
-   * a été vérifié avant le 1er culte n'est pas à re-vérifier avant le 2e.
+   * a été vérifié avant le 1er culte n'est pas à re-vérifier avant le 2e. Cette reprise est rejouée à
+   * chaque appel pour les points encore « à vérifier » : ouvrir le 2e culte avant que le 1er soit
+   * contrôlé ne les laisse pas en attente pour toujours.
    */
   async ensureForEvent(event: CulteEventInfo, dayEvents: CulteEventInfo[]): Promise<void> {
+    // Jamais de points créés sur un culte passé : ouvrir un ancien culte n'y injecte pas les modèles d'aujourd'hui
+    if (event.serviceDate < todayISO()) return;
+
     const templates = (await CulteChecklistTemplateService.list()).filter((t) => t.isActive);
     if (templates.length === 0) return;
 
     const existing = await this.list(event.id);
     const have = new Set(existing.map((item) => item.templateId).filter(Boolean));
     const missing = templates.filter((t) => !have.has(t.id));
-    if (missing.length === 0) return;
+    const dayTemplateIds = new Set(templates.filter((t) => t.scope === 'day').map((t) => t.id));
+    const pendingDay = existing.filter((item) => item.templateId && dayTemplateIds.has(item.templateId) && item.status === 'pending' && !item.inherited);
+    if (missing.length === 0 && pendingDay.length === 0) return;
 
     // Points déjà vérifiés lors d'un culte précédent du même jour (le plus récent l'emporte)
     const earlier = dayEvents.filter((e) => e.id !== event.id && compareEventsInDay(e, event) < 0).sort(compareEventsInDay);
@@ -177,6 +196,11 @@ export const CulteChecklistService = {
         byEvent.set(item.eventId, [...(byEvent.get(item.eventId) ?? []), item]);
       });
       earlier.forEach((e) => (byEvent.get(e.id) ?? []).forEach((item) => item.templateId && inherited.set(item.templateId, item)));
+    }
+
+    if (missing.length === 0) {
+      await this.refreshInherited(pendingDay, inherited);
+      return;
     }
 
     const rows = missing.map((template) => {
@@ -203,6 +227,31 @@ export const CulteChecklistService = {
       .from('culte_checklist_items')
       .upsert(rows, { onConflict: 'event_id,template_id', ignoreDuplicates: true });
     if (error) throw error;
+    await this.refreshInherited(pendingDay, inherited);
+  },
+
+  /** Reprend, pour les points « une fois par jour » encore à vérifier, le résultat du culte précédent s'il existe désormais. */
+  async refreshInherited(pending: ChecklistItem[], inherited: Map<string, ChecklistItem>): Promise<void> {
+    const now = new Date().toISOString();
+    for (const item of pending) {
+      const source = item.templateId ? inherited.get(item.templateId) : undefined;
+      if (!source || source.status === 'pending') continue;
+      const { error } = await supabase
+        .from('culte_checklist_items')
+        .update({
+          status: source.status,
+          inherited: true,
+          responsible_name: item.responsibleName ?? source.responsibleName,
+          observation: item.observation ?? source.observation,
+          checked_by_name: source.checkedByName,
+          checked_at: source.checkedAt,
+          updated_at: now,
+        })
+        // seulement s'il n'a pas été coché entre-temps
+        .eq('id', item.id)
+        .eq('status', 'pending');
+      if (error) throw error;
+    }
   },
 
   async setStatus(itemId: string, status: ChecklistStatus, actor: Actor): Promise<ChecklistItem> {
