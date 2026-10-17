@@ -40,8 +40,13 @@ const DepartmentManagement = lazy(() => import('./pages/DepartmentManagement'));
 const ServiceFamilyManagement = lazy(() => import('./pages/ServiceFamilyManagement'));
 const ShepherdFamilyManagement = lazy(() => import('./pages/ShepherdFamilyManagement'));
 const CulteReportForm = lazy(() => import('./pages/CulteReportForm'));
-const CulteNeedsManagement = lazy(() => import('./pages/CulteNeedsManagement'));
 const CulteReportsDashboard = lazy(() => import('./pages/CulteReportsDashboard'));
+const CulteHub = lazy(() => import('./pages/CulteHub'));
+const CulteCockpit = lazy(() => import('./pages/CulteCockpit'));
+const CulteChecklistSettings = lazy(() => import('./pages/CulteChecklistSettings'));
+const CulteActionsPlan = lazy(() => import('./pages/CulteActionsPlan'));
+// « Besoins signalés » devient le plan d'actions dès que le module est actif (SQL exécuté)
+const CulteNeedsOrPlan = lazy(() => import('./pages/CulteActionsPlan').then((m) => ({ default: m.CulteNeedsOrPlan })));
 const CulteReportDepartmentView = lazy(() => import('./pages/CulteReportDepartmentView'));
 
 /** Remonte CulteReportDepartmentView a chaque changement de type de rapport, sinon React reutilise
@@ -459,7 +464,28 @@ function AppContent() {
           } />
           <Route path="besoins-rapports" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
-              <CulteNeedsManagement />
+              <CulteNeedsOrPlan />
+            </PrivateRoute>
+          } />
+          {/* Brief & débrief des cultes */}
+          <Route path="cultes" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteHub />
+            </PrivateRoute>
+          } />
+          <Route path="cultes/:eventId" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteCockpit />
+            </PrivateRoute>
+          } />
+          <Route path="plan-actions" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteActionsPlan />
+            </PrivateRoute>
+          } />
+          <Route path="parametres-controle" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <CulteChecklistSettings />
             </PrivateRoute>
           } />
           <Route path="rapports/:reportType" element={

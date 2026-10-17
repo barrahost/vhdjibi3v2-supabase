@@ -40,6 +40,9 @@ import {
   Network,
   GraduationCap,
   QrCode,
+  ClipboardCheck,
+  ClipboardList,
+  ListChecks,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,6 +50,7 @@ import { useChurch } from '../contexts/ChurchContext';
 import { ROLES, PERMISSIONS } from '../constants/roles';
 import { usePermissions } from './usePermissions';
 import { useAdminNotifications } from './useAdminNotifications';
+import { useCulteModule } from './useCulteModule';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { getProfileDepartmentIds } from '../types/businessProfile.types';
@@ -85,6 +89,14 @@ export function useNavigationItems(): NavItem[] {
   const { hasPermission } = usePermissions();
   const { hasModule } = useChurch();
   const { alerts } = useAdminNotifications();
+  // Module « Cultes » (brief, contrôle, débrief, plan d'actions) : actif une fois le SQL exécuté
+  const { enabled: culteModule } = useCulteModule({ skip: !hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) });
+  const cultesNavItem: NavItem = { id: 'cultes', label: 'Cultes', href: '/cultes', icon: <ClipboardCheck className="w-5 h-5" /> };
+  // « Besoins signalés » devient le plan d'actions (mêmes données, avec responsable et échéance)
+  const needsNavItem = (id: string): NavItem =>
+    culteModule
+      ? { id, label: "Plan d'actions", href: '/plan-actions', icon: <ClipboardList className="w-5 h-5" /> }
+      : { id, label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> };
 
   // Plus de bascule de profil : le menu montre l'union de toutes les casquettes détenues.
   const heldRoles = new Set<string>(availableRoles as string[]);
@@ -233,8 +245,10 @@ export function useNavigationItems(): NavItem[] {
   ) {
     const children: NavItem[] = [];
 
-    // Rapport(s) de culte en premier : c'est l'action la plus frequente d'un responsable de
-    // departement, et le menu mobile (bottom nav) prend le premier enfant comme raccourci direct.
+    // Cultes (brief, controle, debrief) puis rapport(s) de culte en premier : ce sont les actions les
+    // plus frequentes d'un responsable de departement, et le menu mobile (bottom nav) prend le
+    // premier enfant comme raccourci direct.
+    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(cultesNavItem);
     if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
       if (ledCulteReports.length > 0) {
         ledCulteReports.forEach(({ reportType }) => {
@@ -249,6 +263,7 @@ export function useNavigationItems(): NavItem[] {
         children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
       }
     }
+    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(needsNavItem('leader-plan-actions'));
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
       children.push({ id: 'servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
     }
@@ -270,6 +285,7 @@ export function useNavigationItems(): NavItem[] {
   // Pasteur Assistant : espace Supervision de son portefeuille de departements
   if (hasRole(ROLES.PASTEUR_ASSISTANT) && !isAdmin) {
     const children: NavItem[] = [];
+    if (culteModule) children.push(cultesNavItem);
     supervisedCulteReports.forEach(({ reportType }) => {
       children.push({
         id: `pa-report-${reportType}`,
@@ -279,7 +295,7 @@ export function useNavigationItems(): NavItem[] {
       });
     });
     children.push({ id: 'pa-servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });
-    children.push({ id: 'pa-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> });
+    children.push(needsNavItem('pa-needs'));
     items.push({ id: 'pa-supervision', label: 'Supervision', icon: <Eye className="w-5 h-5" />, children });
   }
 
@@ -491,6 +507,7 @@ export function useNavigationItems(): NavItem[] {
       label: 'Rapports de culte',
       icon: <History className="w-5 h-5" />,
       children: [
+        ...(culteModule ? [{ ...cultesNavItem, id: 'culte-reports-cultes', label: 'Cultes : brief & débrief' }] : []),
         { id: 'culte-reports-dashboard', label: 'Tableau de bord', href: '/tableau-de-bord-rapports', icon: <LayoutDashboard className="w-5 h-5" /> },
         { id: 'culte-reports-worship', label: 'Gestion de Culte', href: '/rapports/worship', icon: <Presentation className="w-5 h-5" /> },
         { id: 'culte-reports-adn', label: 'ADN', href: '/rapports/adn', icon: <Users className="w-5 h-5" /> },
@@ -498,7 +515,7 @@ export function useNavigationItems(): NavItem[] {
         { id: 'culte-reports-academie', label: 'Académie', href: '/rapports/academie', icon: <BookOpen className="w-5 h-5" /> },
         { id: 'culte-reports-sainte-cene', label: 'Sainte Cène', href: '/rapports/sainte_cene', icon: <Wheat className="w-5 h-5" /> },
         { id: 'culte-reports-sono', label: 'Communication & Sono', href: '/rapports/sono', icon: <Radio className="w-5 h-5" /> },
-        { id: 'culte-reports-needs', label: 'Besoins signalés', href: '/besoins-rapports', icon: <HandHelping className="w-5 h-5" /> },
+        needsNavItem('culte-reports-needs'),
       ],
     });
   }
@@ -526,6 +543,9 @@ export function useNavigationItems(): NavItem[] {
       children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
       children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
       children.push({ id: 'recurring-schedule', label: 'Programme récurrent', href: '/parametres-programme-recurrent', icon: <CalendarRange className="w-5 h-5" /> });
+      if (culteModule) {
+        children.push({ id: 'checklist-templates', label: 'Modèles de contrôle', href: '/parametres-controle', icon: <ListChecks className="w-5 h-5" /> });
+      }
     }
 
     const hostname = window.location.hostname;

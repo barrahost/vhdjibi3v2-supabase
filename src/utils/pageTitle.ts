@@ -41,11 +41,16 @@ const PAGE_TITLES: Record<string, string> = {
   '/bug-reports': 'Signalements de bugs',
   '/churches': 'Gestion des Églises',
   '/replay': 'Replay des enseignements',
+  '/cultes': 'Cultes : brief et débrief',
+  '/plan-actions': "Plan d'actions",
+  '/parametres-controle': 'Modèles de contrôle',
   '/academie': 'Académie',
   '/academie/gestion': 'Gestion Académie',
   '/academie/parametres': 'Paramètres Académie',
 };
 
 export function getPageTitle(pathname: string): string {
+  // Cockpit d'un culte : /cultes/:eventId
+  if (pathname.startsWith('/cultes/')) return 'Brief et débrief du culte';
   return PAGE_TITLES[pathname] ?? '';
 }
