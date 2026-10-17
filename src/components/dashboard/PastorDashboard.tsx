@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
 import { formatDate } from '../../utils/dateUtils';
+import { useCulteModule } from '../../hooks/useCulteModule';
+import { ActionPlanDashboardCard, UpcomingCultesDashboardCard } from '../culteBrief/CulteDashboardCards';
 import {
   Heart, Users, Sparkles, TrendingUp, TrendingDown, Presentation,
   CalendarDays, HandHelping, HandHeart, Droplets, ChevronRight,
@@ -12,6 +14,8 @@ import {
  * Tableau de bord Pasteur — regard pastoral, pas opérationnel :
  * l'église en un coup d'œil, le dernier culte, ce qui attend sa décision
  * (congés, besoins), et la vie spirituelle. Composition de données existantes.
+ * Une fois le module « Cultes » activé, « Besoins signalés » laisse la place au plan d'actions
+ * et les prochains cultes (brief, contrôle) s'ajoutent sous le dernier culte.
  */
 
 interface PastorStats {
@@ -33,6 +37,7 @@ interface LastWorship {
 
 export function PastorDashboard() {
   const navigate = useNavigate();
+  const { enabled: culteModule } = useCulteModule();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<PastorStats | null>(null);
   const [lastWorship, setLastWorship] = useState<LastWorship | null>(null);
@@ -198,6 +203,8 @@ export function PastorDashboard() {
         )}
       </div>
 
+      {culteModule && <UpcomingCultesDashboardCard />}
+
       {/* 3. À décider */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -228,30 +235,32 @@ export function PastorDashboard() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <HandHelping className="w-4 h-4 text-red-500" /> Besoins signalés
-              {totalNeeds > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-                  {totalNeeds}
-                </span>
-              )}
-            </h2>
-            <button onClick={() => navigate('/besoins-rapports')} className="text-xs text-[#00665C] hover:underline flex items-center">
-              Gérer <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          {totalNeeds === 0 ? (
-            <p className="text-sm text-gray-400">Aucun besoin en attente. 👍</p>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              {needs.high > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">{needs.high} urgent{needs.high > 1 ? 's' : ''}</span>}
-              {needs.medium > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">{needs.medium} moyen{needs.medium > 1 ? 's' : ''}</span>}
-              {needs.low > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">{needs.low} faible{needs.low > 1 ? 's' : ''}</span>}
+        {culteModule ? <ActionPlanDashboardCard /> : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                <HandHelping className="w-4 h-4 text-red-500" /> Besoins signalés
+                {totalNeeds > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
+                    {totalNeeds}
+                  </span>
+                )}
+              </h2>
+              <button onClick={() => navigate('/besoins-rapports')} className="text-xs text-[#00665C] hover:underline flex items-center">
+                Gérer <ChevronRight className="w-3 h-3" />
+              </button>
             </div>
-          )}
-        </div>
+            {totalNeeds === 0 ? (
+              <p className="text-sm text-gray-400">Aucun besoin en attente. 👍</p>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                {needs.high > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">{needs.high} urgent{needs.high > 1 ? 's' : ''}</span>}
+                {needs.medium > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">{needs.medium} moyen{needs.medium > 1 ? 's' : ''}</span>}
+                {needs.low > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">{needs.low} faible{needs.low > 1 ? 's' : ''}</span>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 4. Vie spirituelle */}

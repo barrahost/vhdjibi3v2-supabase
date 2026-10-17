@@ -4,6 +4,8 @@ import { CalendarRange, Pencil, Trash2, Plus } from 'lucide-react';
 import { RecurringScheduleService } from '../services/culteEvent.service';
 import { CulteRecurringSchedule, DayOfWeek, DAY_OF_WEEK_LABELS } from '../types/culteReport.types';
 import { useConfirmModal } from '../hooks/useConfirmModal';
+import { useCulteModule } from '../hooks/useCulteModule';
+import { formatRangeFr, toHHMM } from '../lib/culteTiming';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 
 const DAY_OPTIONS: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6];
@@ -14,10 +16,14 @@ export default function RecurringScheduleSettings() {
   const [meetingTypeName, setMeetingTypeName] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>(0);
   const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [briefEnabled, setBriefEnabled] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { confirm, confirmModalProps } = useConfirmModal();
+  // Heure de fin et « Brief & contrôle » n'existent qu'une fois le SQL du module « Cultes » exécuté
+  const { enabled: culteModule } = useCulteModule();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -33,7 +39,7 @@ export default function RecurringScheduleSettings() {
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => { setMeetingTypeName(''); setDayOfWeek(0); setStartTime(''); setIsActive(true); setEditingId(null); };
+  const resetForm = () => { setMeetingTypeName(''); setDayOfWeek(0); setStartTime(''); setEndTime(''); setBriefEnabled(false); setIsActive(true); setEditingId(null); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +47,18 @@ export default function RecurringScheduleSettings() {
       toast.error('Le type de rencontre est obligatoire');
       return;
     }
+    if (culteModule && startTime && endTime && endTime <= startTime) {
+      toast.error("L'heure de fin doit être après l'heure de début");
+      return;
+    }
     setIsSubmitting(true);
     try {
+      const extras = culteModule ? { endTime: endTime || null, briefEnabled } : undefined;
       if (editingId) {
-        await RecurringScheduleService.update(editingId, meetingTypeName, dayOfWeek, isActive, startTime || null);
+        await RecurringScheduleService.update(editingId, meetingTypeName, dayOfWeek, isActive, startTime || null, extras);
         toast.success('Programme modifié');
       } else {
-        await RecurringScheduleService.create(meetingTypeName, dayOfWeek, startTime || null);
+        await RecurringScheduleService.create(meetingTypeName, dayOfWeek, startTime || null, extras);
         toast.success('Programme ajouté');
       }
       resetForm();
@@ -60,7 +71,7 @@ export default function RecurringScheduleSettings() {
   };
 
   const handleEdit = (item: CulteRecurringSchedule) => {
-    setEditingId(item.id); setMeetingTypeName(item.meetingTypeName); setDayOfWeek(item.dayOfWeek); setStartTime(item.startTime || ''); setIsActive(item.isActive);
+    setEditingId(item.id); setMeetingTypeName(item.meetingTypeName); setDayOfWeek(item.dayOfWeek); setStartTime(toHHMM(item.startTime) || ''); setEndTime(toHHMM(item.endTime) || ''); setBriefEnabled(item.briefEnabled); setIsActive(item.isActive);
   };
 
   const handleDelete = async (id: string) => {
@@ -104,7 +115,23 @@ export default function RecurringScheduleSettings() {
             <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
             <p className="mt-1 text-xs text-gray-400">Utilisée pour les liens de réception d'âmes ADN (disponibles 30 min après ce début).</p>
           </div>
+          {culteModule && (
+            <div>
+              <label htmlFor="schedule-end-time" className="block text-sm font-medium text-gray-700 mb-1">Heure de fin (optionnel)</label>
+              <input id="schedule-end-time" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]" />
+              <p className="mt-1 text-xs text-gray-400">Sert à proposer le « point entre les deux cultes » (de la fin du 1er culte au début du 2e).</p>
+            </div>
+          )}
         </div>
+        {culteModule && (
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input type="checkbox" className="mt-0.5" checked={briefEnabled} onChange={(e) => setBriefEnabled(e.target.checked)} />
+            <span>
+              Brief, contrôle de préparation et débrief
+              <span className="block text-xs text-gray-400">Ce rendez-vous apparaît dans « Cultes » : les 10 prochains jours sont créés automatiquement.</span>
+            </span>
+          </label>
+        )}
         {editingId && (
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
@@ -135,7 +162,8 @@ export default function RecurringScheduleSettings() {
                 <p className="font-medium text-gray-900">{item.meetingTypeName}</p>
                 <p className="text-sm text-gray-500">
                   {DAY_OF_WEEK_LABELS[item.dayOfWeek]}
-                  {item.startTime && <span className="ml-1">· {item.startTime.slice(0, 5)}</span>}
+                  {item.startTime && <span className="ml-1">· {culteModule ? formatRangeFr(toHHMM(item.startTime), toHHMM(item.endTime)) : item.startTime.slice(0, 5)}</span>}
+                  {culteModule && item.briefEnabled && <span className="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#00665C]/10 text-[#00665C]">Brief &amp; contrôle</span>}
                   {!item.isActive && <span className="ml-2 text-amber-600">(inactif)</span>}
                 </p>
               </div>

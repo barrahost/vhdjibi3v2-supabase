@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { useReceivesAlerts } from '../../hooks/useReceivesAlerts';
+import { useAlertTopics } from '../../hooks/useReceivesAlerts';
 import { useCookieConsent } from '../../lib/cookieConsent';
 import { dismissPushPrompt, isPushPromptDismissed, isStandalone } from '../../lib/pwaInstall';
 import { PushService } from '../../services/push.service';
@@ -15,7 +15,8 @@ import { FloatingPrompt, PromptBar } from './PromptBar';
  */
 export function PushOptInPrompt() {
   const { user } = useAuth();
-  const receivesAlerts = useReceivesAlerts();
+  const { souls, cultes } = useAlertTopics();
+  const receivesAlerts = souls || cultes;
   const consented = useCookieConsent();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -65,7 +66,13 @@ export function PushOptInPrompt() {
           </div>
         }
         title="Active les alertes"
-        description="Une notification dès qu'une âme t'est confiée"
+        description={
+          souls && cultes
+            ? "Une notification quand une âme t'est confiée ou qu'un culte a besoin de toi"
+            : cultes
+              ? 'Une notification pour le brief, le contrôle et les actions des cultes'
+              : "Une notification dès qu'une âme t'est confiée"
+        }
         actionLabel="Activer"
         onAction={enable}
         onDismiss={dismiss}

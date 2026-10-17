@@ -4,6 +4,7 @@ import { Check, Pencil } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { ReportDebriefSection, useReportDebrief } from '../culteBrief/ReportDebrief';
 import { useAuth } from '../../contexts/AuthContext';
 import { CulteReportService } from '../../services/culteReport.service';
 import { MeetingTypeService, SpeakerService } from '../../services/meetingTypeSpeaker.service';
@@ -61,6 +62,8 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
   const [selectedEventId, setSelectedEventId] = useState('');
   const [loadingEvents, setLoadingEvents] = useState(true);
   const selectedEvent = events.find((ev) => ev.id === selectedEventId) || null;
+  // Fiche de débrief du département (module « Cultes ») : remplace « Notes » et « Besoins à signaler »
+  const debrief = useReportDebrief(selectedEventId || null, departmentName);
 
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [newEventDate, setNewEventDate] = useState(todayISO());
@@ -83,13 +86,14 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
           { key: 'data-after', label: 'Après le culte' },
         ]
       : [{ key: 'data', label: 'Données du rapport' }];
-    return [{ key: 'event', label: 'Culte du jour' }, ...dataSteps, { key: 'notes', label: 'Notes & besoins' }];
-  }, [reportType]);
+    return [{ key: 'event', label: 'Culte du jour' }, ...dataSteps, { key: 'notes', label: debrief.enabled ? 'Débrief' : 'Notes & besoins' }];
+  }, [reportType, debrief.enabled]);
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
 
   const resetState = () => {
     setValues(blankFormValues());
+    debrief.reset();
     setNotes(''); setNeedsNotes(''); setSelectedEventId(''); setStepIndex(0); setShowCreateEvent(false);
     setNewEventMeetingType(''); setIsCustomMeetingType(false); setAdnPrefillCount(null);
     setShowEditEvent(false);
@@ -258,7 +262,7 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
       const data = buildCulteReportData(reportType, values);
       if (!data) throw new Error('Type de rapport inconnu');
 
-      await CulteReportService.submitReport({
+      const report = await CulteReportService.submitReport({
         reportType,
         departmentId,
         departmentName,
@@ -270,11 +274,26 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
         submittedBy: user?.id || null,
         submittedByName: user?.fullName || 'Inconnu',
         data,
-        notes: notes || undefined,
-        needsNotes: needsNotes || undefined,
+        notes: (debrief.enabled ? debrief.notes : notes) || undefined,
+        needsNotes: debrief.enabled ? undefined : needsNotes || undefined,
       });
 
       toast.success('Rapport enregistré avec succès');
+      if (debrief.enabled) {
+        // Le rapport est enregistré : un échec de la fiche ne doit pas le remettre en cause
+        try {
+          const { actions } = await debrief.persist({
+            eventId: selectedEvent.id,
+            reportId: report.id,
+            departmentId,
+            actor: { id: user?.id || null, name: user?.fullName || 'Inconnu' },
+          });
+          if (actions > 0) toast.success(`${actions} besoin(s) ajouté(s) au plan d'actions`);
+        } catch (debriefError) {
+          console.error('Error saving department debrief:', debriefError);
+          toast.error("Rapport enregistré, mais la fiche de débrief n'a pas pu l'être : rouvrez-la depuis « Cultes ».");
+        }
+      }
       resetState();
       onSuccess?.();
     } catch (error: any) {
@@ -524,14 +543,20 @@ export default function CulteReportSubmitModal({ isOpen, reportType, departmentI
                 Culte : <span className="font-medium text-gray-700">{frDate(selectedEvent.serviceDate)} — {selectedEvent.meetingTypeName}</span>
               </p>
             )}
-            <div>
-              <label className={labelCls}>Notes</label>
-              <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Besoins à signaler (un par ligne)</label>
-              <textarea rows={3} value={needsNotes} onChange={(e) => setNeedsNotes(e.target.value)} placeholder="ex: Micro HF à remplacer" className={inputCls} />
-            </div>
+            {debrief.enabled ? (
+              <ReportDebriefSection values={debrief.values} onChange={debrief.setValues} preloaded={debrief.preloaded} />
+            ) : (
+              <>
+                <div>
+                  <label className={labelCls}>Notes</label>
+                  <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Besoins à signaler (un par ligne)</label>
+                  <textarea rows={3} value={needsNotes} onChange={(e) => setNeedsNotes(e.target.value)} placeholder="ex: Micro HF à remplacer" className={inputCls} />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

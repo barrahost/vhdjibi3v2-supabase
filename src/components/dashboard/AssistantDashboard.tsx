@@ -5,12 +5,14 @@ import { getChurchId } from '../../lib/churchId';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfileDepartmentIds } from '../../types/businessProfile.types';
 import { DEPARTMENT_TO_REPORT_TYPE, normalizeDeptName } from '../../types/culteReport.types';
+import { useCulteModule } from '../../hooks/useCulteModule';
+import { ActionPlanDashboardCard, UpcomingCultesDashboardCard } from '../culteBrief/CulteDashboardCards';
 import { Eye, UsersRound, HandHelping, FileText, ChevronRight } from 'lucide-react';
 
 /**
  * Tableau de bord Pasteur Assistant (PA/AP) — supervision de son portefeuille :
  * pour chaque département supervisé, l'état des rapports, l'effectif B.O.S.S
- * et les besoins en attente.
+ * et les besoins en attente (devenus des actions du plan une fois le module « Cultes » activé).
  */
 
 interface DeptCard {
@@ -27,6 +29,7 @@ const frDate = (iso: string | null) => (iso ? iso.split('-').reverse().join('/')
 export function AssistantDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { enabled: culteModule } = useCulteModule();
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState<DeptCard[]>([]);
 
@@ -99,6 +102,9 @@ export function AssistantDashboard() {
 
   const totalNeeds = cards.reduce((sum, c) => sum + c.pendingNeeds, 0);
   const totalServants = cards.reduce((sum, c) => sum + c.servantCount, 0);
+  // « Besoin » devient « action » : mêmes lignes, suivies dans le plan d'actions
+  const needLabel = culteModule ? 'action' : 'besoin';
+  const needsPath = culteModule ? '/plan-actions' : '/besoins-rapports';
 
   return (
     <div className="space-y-5">
@@ -123,9 +129,16 @@ export function AssistantDashboard() {
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
           <p className={`text-2xl font-bold ${totalNeeds > 0 ? 'text-red-600' : 'text-gray-900'}`}>{totalNeeds}</p>
-          <p className="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Besoins en attente</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide mt-0.5">{culteModule ? 'Actions en attente' : 'Besoins en attente'}</p>
         </div>
       </div>
+
+      {culteModule && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <UpcomingCultesDashboardCard />
+          {cards.length > 0 && <ActionPlanDashboardCard departmentNames={cards.map(c => c.name)} />}
+        </div>
+      )}
 
       {/* Une carte par département */}
       {cards.length === 0 ? (
@@ -140,7 +153,7 @@ export function AssistantDashboard() {
                 <p className="font-semibold text-gray-900 truncate">{dept.name}</p>
                 {dept.pendingNeeds > 0 && (
                   <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                    <HandHelping className="w-3 h-3" /> {dept.pendingNeeds} besoin{dept.pendingNeeds > 1 ? 's' : ''}
+                    <HandHelping className="w-3 h-3" /> {dept.pendingNeeds} {needLabel}{dept.pendingNeeds > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
@@ -170,10 +183,10 @@ export function AssistantDashboard() {
 
       {totalNeeds > 0 && (
         <button
-          onClick={() => navigate('/besoins-rapports')}
+          onClick={() => navigate(needsPath)}
           className="w-full py-3 bg-[#00665C] text-white text-sm font-medium rounded-xl hover:bg-[#00665C]/90 transition-colors"
         >
-          Traiter les {totalNeeds} besoin{totalNeeds > 1 ? 's' : ''} en attente
+          Traiter les {totalNeeds} {needLabel}{totalNeeds > 1 ? 's' : ''} en attente
         </button>
       )}
     </div>

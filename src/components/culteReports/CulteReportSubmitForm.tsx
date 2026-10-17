@@ -16,6 +16,7 @@ import { CulteReportFields } from './CulteReportFields';
 import { CulteReportFormValues, blankFormValues, buildCulteReportData } from '../../utils/culteReportFormHelpers';
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { ReportDebriefSection, useReportDebrief } from '../culteBrief/ReportDebrief';
 
 interface CulteReportSubmitFormProps {
   reportType: CulteReportType;
@@ -52,6 +53,8 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   const [selectedEventId, setSelectedEventId] = useState('');
   const [loadingEvents, setLoadingEvents] = useState(true);
   const selectedEvent = events.find((ev) => ev.id === selectedEventId) || null;
+  // Fiche de débrief du département (module « Cultes ») : remplace « Notes » et « Besoins à signaler »
+  const debrief = useReportDebrief(selectedEventId || null, departmentName);
 
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [newEventDate, setNewEventDate] = useState(todayISO());
@@ -225,7 +228,7 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
       const data = buildCulteReportData(reportType, values);
       if (!data) throw new Error('Type de rapport inconnu');
 
-      await CulteReportService.submitReport({
+      const report = await CulteReportService.submitReport({
         reportType,
         departmentId,
         departmentName,
@@ -237,11 +240,27 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
         submittedBy: user?.id || null,
         submittedByName: user?.fullName || 'Inconnu',
         data,
-        notes: notes || undefined,
-        needsNotes: needsNotes || undefined,
+        notes: (debrief.enabled ? debrief.notes : notes) || undefined,
+        needsNotes: debrief.enabled ? undefined : needsNotes || undefined,
       });
 
       toast.success('Rapport enregistré avec succès');
+      if (debrief.enabled) {
+        // Le rapport est enregistré : un échec de la fiche ne doit pas le remettre en cause
+        try {
+          const { actions } = await debrief.persist({
+            eventId: selectedEvent.id,
+            reportId: report.id,
+            departmentId,
+            actor: { id: user?.id || null, name: user?.fullName || 'Inconnu' },
+          });
+          if (actions > 0) toast.success(`${actions} besoin(s) ajouté(s) au plan d'actions`);
+        } catch (debriefError) {
+          console.error('Error saving department debrief:', debriefError);
+          toast.error("Rapport enregistré, mais la fiche de débrief n'a pas pu l'être : rouvrez-la depuis « Cultes ».");
+        }
+        debrief.reset();
+      }
       setValues(blankFormValues());
       setNotes(''); setNeedsNotes(''); setSelectedEventId('');
       onSuccess?.();
@@ -449,14 +468,20 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
       )}
       <CulteReportFields reportType={reportType} values={values} onChange={handleFieldChange} />
 
-      <div>
-        <label className={labelCls}>Notes</label>
-        <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
-      </div>
-      <div>
-        <label className={labelCls}>Besoins à signaler (un par ligne)</label>
-        <textarea rows={3} value={needsNotes} onChange={(e) => setNeedsNotes(e.target.value)} placeholder="ex: Micro HF à remplacer" className={inputCls} />
-      </div>
+      {debrief.enabled ? (
+        <ReportDebriefSection values={debrief.values} onChange={debrief.setValues} preloaded={debrief.preloaded} />
+      ) : (
+        <>
+          <div>
+            <label className={labelCls}>Notes</label>
+            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Besoins à signaler (un par ligne)</label>
+            <textarea rows={3} value={needsNotes} onChange={(e) => setNeedsNotes(e.target.value)} placeholder="ex: Micro HF à remplacer" className={inputCls} />
+          </div>
+        </>
+      )}
 
       <div className="flex gap-3">
         {onCancel && (
