@@ -11,6 +11,7 @@ import { telHref, whatsappHref } from '../utils/phoneValidation';
 import { CustomTable } from '../components/ui/CustomTable';
 import LastContactBadge from '../components/interactions/LastContactBadge';
 import toast from 'react-hot-toast';
+import { canTakeAttendance, shepherdKeys } from '../lib/attendance';
 
 type SortField = 'fullName' | 'lastContact';
 
@@ -158,20 +159,17 @@ export default function AssignedSouls() {
       if (usersData && usersData.length > 0) {
         const userData = usersData[0];
 
-        const hasShepherdProfile = (userData.business_profiles || userData.businessProfiles)?.some((profile: any) =>
-          profile.type === 'shepherd' && profile.isActive
-        );
-        const hasOldShepherdRole = userData.role === 'shepherd' || userData.role === 'intern' || userData.role === 'adn';
-
-        if (hasShepherdProfile || hasOldShepherdRole) {
+        // Toutes les casquettes sont actives en permanence : l'ancien drapeau isActive en base ne compte plus.
+        if (canTakeAttendance(userData)) {
           setShepherdId(currentUserId);
 
           const { data: soulsData, error: soulsError } = await supabase
             .from('souls')
             .select('*')
             .eq('church_id', getChurchId())
-            .eq('shepherd_id', currentUserId)
-            .eq('status', 'active');
+            // Les âmes migrées peuvent être rattachées au berger par son ancien uid
+            .in('shepherd_id', shepherdKeys(userData))
+            .or('status.eq.active,status.is.null');
 
           if (soulsError) throw soulsError;
 
