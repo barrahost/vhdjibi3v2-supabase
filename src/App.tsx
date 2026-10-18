@@ -60,6 +60,7 @@ const MeetingTypeSettings = lazy(() => import('./pages/MeetingTypeSettings'));
 const SpeakerSettings = lazy(() => import('./pages/SpeakerSettings'));
 const RecurringScheduleSettings = lazy(() => import('./pages/RecurringScheduleSettings'));
 const SpiritualProgression = lazy(() => import('./pages/SpiritualProgression'));
+const BaptismFollowUp = lazy(() => import('./pages/BaptismFollowUp'));
 const ShepherdReminders = lazy(() => import('./pages/ShepherdReminders'));
 const SMSManagement = lazy(() => import('./pages/SMSManagement'));
 const SMSTemplatesManagement = lazy(() => import('./pages/SMSTemplatesManagement'));
@@ -268,6 +269,13 @@ function AppContent() {
           <Route path="signalements-evangelistes" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_EVANGELIZED_SOULS]}>
               <EvangelizedSignals />
+            </PrivateRoute>
+          } />
+
+          {/* Suivi du baptême : toutes les âmes avec leur nouvelle naissance et leur baptême (direction et responsable du département Baptême ; l'accès est vérifié par la page) */}
+          <Route path="bapteme" element={
+            <PrivateRoute>
+              <BaptismFollowUp />
             </PrivateRoute>
           } />
 

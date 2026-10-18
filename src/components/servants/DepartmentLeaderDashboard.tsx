@@ -17,6 +17,9 @@ import { getChurchId } from '../../lib/churchId';
 import { getProfileDepartmentIds } from '../../types/businessProfile.types';
 import { useCulteModule } from '../../hooks/useCulteModule';
 import { ActionPlanDashboardCard, UpcomingCultesDashboardCard } from '../culteBrief/CulteDashboardCards';
+import { BaptismDashboardCard } from '../dashboard/BaptismDashboardCard';
+import { isBaptismDepartmentName } from '../../lib/baptism';
+import { useChurch } from '../../contexts/ChurchContext';
 
 interface Department {
   id: string;
@@ -36,6 +39,7 @@ export default function DepartmentLeaderDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const { hasModule } = useChurch();
   const [servants, setServants] = useState<Servant[]>([]);
   const [ledDepartments, setLedDepartments] = useState<Department[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
@@ -229,6 +233,9 @@ export default function DepartmentLeaderDashboard() {
           </p>
         </div>
       </div>
+
+      {/* Département Baptême : où en sont les âmes (nouvelle naissance, baptême) */}
+      {isBaptismDepartmentName(department.name) && hasModule('souls') && <BaptismDashboardCard />}
 
       {culteModule && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

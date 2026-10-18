@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/serviteurs': 'B.O.S.S',
   '/familles': 'Familles de service',
   '/spiritual-progression': 'Progression spirituelle',
+  '/bapteme': 'Suivi du baptême',
   '/birthdays': 'Anniversaires',
   '/anniversaires': 'Anniversaires',
   '/carte': 'Carte des âmes',
