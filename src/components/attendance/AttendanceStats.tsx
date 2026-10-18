@@ -124,13 +124,13 @@ export default function AttendanceStats({ user, souls, version }: AttendanceStat
                 {stats.toCall.map(({ soul, streak, last }) => (
                   <li key={soul.id} className="flex items-center gap-3 py-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{soul.fullName}</p>
+                      <p className="text-sm font-medium text-gray-900 break-words">{soul.fullName}</p>
                       <p className="text-xs text-gray-500">
                         {streak} absence(s) de suite{last ? ` · dernière présence : ${shortDay(storedDay(last.date)!)}` : ''}
                       </p>
                     </div>
                     {soul.phone && (
-                      <a href={`tel:${soul.phone.replace(/\s/g, '')}`} className="px-2.5 py-1 text-xs font-medium text-white bg-[#00665C] rounded-md">
+                      <a href={`tel:${soul.phone.replace(/\s/g, '')}`} className="flex-shrink-0 px-2.5 py-1 text-xs font-medium text-white bg-[#00665C] rounded-md">
                         Appeler
                       </a>
                     )}

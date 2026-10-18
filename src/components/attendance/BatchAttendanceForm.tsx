@@ -295,20 +295,20 @@ export default function BatchAttendanceForm({ user, souls, day, onDayChange, onS
               const mark = marks.get(soul.id);
               const pending = changedSet.has(soul.id);
               return (
-                <li key={soul.id} className="flex items-center gap-3 px-3 py-2.5" data-soul={soul.fullName}>
+                <li key={soul.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 py-2.5" data-soul={soul.fullName}>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{soul.fullName || 'Sans nom'}</p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="font-medium text-gray-900 break-words">{soul.fullName || 'Sans nom'}</p>
+                    <p className="text-xs text-gray-500 break-words">
                       {soul.nickname && <span>{soul.nickname} · </span>}
                       {pending ? <span className="text-amber-700">à enregistrer</span> : existing.has(soul.id) ? 'enregistré' : 'non pointé(e)'}
                     </p>
                   </div>
-                  <div className="flex gap-1.5 flex-shrink-0" role="group" aria-label={`Présence de ${soul.fullName}`}>
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-1.5 sm:flex-shrink-0" role="group" aria-label={`Présence de ${soul.fullName}`}>
                     <button
                       type="button"
                       onClick={() => setMark(soul.id, 'present')}
                       aria-pressed={mark === 'present'}
-                      className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 text-sm font-medium rounded-md border ${
+                      className={`inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium rounded-md border ${
                         mark === 'present' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-green-50'
                       }`}
                     >
@@ -319,7 +319,7 @@ export default function BatchAttendanceForm({ user, souls, day, onDayChange, onS
                       type="button"
                       onClick={() => setMark(soul.id, 'absent')}
                       aria-pressed={mark === 'absent'}
-                      className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 text-sm font-medium rounded-md border ${
+                      className={`inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium rounded-md border ${
                         mark === 'absent' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-red-50'
                       }`}
                     >
