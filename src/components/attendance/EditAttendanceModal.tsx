@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
-import { Input } from '../ui/input';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { getChurchId } from '../../lib/churchId';
@@ -12,13 +11,18 @@ interface EditAttendanceModalProps {
     present: boolean;
     notes?: string;
   };
+  soulName?: string;
   isOpen: boolean;
   onClose: () => void;
+  onSaved?: () => void;
 }
 
-export default function EditAttendanceModal({ attendance, isOpen, onClose }: EditAttendanceModalProps) {
+/**
+ * Corrige une présence (statut, note). Le jour ne se change pas ici : pour un autre culte, on pointe ce jour-là
+ * (sinon l'âme aurait deux présences le même jour).
+ */
+export default function EditAttendanceModal({ attendance, soulName, isOpen, onClose, onSaved }: EditAttendanceModalProps) {
   const [formData, setFormData] = useState({
-    date: '',
     present: true,
     notes: ''
   });
@@ -26,10 +30,7 @@ export default function EditAttendanceModal({ attendance, isOpen, onClose }: Edi
 
   useEffect(() => {
     if (attendance) {
-      const date = attendance.date.toISOString().split('T')[0];
-      
       setFormData({
-        date,
         present: attendance.present,
         notes: attendance.notes || ''
       });
@@ -40,30 +41,20 @@ export default function EditAttendanceModal({ attendance, isOpen, onClose }: Edi
     e.preventDefault();
     try {
       setIsSubmitting(true);
-
-      // Validate date
-      const selectedDate = new Date(formData.date);
-      const dayOfWeek = selectedDate.getDay();
-      const validDays = [2, 4, 6]; // Tuesday, Thursday, Saturday
-
-      if (!validDays.includes(dayOfWeek)) {
-        toast.error('Les présences ne sont autorisées que les Mardis, Jeudis et Samedis');
-        return;
-      }
-
-      const { error: updateErr } = await supabase.from('attendances').update({
-        date: selectedDate instanceof Date ? selectedDate.toISOString() : selectedDate,
+      const { data: updated, error: updateErr } = await supabase.from('attendances').update({
         present: formData.present,
-        notes: formData.notes.trim(),
+        notes: formData.notes.trim() || null,
         updated_at: new Date().toISOString(),
-      }).eq('id', attendance.id);
+      }).eq('id', attendance.id).eq('church_id', getChurchId()).select('id');
       if (updateErr) throw updateErr;
-      
+      if (!updated || updated.length === 0) throw new Error('modification refusée par la base de données');
+
       toast.success('Présence modifiée avec succès');
+      onSaved?.();
       onClose();
     } catch (error) {
       console.error('Error updating attendance:', error);
-      toast.error('Erreur lors de la modification');
+      toast.error('La présence n’a pas été modifiée. Vérifiez votre connexion et réessayez.');
     } finally {
       setIsSubmitting(false);
     }
@@ -76,14 +67,12 @@ export default function EditAttendanceModal({ attendance, isOpen, onClose }: Edi
       title="Modifier une présence"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
-        <Input
-          label="Date du culte"
-          id="date"
-          type="date"
-          required
-          value={formData.date}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-        />
+        <div className="text-sm text-gray-700">
+          {soulName && <p className="font-medium text-gray-900">{soulName}</p>}
+          <p className="first-letter:uppercase">
+            {attendance.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}
+          </p>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
