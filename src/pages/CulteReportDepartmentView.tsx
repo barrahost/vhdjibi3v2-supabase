@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Eye, Pencil, Trash2, Search, Plus, BarChart3, TrendingUp, UserPlus, CalendarDays,
@@ -773,7 +773,13 @@ export default function CulteReportDepartmentView() {
   const [editingReport, setEditingReport] = useState<CulteReport | null>(null);
   const [viewingReport, setViewingReport] = useState<CulteReport | null>(null);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // « Faire mon rapport » depuis le tableau de bord : le formulaire s'ouvre directement
+  const [showForm, setShowForm] = useState(() => searchParams.get('nouveau') === '1');
+  useEffect(() => {
+    if (searchParams.get('nouveau') === '1') setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => { MeetingTypeService.list().then(setMeetingTypes); }, []);
 
