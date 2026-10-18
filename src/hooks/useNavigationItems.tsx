@@ -266,10 +266,9 @@ export function useNavigationItems(): NavItem[] {
   ) {
     const children: NavItem[] = [];
 
-    // Cultes (brief, controle, debrief) puis rapport(s) de culte en premier : ce sont les actions les
-    // plus frequentes d'un responsable de departement, et le menu mobile (bottom nav) prend le
-    // premier enfant comme raccourci direct.
-    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(cultesNavItem);
+    // Rapport(s) de culte en premier, puis Cultes (brief, controle, debrief) : faire son rapport est
+    // l'action la plus frequente d'un responsable de departement, et le menu mobile (bottom nav)
+    // prend le premier enfant comme raccourci direct -- les responsables ne doivent pas le perdre.
     if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
       if (ledCulteReports.length > 0) {
         ledCulteReports.forEach(({ reportType }) => {
@@ -284,6 +283,7 @@ export function useNavigationItems(): NavItem[] {
         children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
       }
     }
+    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(cultesNavItem);
     if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(needsNavItem('leader-plan-actions'));
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
       children.push({ id: 'servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });

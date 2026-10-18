@@ -8,7 +8,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Users, UserCheck, UserPlus, Crown, Download, Plus, TrendingUp, CalendarDays } from 'lucide-react';
+import { Users, UserCheck, UserPlus, Crown, Download, Plus, TrendingUp, CalendarDays, FileText, ChevronRight } from 'lucide-react';
 import { ImportServantsModal } from './ImportServantsModal';
 import { DepartmentActivityModal } from '../departments/DepartmentActivityModal';
 import { DepartmentActivityService } from '../../services/departmentActivity.service';
@@ -20,6 +20,7 @@ import { ActionPlanDashboardCard, UpcomingCultesDashboardCard } from '../culteBr
 import { BaptismDashboardCard } from '../dashboard/BaptismDashboardCard';
 import { isBaptismDepartmentName } from '../../lib/baptism';
 import { useChurch } from '../../contexts/ChurchContext';
+import { CULTE_REPORT_TYPE_LABELS, DEPARTMENT_TO_REPORT_TYPE, normalizeDeptName } from '../../types/culteReport.types';
 
 interface Department {
   id: string;
@@ -44,6 +45,7 @@ export default function DepartmentLeaderDashboard() {
   const [ledDepartments, setLedDepartments] = useState<Department[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const department = ledDepartments.find((d) => d.id === selectedDeptId) || null;
+  const reportType = department ? DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(department.name)] : undefined;
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalServants: 0,
@@ -233,6 +235,24 @@ export default function DepartmentLeaderDashboard() {
           </p>
         </div>
       </div>
+
+      {/* Le rapport de culte du département : l'action la plus fréquente, à portée de main */}
+      {reportType && hasPermission('MANAGE_CULTE_REPORTS') && (
+        <button
+          type="button"
+          onClick={() => navigate(`/rapports/${reportType}?nouveau=1`)}
+          className="w-full flex items-center gap-3 rounded-2xl border-2 border-[#00665C] bg-white px-4 py-3 text-left shadow-sm hover:bg-[#00665C]/5"
+        >
+          <span className="w-10 h-10 rounded-xl bg-[#00665C] flex items-center justify-center flex-shrink-0">
+            <FileText className="h-5 w-5 text-white" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-semibold text-gray-900">Faire mon rapport — {CULTE_REPORT_TYPE_LABELS[reportType]}</span>
+            <span className="block text-xs text-gray-500">Saisir le rapport du culte et voir les rapports déjà envoyés</span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-[#00665C] flex-shrink-0" />
+        </button>
+      )}
 
       {/* Département Baptême : où en sont les âmes (nouvelle naissance, baptême) */}
       {isBaptismDepartmentName(department.name) && hasModule('souls') && <BaptismDashboardCard />}
