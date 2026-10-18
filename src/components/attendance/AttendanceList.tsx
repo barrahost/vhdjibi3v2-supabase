@@ -217,18 +217,18 @@ export default function AttendanceList({ user, souls, version, onChanged, onEdit
                 {isOpen && (
                   <ul className="divide-y divide-gray-100">
                     {group.rows.map((row) => (
-                      <li key={row.id} className="flex items-center gap-3 px-3 py-2">
+                      <li key={row.id} className="flex items-center gap-2 sm:gap-3 px-3 py-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{nameOf(row.soul_id)}</p>
+                          <p className="text-sm font-medium text-gray-900 break-words">{nameOf(row.soul_id)}</p>
                           {row.notes && <p className="text-xs text-gray-500 whitespace-pre-wrap break-words">{row.notes}</p>}
                         </div>
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${row.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${row.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                           {row.present ? 'Présent(e)' : 'Absent(e)'}
                         </span>
-                        <button type="button" onClick={() => setEditing(row)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier (note, statut)">
+                        <button type="button" onClick={() => setEditing(row)} className="flex-shrink-0 p-1 text-blue-600 hover:bg-blue-50 rounded" title="Modifier (note, statut)" aria-label="Modifier">
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button type="button" onClick={() => remove(row)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+                        <button type="button" onClick={() => remove(row)} className="flex-shrink-0 p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </li>
