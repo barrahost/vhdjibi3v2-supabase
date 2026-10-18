@@ -274,7 +274,12 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
         } catch (debriefError) {
           // Le rapport est enregistré mais la fiche non : on garde les réponses à l'écran pour réessayer
           console.error('Error saving department debrief:', debriefError);
-          toast.error("Le rapport est enregistré, mais la fiche de débrief n'a pas pu l'être. Vos réponses sont conservées : réessayez.");
+          toast.error(
+            `Le rapport est enregistré, mais la fiche de débrief n'a pas pu l'être. Vos réponses sont conservées : réessayez.${
+              (debriefError as any)?.message ? ` (Détail : ${(debriefError as any).message})` : ''
+            }`,
+            { duration: 12000 }
+          );
           return;
         }
         debrief.reset();
@@ -286,7 +291,10 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
       loadEvents();
     } catch (error: any) {
       console.error('Error submitting culte report:', error);
-      toast.error(error.message || "Erreur lors de l'enregistrement du rapport");
+      toast.error(
+        `Le rapport n'a pas été enregistré. Vérifiez votre connexion et réessayez.${error?.message ? ` (Détail : ${error.message})` : ''}`,
+        { duration: 12000 }
+      );
     } finally {
       setIsSubmitting(false);
     }
