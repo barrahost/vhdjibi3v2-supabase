@@ -43,6 +43,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   ListChecks,
+  Droplets,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -55,6 +56,7 @@ import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import { getProfileDepartmentIds } from '../types/businessProfile.types';
 import { CulteReportType, DEPARTMENT_TO_REPORT_TYPE, normalizeDeptName } from '../types/culteReport.types';
+import { isBaptismDepartmentName } from '../lib/baptism';
 
 const CULTE_REPORT_NAV_LABEL: Record<CulteReportType, string> = {
   worship: 'Gestion de Culte',
@@ -110,16 +112,21 @@ export function useNavigationItems(): NavItem[] {
 
   const [ledCulteReports, setLedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
   const [supervisedCulteReports, setSupervisedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
+  // Responsable (ou pasteur assistant superviseur) du département Baptême : accès au suivi du baptême
+  const [ledBaptism, setLedBaptism] = useState(false);
+  const [supervisedBaptism, setSupervisedBaptism] = useState(false);
 
   useEffect(() => {
     if (!hasRole(ROLES.DEPARTMENT_LEADER) || !user?.businessProfiles) {
       setLedCulteReports([]);
+      setLedBaptism(false);
       return;
     }
     const profile = (user.businessProfiles as any[]).find((p) => p.type === 'department_leader');
     const departmentIds = getProfileDepartmentIds(profile);
     if (departmentIds.length === 0) {
       setLedCulteReports([]);
+      setLedBaptism(false);
       return;
     }
     let cancelled = false;
@@ -135,7 +142,10 @@ export function useNavigationItems(): NavItem[] {
           return reportType ? { reportType } : null;
         })
         .filter((d: { reportType: CulteReportType } | null): d is { reportType: CulteReportType } => d !== null);
-      if (!cancelled) setLedCulteReports(mapped);
+      if (!cancelled) {
+        setLedCulteReports(mapped);
+        setLedBaptism((data || []).some((d: { name: string }) => isBaptismDepartmentName(d.name)));
+      }
     })();
     return () => {
       cancelled = true;
@@ -148,6 +158,7 @@ export function useNavigationItems(): NavItem[] {
   useEffect(() => {
     if (!hasRole(ROLES.PASTEUR_ASSISTANT) || !user?.businessProfiles) {
       setSupervisedCulteReports([]);
+      setSupervisedBaptism(false);
       return;
     }
     const profiles = user.businessProfiles as any[];
@@ -156,6 +167,7 @@ export function useNavigationItems(): NavItem[] {
       .filter((id) => !ownIds.has(id));
     if (paIds.length === 0) {
       setSupervisedCulteReports([]);
+      setSupervisedBaptism(false);
       return;
     }
     let cancelled = false;
@@ -171,7 +183,10 @@ export function useNavigationItems(): NavItem[] {
           return reportType ? { reportType } : null;
         })
         .filter((d: { reportType: CulteReportType } | null): d is { reportType: CulteReportType } => d !== null);
-      if (!cancelled) setSupervisedCulteReports(mapped);
+      if (!cancelled) {
+        setSupervisedCulteReports(mapped);
+        setSupervisedBaptism((data || []).some((d: { name: string }) => isBaptismDepartmentName(d.name)));
+      }
     })();
     return () => {
       cancelled = true;
@@ -202,6 +217,12 @@ export function useNavigationItems(): NavItem[] {
     })();
     return () => { cancelled = true; };
   }, [user]);
+
+  // Suivi & Interactions (administration, pasteur) : regroupe aussi le suivi du baptême
+  const trackingGroupVisible =
+    (hasPermission(PERMISSIONS.MANAGE_USERS) || hasRole(ROLES.PASTEUR)) &&
+    hasPermission(PERMISSIONS.VIEW_STATS) &&
+    (hasModule('interactions') || hasModule('attendance') || hasModule('spiritual_progression'));
 
   const items: NavItem[] = [
     {
@@ -299,6 +320,14 @@ export function useNavigationItems(): NavItem[] {
     items.push({ id: 'pa-supervision', label: 'Supervision', icon: <Eye className="w-5 h-5" />, children });
   }
 
+  // Suivi du baptême : toutes les âmes avec leur nouvelle naissance et leur baptême. Responsable du département
+  // Baptême (ou pasteur assistant qui le supervise) : une entrée à part, après ses groupes habituels (les raccourcis de
+  // la barre mobile restent les mêmes pour qui cumule des casquettes). La direction le trouve dans « Suivi & Interactions »,
+  // ou ici si ce groupe n'est pas affiché.
+  if (hasModule('souls') && !trackingGroupVisible && (isAdmin || hasRole(ROLES.PASTEUR) || ledBaptism || supervisedBaptism)) {
+    items.push({ id: 'baptism-followup', label: 'Baptême', icon: <Droplets className="w-5 h-5" />, href: '/bapteme' });
+  }
+
   // Souls management (ADN + admin + pasteur, not family leaders)
   if (
     (hasRole(ROLES.ADN) || isAdmin || hasRole(ROLES.PASTEUR)) &&
@@ -362,11 +391,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Admin tracking & interactions (pasteur : consultation du suivi)
-  if (
-    (hasPermission(PERMISSIONS.MANAGE_USERS) || hasRole(ROLES.PASTEUR)) &&
-    hasPermission(PERMISSIONS.VIEW_STATS) &&
-    (hasModule('interactions') || hasModule('attendance') || hasModule('spiritual_progression'))
-  ) {
+  if (trackingGroupVisible) {
     items.push({
       id: 'tracking-interactions',
       label: 'Suivi & Interactions',
@@ -377,6 +402,7 @@ export function useNavigationItems(): NavItem[] {
         { id: 'attendance-management', label: 'Gestion des présences', href: '/presences', icon: <CalendarCheck className="w-5 h-5" /> },
         { id: 'attendance-view', label: 'Historique des présences', href: '/historique-presences', icon: <BarChart className="w-5 h-5" /> },
         { id: 'progression', label: 'Progression spirituelle', href: '/spiritual-progression', icon: <TrendingUp className="w-5 h-5" /> },
+        ...(hasModule('souls') ? [{ id: 'baptism-followup-direction', label: 'Suivi du baptême', href: '/bapteme', icon: <Droplets className="w-5 h-5" /> }] : []),
       ],
     });
   }
