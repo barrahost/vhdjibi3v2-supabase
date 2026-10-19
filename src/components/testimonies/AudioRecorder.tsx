@@ -19,7 +19,9 @@ interface AudioRecorderProps {
   onBusyChange?: (busy: boolean) => void;
 }
 
-const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/aac'];
+// M4A (AAC) d'abord : il se lit partout (iPhone, Android, ordinateur). Le WebM, que les iPhone récents savent
+// produire, est mal relu par Safari (lecture qui s'arrête au bout de quelques secondes) : il ne sert qu'à défaut.
+const MIME_CANDIDATES = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 /** Avertissement avant l'arrêt automatique, en secondes. */
 const WARN_BEFORE_END = 60;

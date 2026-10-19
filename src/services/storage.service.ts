@@ -102,9 +102,14 @@ export class StorageService {
   }
 
   // -- Témoignage audio (enregistré depuis la page publique) -> R2 --
-  static async uploadTestimonyAudio(audio: Blob): Promise<string> {
-    if (!audio || audio.size === 0) throw new Error("L'enregistrement est vide");
-    if (audio.size > 50 * 1024 * 1024) throw new Error("L'enregistrement ne doit pas dépasser 50 Mo");
+  /**
+   * Envoi avec progression (pour l'afficher à la personne) et délai maximal : sur une connexion mobile lente,
+   * on ne doit jamais rester bloqué sur « Envoi… » sans savoir ce qui se passe.
+   */
+  static uploadTestimonyAudio(audio: Blob, onProgress?: (percent: number) => void): Promise<string> {
+    if (!audio || audio.size === 0) return Promise.reject(new Error("L'enregistrement est vide"));
+    if (audio.size > 50 * 1024 * 1024) return Promise.reject(new Error("L'enregistrement ne doit pas dépasser 50 Mo"));
+    if (!R2_WORKER_URL) return Promise.reject(new Error("le stockage audio n'est pas configuré sur le site (VITE_R2_WORKER_URL)"));
     const type = (audio.type || 'audio/webm').split(';')[0];
     const ext = type.includes('mp4') || type.includes('m4a') || type.includes('aac') ? 'm4a'
       : type.includes('mpeg') || type.includes('mp3') ? 'mp3'
@@ -112,9 +117,38 @@ export class StorageService {
       : type.includes('wav') ? 'wav'
       : 'webm';
     // Nom imprévisible : l'adresse du fichier ne se devine pas
-    const filePath = `temoignages/${getChurchId()}/${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}.${ext}`;
-    const file = new File([audio], filePath.split('/').pop()!, { type });
-    return this.uploadToR2(file, filePath);
+    const id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+    const filePath = `temoignages/${getChurchId()}/${new Date().toISOString().slice(0, 10)}-${id}.${ext}`;
+    // 2 minutes, plus 1 minute par Mo : large pour une connexion lente, mais jamais infini
+    const timeoutMs = 120_000 + Math.ceil(audio.size / (1024 * 1024)) * 60_000;
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', R2_WORKER_URL);
+      Object.entries(this.workerHeaders({ 'Content-Type': type, 'x-file-path': filePath })).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+      xhr.timeout = timeoutMs;
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+      };
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(`envoi de l'audio refusé (${xhr.status}) ${String(xhr.responseText || '').slice(0, 120)}`.trim()));
+          return;
+        }
+        try {
+          const { url } = JSON.parse(xhr.responseText) as { url: string };
+          onProgress?.(100);
+          resolve(url);
+        } catch {
+          reject(new Error("réponse inattendue du stockage audio"));
+        }
+      };
+      xhr.onerror = () => reject(new Error("connexion au stockage audio impossible (réseau coupé ou service injoignable)"));
+      xhr.ontimeout = () => reject(new Error("l'envoi de l'audio a pris trop de temps (connexion trop lente)"));
+      xhr.send(audio);
+    });
   }
 
   static async deleteAudioFile(fileUrl: string): Promise<void> {
