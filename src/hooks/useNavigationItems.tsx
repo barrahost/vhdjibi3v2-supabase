@@ -114,6 +114,8 @@ export function useNavigationItems(): NavItem[] {
   const [supervisedCulteReports, setSupervisedCulteReports] = useState<{ reportType: CulteReportType }[]>([]);
   // Responsable (ou pasteur assistant superviseur) du département Baptême : accès au suivi du baptême
   const [ledBaptism, setLedBaptism] = useState(false);
+  // Dirige un département sans rapport de culte à lui (Accueil, Louange…) : son débrief en tient lieu
+  const [ledDebriefOnly, setLedDebriefOnly] = useState(false);
   const [supervisedBaptism, setSupervisedBaptism] = useState(false);
 
   useEffect(() => {
@@ -145,6 +147,7 @@ export function useNavigationItems(): NavItem[] {
       if (!cancelled) {
         setLedCulteReports(mapped);
         setLedBaptism((data || []).some((d: { name: string }) => isBaptismDepartmentName(d.name)));
+        setLedDebriefOnly((data || []).some((d: { name: string }) => !DEPARTMENT_TO_REPORT_TYPE[normalizeDeptName(d.name)]));
       }
     })();
     return () => {
@@ -279,8 +282,12 @@ export function useNavigationItems(): NavItem[] {
             icon: CULTE_REPORT_NAV_ICON[reportType],
           });
         });
-      } else {
+      } else if (!culteModule) {
         children.push({ id: 'culte-report', label: 'Rapport de culte', href: '/rapport-culte', icon: <FileText className="w-5 h-5" /> });
+      }
+      // Départements sans rapport de culte à eux : la fiche de débrief du département en tient lieu
+      if (culteModule && ledDebriefOnly) {
+        children.push({ id: 'my-debrief', label: 'Mon débrief', href: '/mon-debrief', icon: <ClipboardList className="w-5 h-5" /> });
       }
     }
     if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(cultesNavItem);
