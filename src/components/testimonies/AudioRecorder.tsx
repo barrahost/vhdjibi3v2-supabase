@@ -23,6 +23,8 @@ interface AudioRecorderProps {
 // produire, est mal relu par Safari (lecture qui s'arrête au bout de quelques secondes) : il ne sert qu'à défaut.
 const MIME_CANDIDATES = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+// Extensions listées en plus de « audio/* » : sinon l'iPhone grise certains fichiers audio (un .m4a téléchargé, par exemple)
+const ACCEPTED_AUDIO = 'audio/*,.m4a,.mp3,.aac,.wav,.ogg,.opus,.webm,audio/mp4,audio/x-m4a,audio/mpeg,audio/aac,audio/wav,audio/ogg';
 /** Avertissement avant l'arrêt automatique, en secondes. */
 const WARN_BEFORE_END = 60;
 
@@ -290,10 +292,11 @@ export function AudioRecorder({ value, onChange, maxSeconds = 600, onBusyChange 
               >
                 <Upload className="w-4 h-4" aria-hidden="true" /> Ou choisir un fichier audio
               </button>
+              <p className="text-[11px] text-gray-400 text-center">MP3 ou M4A conseillés (lisibles partout) · 50 Mo maximum</p>
               <input
                 ref={fileInput}
                 type="file"
-                accept="audio/*"
+                accept={ACCEPTED_AUDIO}
                 className="hidden"
                 data-testid="audio-file-input"
                 onChange={(e) => {
