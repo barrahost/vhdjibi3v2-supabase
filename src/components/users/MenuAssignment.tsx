@@ -93,6 +93,12 @@ export function MenuAssignment({ selectedMenus, onChange }: MenuAssignmentProps)
       label: 'Chaîne de prière',
       permission: PERMISSIONS.MANAGE_PRAYER_REQUESTS,
       description: 'Permet de consulter et gérer les sujets soumis sur la chaîne de prière'
+    },
+    {
+      id: 'MANAGE_TESTIMONIES',
+      label: 'Témoignages',
+      permission: PERMISSIONS.MANAGE_TESTIMONIES,
+      description: 'Permet de consulter et gérer les témoignages déposés (écrits et audio)'
     }
   ];
 

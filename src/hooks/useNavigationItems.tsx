@@ -25,6 +25,7 @@ import {
   Building2,
   CalendarDays,
   HandHeart,
+  Sparkles,
   History,
   HandHelping,
   Mic,
@@ -530,6 +531,16 @@ export function useNavigationItems(): NavItem[] {
       label: 'Chaîne de prière',
       icon: <HandHeart className="w-5 h-5" />,
       href: '/prieres',
+    });
+  }
+
+  // Témoignages (même principe que la chaîne de prière)
+  if (hasPermission(PERMISSIONS.MANAGE_TESTIMONIES)) {
+    items.push({
+      id: 'testimonies',
+      label: 'Témoignages',
+      icon: <Sparkles className="w-5 h-5" />,
+      href: '/temoignages',
     });
   }
 

@@ -107,6 +107,7 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
   pasteur: [
     'MANAGE_LEAVES',
     'MANAGE_PRAYER_REQUESTS',
+    'MANAGE_TESTIMONIES',
     'MANAGE_CULTE_REPORTS',
     'MANAGE_SOULS',
     'VIEW_STATS',
