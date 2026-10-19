@@ -84,6 +84,8 @@ const EvangelizationForm = lazy(() => import('./pages/EvangelizationForm'));
 const ReceptionCheckIn = lazy(() => import('./pages/ReceptionCheckIn'));
 const ReceptionQrCode = lazy(() => import('./pages/ReceptionQrCode'));
 const PrayerRequestsManagement = lazy(() => import('./pages/PrayerRequestsManagement'));
+const TestimonyForm = lazy(() => import('./pages/TestimonyForm'));
+const TestimoniesManagement = lazy(() => import('./pages/TestimoniesManagement'));
 const AcademieHub = lazy(() => import('./pages/AcademieHub'));
 const AcademieCourseTimeline = lazy(() => import('./pages/AcademieCourseTimeline'));
 const AcademieSessionDetail = lazy(() => import('./pages/AcademieSessionDetail'));
@@ -170,6 +172,11 @@ function AppContent() {
         <Route path="/priere" element={
           <Suspense fallback={<PageLoader />}>
             <PrayerRequestForm />
+          </Suspense>
+        } />
+        <Route path="/temoignage" element={
+          <Suspense fallback={<PageLoader />}>
+            <TestimonyForm />
           </Suspense>
         } />
         <Route path="/evangelisation" element={
@@ -456,6 +463,15 @@ function AppContent() {
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_PRAYER_REQUESTS]}>
               <Suspense fallback={<PageLoader />}>
                 <PrayerRequestsManagement />
+              </Suspense>
+            </PrivateRoute>
+          } />
+
+          {/* Témoignages */}
+          <Route path="temoignages" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_TESTIMONIES]}>
+              <Suspense fallback={<PageLoader />}>
+                <TestimoniesManagement />
               </Suspense>
             </PrivateRoute>
           } />

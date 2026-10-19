@@ -101,6 +101,22 @@ export class StorageService {
     }
   }
 
+  // -- Témoignage audio (enregistré depuis la page publique) -> R2 --
+  static async uploadTestimonyAudio(audio: Blob): Promise<string> {
+    if (!audio || audio.size === 0) throw new Error("L'enregistrement est vide");
+    if (audio.size > 50 * 1024 * 1024) throw new Error("L'enregistrement ne doit pas dépasser 50 Mo");
+    const type = (audio.type || 'audio/webm').split(';')[0];
+    const ext = type.includes('mp4') || type.includes('m4a') || type.includes('aac') ? 'm4a'
+      : type.includes('mpeg') || type.includes('mp3') ? 'mp3'
+      : type.includes('ogg') ? 'ogg'
+      : type.includes('wav') ? 'wav'
+      : 'webm';
+    // Nom imprévisible : l'adresse du fichier ne se devine pas
+    const filePath = `temoignages/${getChurchId()}/${new Date().toISOString().slice(0, 10)}-${crypto.randomUUID()}.${ext}`;
+    const file = new File([audio], filePath.split('/').pop()!, { type });
+    return this.uploadToR2(file, filePath);
+  }
+
   static async deleteAudioFile(fileUrl: string): Promise<void> {
     try {
       if (!fileUrl) return;
