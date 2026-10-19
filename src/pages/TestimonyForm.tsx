@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import {
   Loader2, Check, UserCircle2, Sparkles, PartyPopper, HeartPulse, Shield, Home, Briefcase, Coins, Cross, HandHeart, MoreHorizontal, Mic, Megaphone,
 } from 'lucide-react';
-import { TestimonyService, TESTIMONY_CATEGORIES, TESTIMONY_CONTENT_MAX, type TestimonyCategory } from '../services/testimony.service';
+import { TestimonyService, TESTIMONY_CATEGORIES, TESTIMONY_CONTENT_MAX, formatDuration, type TestimonyCategory } from '../services/testimony.service';
 import { useChurch } from '../contexts/ChurchContext';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import { PhoneInput } from '../components/ui/PhoneInput';
@@ -38,14 +38,22 @@ export default function TestimonyForm() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [shareConsent, setShareConsent] = useState(false);
+  // Enregistrement en cours ou en préparation : on attend qu'il soit prêt avant d'envoyer
+  const [recording, setRecording] = useState(false);
+  const onRecorderBusy = useCallback((busy: boolean) => setRecording(busy), []);
+  // Récapitulatif à confirmer avant l'envoi
+  const [reviewing, setReviewing] = useState(false);
 
   const phoneCheck = wantsContact ? validatePhoneNumber(phone) : null;
   const hasTestimony = content.trim().length > 0 || !!audio;
-  const canSubmit = category !== '' && hasTestimony && (!wantsContact || (fullName.trim().length > 0 && !!phoneCheck?.isValid));
-  const missing = category === '' ? 'Choisis le type de témoignage' : !hasTestimony ? 'Écris ou enregistre ton témoignage' : '';
+  const canSubmit = !recording && category !== '' && hasTestimony && (!wantsContact || (fullName.trim().length > 0 && !!phoneCheck?.isValid));
+  const missing = recording
+    ? "Termine l'enregistrement (bouton « Arrêter ») avant d'envoyer"
+    : category === '' ? 'Choisis le type de témoignage' : !hasTestimony ? 'Écris ou enregistre ton témoignage' : '';
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    setReviewing(false);
     setPageState('submitting');
     try {
       await TestimonyService.submit({
@@ -188,7 +196,7 @@ export default function TestimonyForm() {
                 {!wantsContact && ' Même si tu restes anonyme, ta voix peut être reconnue.'}
               </p>
             </div>
-            <AudioRecorder value={audio} onChange={setAudio} />
+            <AudioRecorder value={audio} onChange={setAudio} onBusyChange={onRecorderBusy} />
           </div>
 
           {/* Texte */}
@@ -274,7 +282,7 @@ export default function TestimonyForm() {
           <div className="max-w-md mx-auto space-y-1.5">
             {missing && <p className="text-xs text-gray-400 text-center">{missing}</p>}
             <button
-              onClick={handleSubmit}
+              onClick={() => setReviewing(true)}
               disabled={!canSubmit || pageState === 'submitting'}
               className="w-full h-12 bg-[#00665C] text-white font-semibold rounded-xl hover:bg-[#00665C]/90 disabled:opacity-40 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
             >
@@ -283,6 +291,56 @@ export default function TestimonyForm() {
             </button>
           </div>
         </div>
+        {/* Récapitulatif avant l'envoi */}
+        {reviewing && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setReviewing(false)}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="testimony-review-title"
+              className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[90dvh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="testimony-review-title" className="text-lg font-bold text-gray-900">Envoyer ton témoignage ?</h2>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li><span className="text-gray-500">Type :</span> <span className="font-medium">{category}</span></li>
+                <li>
+                  <span className="text-gray-500">Audio :</span>{' '}
+                  <span className="font-medium">{audio ? `oui${audio.duration ? ` (${formatDuration(audio.duration)})` : ''}` : 'non'}</span>
+                </li>
+                <li>
+                  <span className="text-gray-500">Texte :</span>{' '}
+                  {content.trim() ? <span className="italic line-clamp-3">« {content.trim()} »</span> : <span className="font-medium">aucun</span>}
+                </li>
+                <li>
+                  <span className="text-gray-500">Identité :</span>{' '}
+                  <span className="font-medium">{wantsContact ? `${fullName.trim()} — ${phone.trim()}` : 'anonyme'}</span>
+                </li>
+                <li>
+                  <span className="text-gray-500">Partage :</span>{' '}
+                  <span className="font-medium">{shareConsent ? (wantsContact ? 'autorisé' : 'autorisé, sans ton nom') : 'réservé aux pasteurs'}</span>
+                </li>
+              </ul>
+              <p className="text-xs text-gray-500">Une fois envoyé, ton témoignage ne peut plus être modifié depuis cette page.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewing(false)}
+                  className="min-h-[48px] rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700"
+                >
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="min-h-[48px] rounded-xl bg-[#00665C] text-white text-sm font-semibold"
+                >
+                  Confirmer l'envoi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
