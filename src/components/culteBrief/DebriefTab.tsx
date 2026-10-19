@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DEBRIEF_QUESTIONS } from '../../data/culteGuide';
@@ -53,6 +53,10 @@ export function DebriefTab({ event, access, onChanged, active = true, onDirtyCha
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [actionEditor, setActionEditor] = useState<{ action?: CulteAction; draft?: ActionDraft } | null>(null);
+  // Arrivée depuis « Mon débrief » : la fiche du département demandé est ouverte et amenée à l'écran
+  const [searchParams] = useSearchParams();
+  const requestedDepartment = searchParams.get('departement');
+  const scrolledTo = useRef<string | null>(null);
 
   const actor = useMemo(() => ({ id: access.userId, name: access.userName }), [access.userId, access.userName]);
   const { canManageAction } = access;
@@ -260,11 +264,21 @@ export function DebriefTab({ event, access, onChanged, active = true, onDirtyCha
         // Ouverte d'office : la fiche de MON département tant qu'elle n'est pas remplie. La direction,
         // qui voit tous les départements, les parcourt repliés et ouvre celui qui l'intéresse.
         const isOwn = !!department && access.managedDepartmentIds.includes(department.id);
-        const isOpen = open[name] ?? (isOwn && !filled);
+        const isOpen = open[name] ?? ((isOwn && !filled) || (name === requestedDepartment && canEdit));
         const hasContent = !isDebriefSheetEmpty(values);
 
         return (
           <Card key={name}>
+            <div
+              ref={(el) => {
+                if (el && name === requestedDepartment && !loading && scrolledTo.current !== name) {
+                  scrolledTo.current = name;
+                  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                }
+              }}
+              className="scroll-mt-20"
+              data-department={name}
+            />
             <button type="button" onClick={() => setOpen((prev) => ({ ...prev, [name]: !isOpen }))} className="w-full flex items-center gap-3 px-4 py-3 text-left" aria-expanded={isOpen}>
               {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
               <span className="flex-1 font-semibold text-gray-900 truncate">{name}</span>

@@ -254,6 +254,24 @@ export default function DepartmentLeaderDashboard() {
         </button>
       )}
 
+      {/* Département sans rapport de culte à lui : sa fiche de débrief en tient lieu */}
+      {!reportType && culteModule && (
+        <button
+          type="button"
+          onClick={() => navigate('/mon-debrief')}
+          className="w-full flex items-center gap-3 rounded-2xl border-2 border-[#00665C] bg-white px-4 py-3 text-left shadow-sm hover:bg-[#00665C]/5"
+        >
+          <span className="w-10 h-10 rounded-xl bg-[#00665C] flex items-center justify-center flex-shrink-0">
+            <FileText className="h-5 w-5 text-white" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-semibold text-gray-900">Faire mon débrief — {department.name}</span>
+            <span className="block text-xs text-gray-500">Remplir la fiche de débrief du culte pour votre département</span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-[#00665C] flex-shrink-0" />
+        </button>
+      )}
+
       {/* Département Baptême : où en sont les âmes (nouvelle naissance, baptême) */}
       {isBaptismDepartmentName(department.name) && hasModule('souls') && <BaptismDashboardCard />}
 

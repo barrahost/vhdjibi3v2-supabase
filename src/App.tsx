@@ -45,6 +45,7 @@ const CulteHub = lazy(() => import('./pages/CulteHub'));
 const CulteCockpit = lazy(() => import('./pages/CulteCockpit'));
 const CulteChecklistSettings = lazy(() => import('./pages/CulteChecklistSettings'));
 const CulteActionsPlan = lazy(() => import('./pages/CulteActionsPlan'));
+const MyDebrief = lazy(() => import('./pages/MyDebrief'));
 // « Besoins signalés » devient le plan d'actions dès que le module est actif (SQL exécuté)
 const CulteNeedsOrPlan = lazy(() => import('./pages/CulteActionsPlan').then((m) => ({ default: m.CulteNeedsOrPlan })));
 const CulteReportDepartmentView = lazy(() => import('./pages/CulteReportDepartmentView'));
@@ -484,6 +485,11 @@ function AppContent() {
           <Route path="cultes/:eventId" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
               <CulteCockpit />
+            </PrivateRoute>
+          } />
+          <Route path="mon-debrief" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_CULTE_REPORTS]}>
+              <MyDebrief />
             </PrivateRoute>
           } />
           <Route path="plan-actions" element={
