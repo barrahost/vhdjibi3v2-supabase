@@ -78,9 +78,11 @@ export const TestimonyService = {
     audio?: { blob: Blob; duration: number } | null;
     contact?: { fullName: string; phone: string };
     shareConsent: boolean;
+    /** Progression de l'envoi de l'audio, en %. */
+    onProgress?: (percent: number) => void;
   }): Promise<void> {
     let audioUrl: string | null = null;
-    if (input.audio) audioUrl = await StorageService.uploadTestimonyAudio(input.audio.blob);
+    if (input.audio) audioUrl = await StorageService.uploadTestimonyAudio(input.audio.blob, input.onProgress);
     const { error } = await supabase.rpc('submit_testimony', {
       p_church_id: getChurchId(),
       p_category: input.category,

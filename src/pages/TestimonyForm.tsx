@@ -31,6 +31,9 @@ const CATEGORY_ICONS: Record<TestimonyCategory, React.ComponentType<{ className?
 export default function TestimonyForm() {
   const { loading: churchLoading } = useChurch();
   const [pageState, setPageState] = useState<PageState>('ready');
+  // Progression de l'envoi de l'audio (%), affichée pendant l'envoi
+  const [progress, setProgress] = useState(0);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [category, setCategory] = useState<TestimonyCategory | ''>('');
   const [content, setContent] = useState('');
   const [audio, setAudio] = useState<RecordedAudio | null>(null);
@@ -54,6 +57,8 @@ export default function TestimonyForm() {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setReviewing(false);
+    setSendError(null);
+    setProgress(0);
     setPageState('submitting');
     try {
       await TestimonyService.submit({
@@ -62,10 +67,13 @@ export default function TestimonyForm() {
         audio: audio ? { blob: audio.blob, duration: audio.duration } : null,
         contact: wantsContact ? { fullName: fullName.trim(), phone: phoneCheck!.formattedNumber! } : undefined,
         shareConsent,
+        onProgress: setProgress,
       });
       setPageState('done');
     } catch (e: any) {
-      toast.error(`Ton témoignage n'a pas pu être envoyé. Vérifie ta connexion et réessaie.${e?.message ? ` (${e.message})` : ''}`, { duration: 8000 });
+      // Reste affiché sous le bouton (et non un message qui disparaît) : la personne peut réessayer ou nous le montrer
+      setSendError(`Ton témoignage n'a pas pu être envoyé : ${e?.message || 'erreur inconnue'}. Tes réponses sont conservées : vérifie ta connexion et réessaie.`);
+      toast.error("Ton témoignage n'a pas pu être envoyé.", { duration: 6000 });
       setPageState('ready');
     }
   };
@@ -280,6 +288,16 @@ export default function TestimonyForm() {
         {/* Pied de page fixe */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 pb-6">
           <div className="max-w-md mx-auto space-y-1.5">
+            {sendError && pageState !== 'submitting' && (
+              <p className="text-xs text-red-600 text-center" role="alert" data-testid="send-error">
+                {sendError}
+              </p>
+            )}
+            {pageState === 'submitting' && audio && (
+              <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden" aria-hidden="true">
+                <div className="h-full bg-[#00665C] transition-all" style={{ width: `${Math.max(3, progress)}%` }} />
+              </div>
+            )}
             {missing && <p className="text-xs text-gray-400 text-center">{missing}</p>}
             <button
               onClick={() => setReviewing(true)}
@@ -287,7 +305,15 @@ export default function TestimonyForm() {
               className="w-full h-12 bg-[#00665C] text-white font-semibold rounded-xl hover:bg-[#00665C]/90 disabled:opacity-40 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
             >
               {pageState === 'submitting' && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
-              {pageState === 'submitting' ? (audio ? "Envoi de l'audio..." : 'Envoi en cours...') : 'Envoyer mon témoignage'}
+              {pageState === 'submitting'
+                ? audio
+                  ? progress >= 100
+                    ? 'Enregistrement du témoignage...'
+                    : `Envoi de l'audio... ${progress} %`
+                  : 'Envoi en cours...'
+                : sendError
+                  ? 'Réessayer l’envoi'
+                  : 'Envoyer mon témoignage'}
             </button>
           </div>
         </div>
