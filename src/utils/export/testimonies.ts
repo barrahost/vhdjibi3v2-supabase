@@ -11,6 +11,7 @@ export function exportTestimonies(testimonies: Testimony[], filename?: string): 
     'Accord de partage': t.shareConsent ? 'Oui' : 'Non',
     'Statut': TESTIMONY_STATUS_LABELS[t.status] ?? t.status,
     'Nom': t.fullName || 'Anonyme',
+    'Anonyme en public': t.publicAnonymous || !t.fullName ? 'Oui' : 'Non',
     'Téléphone': t.phone?.replace('+225', '') || '',
     'Déposé le': formatDateForExcel(t.submittedAt),
   }));
@@ -25,6 +26,7 @@ export function exportTestimonies(testimonies: Testimony[], filename?: string): 
     { wch: 10 }, // Accord
     { wch: 12 }, // Statut
     { wch: 25 }, // Nom
+    { wch: 12 }, // Anonyme en public
     { wch: 15 }, // Téléphone
     { wch: 12 }, // Déposé le
   ];
