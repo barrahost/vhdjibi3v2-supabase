@@ -37,6 +37,8 @@ export interface Testimony {
   fullName?: string;
   phone?: string;
   shareConsent: boolean;
+  /** Identifiée auprès des pasteurs, mais son nom ne doit jamais être cité en public. */
+  publicAnonymous: boolean;
   status: TestimonyStatus;
   submittedAt: Date;
 }
@@ -52,6 +54,7 @@ function mapTestimony(r: any): Testimony {
     fullName: r.full_name || undefined,
     phone: r.phone || undefined,
     shareConsent: !!r.share_consent,
+    publicAnonymous: !!r.public_anonymous,
     status: r.status || 'nouveau',
     submittedAt: new Date(r.submitted_at),
   };
@@ -76,7 +79,9 @@ export const TestimonyService = {
     category: TestimonyCategory;
     content: string;
     audio?: { blob: Blob; duration: number } | null;
-    contact?: { fullName: string; phone: string };
+    contact: { fullName: string; phone: string };
+    /** Le nom ne doit jamais être cité en public (les pasteurs le connaissent). */
+    publicAnonymous: boolean;
     shareConsent: boolean;
     /** Progression de l'envoi de l'audio, en %. */
     onProgress?: (percent: number) => void;
@@ -89,12 +94,15 @@ export const TestimonyService = {
       p_content: input.content.trim() || null,
       p_audio_url: audioUrl,
       p_audio_duration: input.audio ? Math.round(input.audio.duration) : null,
-      p_full_name: input.contact?.fullName ?? null,
-      p_phone: input.contact?.phone ?? null,
+      p_full_name: input.contact.fullName,
+      p_phone: input.contact.phone,
       p_share_consent: input.shareConsent,
+      p_public_anonymous: input.publicAnonymous,
     });
     if (error) {
       if (audioUrl) await StorageService.deleteAudioFile(audioUrl);
+      // La base n'a pas encore la nouvelle version (script supabase_testimonies_identite.sql non exécuté)
+      if (error.code === 'PGRST202') throw new Error('le site est en cours de mise à jour, réessaie dans quelques minutes');
       throw new Error(error.message);
     }
   },
