@@ -6,6 +6,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { TranslationWarning } from './components/TranslationWarning';
 import './index.css';
 
 // Après un déploiement, les anciens fichiers JS n'existent plus : un onglet resté
@@ -32,9 +33,13 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// L'application démarre : le message « navigateur incompatible » d'index.html ne s'affichera pas
+(window as unknown as { __bergerieStarted?: boolean }).__bergerieStarted = true;
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
+      <TranslationWarning />
       <App />
     </AppErrorBoundary>
   </StrictMode>
