@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { Megaphone, Loader2, CheckCircle2, Plus, Check, ChevronLeft, ChevronRight, LogIn, UserCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -235,7 +234,6 @@ export default function EvangelizationForm() {
   if (accessMode === 'choice' || accessMode === 'login') {
     return (
       <>
-        <Toaster position="top-center" />
         <div className="min-h-screen bg-gray-50 flex flex-col">
           <div className="bg-[#00665C] text-white px-4 pt-10 pb-8">
             <div className="max-w-lg mx-auto">
@@ -316,7 +314,6 @@ export default function EvangelizationForm() {
 
   return (
     <>
-      <Toaster position="top-center" />
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="bg-[#00665C] text-white px-4 pt-10 pb-5">
           <div className="max-w-lg mx-auto">

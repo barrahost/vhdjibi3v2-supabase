@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Cake, User } from 'lucide-react';
@@ -22,6 +23,13 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
     phone: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Brouillon (page publique seulement) : la saisie est retrouvée après un rechargement
+  const draft = useFormDraft('anniversaire', formData, {
+    restore: (d) => setFormData({ ...formData, ...d }),
+    isEmpty: (d) => !d.fullName.trim() && !d.birthMonth && !d.birthDay && !d.phone.trim(),
+    enabled: !isModal,
+    restoredMessage: isModal ? null : undefined,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +70,7 @@ export default function BirthdayForm({ onSuccess, onClose, isModal = false }: Bi
       });
 
       if (insertErr) throw insertErr;
+      draft.clear();
 
       // Si en mode modal, utiliser l'ancien comportement
       if (isModal) {

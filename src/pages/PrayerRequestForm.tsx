@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import {
   HandHeart, Loader2, MessageCircle, Video, Clock,
@@ -10,6 +9,7 @@ import { getChurchId } from '../lib/churchId';
 import { useChurch } from '../contexts/ChurchContext';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import { PhoneInput } from '../components/ui/PhoneInput';
+import { useFormDraft } from '../hooks/useFormDraft';
 
 type PageState = 'ready' | 'submitting' | 'done';
 
@@ -35,6 +35,18 @@ export default function PrayerRequestForm() {
   const [wantsContact, setWantsContact] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  // Brouillon : la saisie est retrouvée après un rechargement
+  const draft = useFormDraft('priere', { category, subject, wantsContact, fullName, phone }, {
+    restore: (d) => {
+      setCategory(d.category);
+      setSubject(d.subject);
+      setWantsContact(d.wantsContact);
+      setFullName(d.fullName);
+      setPhone(d.phone);
+    },
+    isEmpty: (d) => !d.category && !d.subject.trim() && !d.fullName.trim() && !d.phone.trim(),
+    enabled: pageState !== 'done',
+  });
 
   const phoneCheck = wantsContact ? validatePhoneNumber(phone) : null;
   const canSubmit = category !== '' && subject.trim().length > 0
@@ -50,6 +62,7 @@ export default function PrayerRequestForm() {
         subject.trim(),
         wantsContact ? { fullName: fullName.trim(), phone: phoneCheck!.formattedNumber! } : undefined
       );
+      draft.clear();
       setPageState('done');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de l\'envoi. Réessaie.');
@@ -88,7 +101,6 @@ export default function PrayerRequestForm() {
   if (pageState === 'done') {
     return (
       <>
-        <Toaster position="top-center" />
         <style>{`
           @keyframes prf-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
           .prf-animate { animation: prf-fade-up 400ms ease-out both; }
@@ -160,7 +172,6 @@ export default function PrayerRequestForm() {
 
   return (
     <>
-      <Toaster position="top-center" />
       <style>{`
         @keyframes prf-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .prf-animate { animation: prf-fade-up 400ms ease-out both; }

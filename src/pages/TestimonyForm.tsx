@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import {
   Loader2, Check, UserCircle2, EyeOff, ArrowRight, Sparkles, PartyPopper, HeartPulse, Shield, Home, Briefcase, Coins, Cross, HandHeart, MoreHorizontal, Mic, Megaphone,
@@ -9,6 +8,7 @@ import { useChurch } from '../contexts/ChurchContext';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { AudioRecorder, type RecordedAudio } from '../components/testimonies/AudioRecorder';
+import { useFormDraft } from '../hooks/useFormDraft';
 
 type PageState = 'identify' | 'ready' | 'submitting' | 'done';
 
@@ -63,6 +63,19 @@ export default function TestimonyForm() {
   const [fullName, setFullName] = useState(() => loadIdentity().fullName);
   const [phone, setPhone] = useState(() => loadIdentity().phone);
   const [shareConsent, setShareConsent] = useState(false);
+  // Brouillon : type, texte et choix sont retrouvés après un rechargement (un enregistrement audio, lui, ne peut pas
+  // être gardé sur le téléphone : il faudra le refaire)
+  const draft = useFormDraft('temoignage', { category, content, publicAnonymous, shareConsent }, {
+    restore: (d) => {
+      setCategory(d.category);
+      setContent(d.content);
+      setPublicAnonymous(d.publicAnonymous);
+      setShareConsent(d.shareConsent);
+    },
+    isEmpty: (d) => !d.category && !d.content.trim(),
+    enabled: pageState !== 'done',
+    restoredMessage: 'Ton témoignage en cours a été retrouvé. Si tu avais fait un enregistrement audio, refais-le.',
+  });
   // Enregistrement en cours ou en préparation : on attend qu'il soit prêt avant d'envoyer
   const [recording, setRecording] = useState(false);
   const onRecorderBusy = useCallback((busy: boolean) => setRecording(busy), []);
@@ -93,6 +106,7 @@ export default function TestimonyForm() {
         shareConsent,
         onProgress: setProgress,
       });
+      draft.clear();
       setPageState('done');
     } catch (e: any) {
       // Reste affiché sous le bouton (et non un message qui disparaît) : la personne peut réessayer ou nous le montrer
@@ -139,7 +153,6 @@ export default function TestimonyForm() {
   if (pageState === 'done') {
     return (
       <>
-        <Toaster position="top-center" />
         {animations}
         <div className="min-h-screen bg-gray-50 flex flex-col">
           <div className="bg-[#00665C] text-white px-4 pt-10 pb-8 text-center tf-animate">
@@ -194,7 +207,6 @@ export default function TestimonyForm() {
   if (pageState === 'identify') {
     return (
       <>
-        <Toaster position="top-center" />
         {animations}
         <div className="min-h-screen bg-gray-50 flex flex-col">
           {banner}
@@ -242,7 +254,6 @@ export default function TestimonyForm() {
 
   return (
     <>
-      <Toaster position="top-center" />
       {animations}
       <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Bandeau (même que l'étape 1) */}
