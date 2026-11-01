@@ -1,9 +1,11 @@
 // À importer AVANT App : le module s'abonne à `beforeinstallprompt` (émis une seule fois,
 // très tôt) pour que le bandeau d'installation puisse l'utiliser plus tard.
 import './lib/pwaInstall';
+import './lib/translationGuard';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import './index.css';
 
 // Après un déploiement, les anciens fichiers JS n'existent plus : un onglet resté
@@ -32,6 +34,8 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>
 );

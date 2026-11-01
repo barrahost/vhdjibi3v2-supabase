@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { Megaphone, Loader2, CheckCircle2, Plus, Check, ChevronLeft, ChevronRight, LogIn, UserCircle2 } from 'lucide-react';
@@ -33,6 +33,36 @@ const initial = {
   serviceFamilyId: '',
 };
 
+// Brouillon : la fiche en cours est gardée sur le téléphone (12 h). Après un rechargement (réseau, page blanche,
+// appel reçu…), on reprend là où on en était au lieu de tout ressaisir.
+const DRAFT_KEY = 'evangelisation:brouillon';
+const DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
+type Draft = { data: typeof initial; step: 1 | 2 | 3; guest: boolean; savedAt: number };
+
+function loadDraft(): Draft | null {
+  try {
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null') as Draft | null;
+    if (!draft || Date.now() - draft.savedAt > DRAFT_TTL_MS) return null;
+    return { ...draft, data: { ...initial, ...draft.data } };
+  } catch {
+    return null;
+  }
+}
+function saveDraft(draft: Omit<Draft, 'savedAt'>) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, savedAt: Date.now() }));
+  } catch {
+    /* stockage indisponible (navigation privée) : pas de brouillon */
+  }
+}
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* ignoré */
+  }
+}
+
 function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
   return (
     <div className="mt-3">
@@ -66,16 +96,29 @@ export default function EvangelizationForm() {
   const { loading: churchLoading } = useChurch();
   const { families } = useServiceFamilies(true);
   const { user, login } = useAuth();
+  const [draft] = useState(loadDraft);
   const [pageState, setPageState] = useState<PageState>('ready');
-  const [data, setData] = useState(initial);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [data, setData] = useState(draft?.data ?? initial);
+  const [step, setStep] = useState<1 | 2 | 3>(draft?.step ?? 1);
   const [stepError, setStepError] = useState<string | null>(null);
   const [navLocked, setNavLocked] = useState(false);
   const navLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Acces : deja connecte (session existante) -> direct ; sinon on demande de choisir
   // entre se connecter (B.O.S.S/evangeliste) et continuer en invite (sans compte).
-  const [accessMode, setAccessMode] = useState<AccessMode>(user ? 'authenticated' : 'choice');
+  const [accessMode, setAccessMode] = useState<AccessMode>(user ? 'authenticated' : draft?.guest ? 'guest' : 'choice');
+  const restored = useRef(!!draft && JSON.stringify(draft.data) !== JSON.stringify(initial));
+
+  useEffect(() => {
+    if (restored.current) toast.success('Ta fiche en cours a été retrouvée : tu peux continuer.', { duration: 5000 });
+  }, []);
+
+  // Sauvegarde à chaque saisie, tant que la fiche n'est pas envoyée
+  useEffect(() => {
+    if (pageState === 'done' || (accessMode !== 'guest' && accessMode !== 'authenticated')) return;
+    if (JSON.stringify(data) === JSON.stringify(initial) && step === 1) return;
+    saveDraft({ data, step, guest: accessMode === 'guest' });
+  }, [data, step, accessMode, pageState]);
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -143,6 +186,7 @@ export default function EvangelizationForm() {
         p_evangelist_id: accessMode === 'authenticated' && user ? user.id : null,
       });
       if (error) throw new Error(error.message);
+      clearDraft();
       setPageState('done');
     } catch (err: any) {
       toast.error(err?.message || "Erreur lors de l'envoi. Réessaie.");
@@ -151,6 +195,7 @@ export default function EvangelizationForm() {
   };
 
   const handleReset = () => {
+    clearDraft();
     setData(initial);
     setStep(1);
     setStepError(null);
