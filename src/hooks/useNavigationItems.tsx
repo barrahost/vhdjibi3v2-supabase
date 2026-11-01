@@ -247,7 +247,8 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
       children.push(
         { id: 'assigned-souls', label: 'Mes âmes suivies', href: '/assigned-souls', icon: <Heart className="w-5 h-5" />, dataTour: 'nav-assigned-souls' },
-        { id: 'interactions', label: 'Mes interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" />, dataTour: 'nav-interactions-shepherd' }
+        { id: 'interactions', label: 'Mes interactions', href: '/interactions', icon: <MessageCircle className="w-5 h-5" />, dataTour: 'nav-interactions-shepherd' },
+        { id: 'my-stats', label: 'Mes statistiques', href: '/mes-statistiques', icon: <BarChart2 className="w-5 h-5" /> }
       );
     }
     if (hasPermission(PERMISSIONS.MANAGE_ATTENDANCES)) {
@@ -388,6 +389,7 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_INTERACTIONS)) {
       children.push(
         { id: 'family-interactions', label: 'Interactions de ma famille', href: '/interactions', icon: <MessageCircle className="w-5 h-5" /> },
+        { id: 'family-stats', label: 'Statistiques des interactions', href: '/ma-famille/statistiques', icon: <BarChart2 className="w-5 h-5" /> },
         { id: 'family-reminders', label: 'Rappels', href: '/rappels', icon: <Bell className="w-5 h-5" /> }
       );
     }
@@ -428,6 +430,7 @@ export function useNavigationItems(): NavItem[] {
       children: [
         { id: 'stats-overview', label: "Vue d'ensemble", href: '/statistiques', icon: <BarChart className="w-5 h-5" /> },
         { id: 'stats-pastoral', label: 'Suivi pastoral', href: '/statistiques?tab=pastoral', icon: <Heart className="w-5 h-5" /> },
+        { id: 'stats-interactions', label: 'Interactions', href: '/statistiques?tab=interactions', icon: <MessageCircle className="w-5 h-5" /> },
         { id: 'stats-spiritual', label: 'Progression spirituelle', href: '/statistiques?tab=spiritual', icon: <TrendingUp className="w-5 h-5" /> },
         { id: 'stats-evangelization', label: 'Évangélisation', href: '/statistiques?tab=evangelization', icon: <Megaphone className="w-5 h-5" /> },
       ],

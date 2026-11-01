@@ -7,13 +7,14 @@ import { InteractionStats } from '../components/dashboard/stats/InteractionStats
 import { SpiritualStats } from '../components/dashboard/stats/SpiritualStats';
 import { SoulEvolutionChart } from '../components/dashboard/stats/SoulEvolutionChart';
 import { EvangelizationStats } from '../components/dashboard/stats/EvangelizationStats';
+import InteractionStatsDashboard from '../components/stats/InteractionStatsDashboard';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
 
-type TabId = 'overview' | 'pastoral' | 'spiritual' | 'evangelization';
+type TabId = 'overview' | 'pastoral' | 'interactions' | 'spiritual' | 'evangelization';
 
 interface Tab {
   id: TabId;
@@ -34,6 +35,12 @@ const TABS: Tab[] = [
     label: 'Suivi pastoral',
     icon: <Heart className="w-4 h-4" />,
     description: 'Rétention, interactions et engagement des âmes'
+  },
+  {
+    id: 'interactions',
+    label: 'Interactions',
+    icon: <MessageCircle className="w-4 h-4" />,
+    description: 'Appels, visites et messages des bergers, couverture des âmes et âmes à ne pas oublier'
   },
   {
     id: 'spiritual',
@@ -211,6 +218,8 @@ export default function StatistiquesAdmin() {
             </section>
           </>
         )}
+
+        {activeTab === 'interactions' && <InteractionStatsDashboard scope="church" />}
 
         {activeTab === 'spiritual' && (
           <section>

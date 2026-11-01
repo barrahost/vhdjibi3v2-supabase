@@ -6,6 +6,7 @@ import { StatCard } from './stats/StatCard';
 import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle, Search, X, Briefcase } from 'lucide-react';
 import { useDepartments } from '../../hooks/useDepartments';
 import PendingActionsWidget from './PendingActionsWidget';
+import InteractionStatsCard from '../stats/InteractionStatsCard';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -337,6 +338,8 @@ export function ShepherdDashboard() {
           iconClassName="text-green-600"
         />
       </div>
+
+      <InteractionStatsCard />
 
       {/* Mes âmes — suivi par urgence de contact */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
