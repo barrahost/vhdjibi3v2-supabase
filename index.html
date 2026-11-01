@@ -15,7 +15,34 @@
     <title>Bergerie</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div id="boot" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;color:#6b7280;font-size:14px">Chargement…</div></div>
+    <!-- Démarrage surveillé (écrit en JavaScript ancien, compris par tous les navigateurs) : si l'application ne démarre
+         pas (navigateur trop ancien ou incompatible, script bloqué), on l'explique au lieu de laisser une page blanche. -->
+    <script>
+      (function () {
+        var shown = false;
+        function explain() {
+          if (shown || window.__bergerieStarted) return;
+          var boot = document.getElementById('boot');
+          if (!boot) return;
+          shown = true;
+          boot.innerHTML =
+            '<div style="max-width:360px;padding:24px;text-align:center" data-testid="boot-error">' +
+            '<p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 8px">L’application ne parvient pas à s’afficher</p>' +
+            '<p style="font-size:14px;color:#4b5563;line-height:1.5;margin:0 0 16px">Ton navigateur est peut-être trop ancien ou incompatible. ' +
+            'Mets-le à jour, ou ouvre ce lien dans <b>Chrome</b> (Android) ou <b>Safari</b> (iPhone). ' +
+            'Si tu as ouvert le lien depuis WhatsApp ou Facebook, choisis « Ouvrir dans le navigateur ».</p>' +
+            '<button type="button" onclick="location.reload()" style="width:100%;height:46px;border:0;border-radius:12px;background:#00665C;color:#fff;font-size:15px;font-weight:600">Réessayer</button>' +
+            '</div>';
+        }
+        // Erreur de script avant le démarrage (ex. syntaxe inconnue d'un vieux navigateur)
+        window.addEventListener('error', function () { setTimeout(explain, 1500); });
+        // Navigateur sans modules JavaScript : l'application ne peut pas démarrer
+        if (!('noModule' in document.createElement('script'))) explain();
+        // Démarrage trop long (réseau très lent ou blocage silencieux)
+        setTimeout(explain, 25000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
