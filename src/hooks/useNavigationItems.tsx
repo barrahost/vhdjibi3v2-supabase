@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Youtube,
   MessageCircle,
   TrendingUp,
   Heart,
@@ -433,6 +434,7 @@ export function useNavigationItems(): NavItem[] {
         { id: 'stats-interactions', label: 'Interactions', href: '/statistiques?tab=interactions', icon: <MessageCircle className="w-5 h-5" /> },
         { id: 'stats-spiritual', label: 'Progression spirituelle', href: '/statistiques?tab=spiritual', icon: <TrendingUp className="w-5 h-5" /> },
         { id: 'stats-evangelization', label: 'Évangélisation', href: '/statistiques?tab=evangelization', icon: <Megaphone className="w-5 h-5" /> },
+        { id: 'stats-youtube', label: 'Directs YouTube', href: '/statistiques?tab=directs', icon: <Youtube className="w-5 h-5" /> },
       ],
     });
   }

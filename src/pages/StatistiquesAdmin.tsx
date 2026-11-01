@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BarChart2, Heart, TrendingUp, MessageCircle, Megaphone, Download } from 'lucide-react';
+import { BarChart2, Heart, TrendingUp, MessageCircle, Megaphone, Download, Youtube } from 'lucide-react';
 import { GeneralStats } from '../components/dashboard/stats/GeneralStats';
 import { RetentionStats } from '../components/dashboard/stats/RetentionStats';
 import { InteractionStats } from '../components/dashboard/stats/InteractionStats';
@@ -8,13 +8,14 @@ import { SpiritualStats } from '../components/dashboard/stats/SpiritualStats';
 import { SoulEvolutionChart } from '../components/dashboard/stats/SoulEvolutionChart';
 import { EvangelizationStats } from '../components/dashboard/stats/EvangelizationStats';
 import InteractionStatsDashboard from '../components/stats/InteractionStatsDashboard';
+import YoutubeLiveStats from '../components/stats/YoutubeLiveStats';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/roles';
 import { supabase } from '../lib/supabase';
 import { getChurchId } from '../lib/churchId';
 import toast from 'react-hot-toast';
 
-type TabId = 'overview' | 'pastoral' | 'interactions' | 'spiritual' | 'evangelization';
+type TabId = 'overview' | 'pastoral' | 'interactions' | 'spiritual' | 'evangelization' | 'directs';
 
 interface Tab {
   id: TabId;
@@ -53,6 +54,12 @@ const TABS: Tab[] = [
     label: 'Évangélisation',
     icon: <Megaphone className="w-4 h-4" />,
     description: 'Âmes évangélisées, reçues et taux de conversion'
+  },
+  {
+    id: 'directs',
+    label: 'Directs YouTube',
+    icon: <Youtube className="w-4 h-4" />,
+    description: 'Audience des directs des cultes sur la chaîne YouTube de l\'église'
   },
 ];
 
@@ -220,6 +227,8 @@ export default function StatistiquesAdmin() {
         )}
 
         {activeTab === 'interactions' && <InteractionStatsDashboard scope="church" />}
+
+        {activeTab === 'directs' && <YoutubeLiveStats />}
 
         {activeTab === 'spiritual' && (
           <section>
