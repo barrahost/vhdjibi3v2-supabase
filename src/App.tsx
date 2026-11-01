@@ -22,6 +22,7 @@ import ServantManagement from './pages/ServantManagement';
 // Lazy load components
 const FamilyLeaderDashboard = lazy(() => import('./components/dashboard/FamilyLeaderDashboard'));
 const FamilyShepherdsPage = lazy(() => import('./pages/FamilyShepherdsPage'));
+const InteractionStatsPage = lazy(() => import('./pages/InteractionStatsPage'));
 const FamilyProgressionPage = lazy(() => import('./pages/FamilyProgressionPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -200,6 +201,12 @@ function AppContent() {
           <Route path="/ma-famille/ames" element={<FamilyLeaderDashboard />} />
           <Route path="/ma-famille/bergers" element={<FamilyShepherdsPage />} />
           <Route path="/ma-famille/progression" element={<FamilyProgressionPage />} />
+          <Route path="/ma-famille/statistiques" element={<InteractionStatsPage scope="family" />} />
+          <Route path="/mes-statistiques" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_INTERACTIONS]}>
+              <InteractionStatsPage scope="shepherd" />
+            </PrivateRoute>
+          } />
           <Route path="/ames-indecises" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.MANAGE_SOULS]}>
               <SoulsHub defaultTab="undecided" />
