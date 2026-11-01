@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { useFormDraft } from '../hooks/useFormDraft';
 import toast from 'react-hot-toast';
 import { CheckCircle2, AlertCircle, Loader2, Plus, X, CalendarDays, CalendarClock, Search, Pencil } from 'lucide-react';
 import { LeaveRequestService, LeaveUser, LeavePeriod } from '../services/leaveRequest.service';
@@ -137,6 +137,28 @@ export default function LeaveRequestForm() {
   const [manualName, setManualName] = useState('');
   const comboBoxRef = useRef<HTMLDivElement>(null);
 
+  // Brouillon : la personne choisie et les dates sont retrouvées après un rechargement
+  const draft = useFormDraft('absence', { selectedUser, requestType, periods, searchTerm, manualMode, manualName }, {
+    restore: (d) => {
+      setRequestType(d.requestType);
+      setPeriods(d.periods.length ? d.periods : [newPeriod()]);
+      setSelectedUser(d.selectedUser);
+      setSearchTerm(d.searchTerm);
+      setManualMode(d.manualMode);
+      setManualName(d.manualName);
+      if (d.selectedUser) {
+        // Demandes déjà en attente (information), sans toucher aux dates retrouvées
+        const user = d.selectedUser;
+        (d.requestType === 'conge'
+          ? LeaveRequestService.getUserExistingRequests(user.id, getChurchId())
+          : AbsenceRequestService.getUserExistingRequests(user.id, getChurchId())
+        ).then(setExistingPending).catch(() => undefined);
+      }
+    },
+    isEmpty: (d) => !d.selectedUser && !d.manualName.trim() && d.periods.every((p) => !p.startDate && !p.endDate && !p.reason),
+    enabled: pageState !== 'done',
+  });
+
   useEffect(() => {
     if (churchLoading) return;
     const churchId = getChurchId();
@@ -255,6 +277,7 @@ export default function LeaveRequestForm() {
         );
       }
       setSubmittedCount(valid.length);
+      draft.clear();
       setPageState('done');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la soumission. Réessaie.');
@@ -317,7 +340,6 @@ export default function LeaveRequestForm() {
 
   return (
     <>
-      <Toaster position="top-center" />
       <div className="min-h-screen bg-gray-50 flex flex-col">
 
         {/* Header */}

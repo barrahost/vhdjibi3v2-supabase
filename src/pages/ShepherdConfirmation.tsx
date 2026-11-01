@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { CheckSquare, Square, User as UserIcon, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import {
@@ -148,7 +147,6 @@ export default function ShepherdConfirmation() {
 
   return (
     <>
-      <Toaster position="top-center" />
 
       <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Header */}

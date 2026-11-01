@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { useFormDraft } from '../hooks/useFormDraft';
 import toast from 'react-hot-toast';
 import { Search, CheckCircle2, Loader2, UserPlus, HandHeart } from 'lucide-react';
 import { useChurch } from '../contexts/ChurchContext';
@@ -68,6 +68,26 @@ export default function ReceptionCheckIn() {
   const [attendedCommunity, setAttendedCommunity] = useState('');
   const [prayerTopics, setPrayerTopics] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  // Brouillon de la fiche « nouveau venu » : retrouvée après un rechargement
+  const draft = useFormDraft(
+    'accueil',
+    { showNewForm, gender, fullName, phone, location, gaveLifeToJesus, willJoinVH, attendedCommunity, prayerTopics },
+    {
+      restore: (d) => {
+        setShowNewForm(d.showNewForm);
+        setGender(d.gender);
+        setFullName(d.fullName);
+        setPhone(d.phone);
+        setLocation(d.location);
+        setGaveLifeToJesus(d.gaveLifeToJesus);
+        setWillJoinVH(d.willJoinVH);
+        setAttendedCommunity(d.attendedCommunity);
+        setPrayerTopics(d.prayerTopics);
+      },
+      isEmpty: (d) => !d.gender && !d.fullName.trim() && !d.phone.trim() && !d.location.trim() && !d.prayerTopics.trim(),
+      enabled: pageState !== 'done',
+    }
+  );
 
   useEffect(() => {
     if (churchLoading) return;
@@ -97,6 +117,7 @@ export default function ReceptionCheckIn() {
     try {
       await ReceptionService.confirmArrival(person.id, getChurchId(), plannedService);
       setDoneInfo({ kind: 'confirmed', name: person.fullName });
+      draft.clear();
       setPageState('done');
     } catch (e: any) {
       toast.error(e.message || "Erreur, réessaie ou préviens l'équipe d'accueil.");
@@ -116,6 +137,7 @@ export default function ReceptionCheckIn() {
         gaveLifeToJesus, willJoinVH, attendedCommunity, prayerTopics
       );
       setDoneInfo({ kind: 'new', name: fullName.trim() });
+      draft.clear();
       setPageState('done');
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de l'envoi. Réessaie.");
@@ -164,7 +186,6 @@ export default function ReceptionCheckIn() {
 
   return (
     <>
-      <Toaster position="top-center" />
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="bg-[#00665C] text-white px-4 pt-10 pb-6">
           <div className="max-w-lg mx-auto">
