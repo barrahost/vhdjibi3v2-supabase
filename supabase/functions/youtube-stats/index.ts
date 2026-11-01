@@ -142,8 +142,10 @@ async function syncChurch(connection: { church_id: string; refresh_token: string
     const accessToken = await accessTokenFor(connection.refresh_token);
     const channel = await myChannel(accessToken);
 
-    const { data: known } = await db.from('youtube_live_stats').select('video_id, started_at').eq('church_id', churchId);
+    const { data: known } = await db.from('youtube_live_stats').select('video_id, avg_view_duration_sec').eq('church_id', churchId);
     const knownIds = new Set((known ?? []).map((k: any) => k.video_id));
+    // Directs enregistrés sans chiffres détaillés (Analytics indisponible lors d'une synchronisation précédente)
+    const incomplete = new Set((known ?? []).filter((k: any) => k.avg_view_duration_sec === null).map((k: any) => k.video_id));
     const cutoff = Date.now() - LOOKBACK_DAYS * 86_400_000;
 
     // Videos de la chaine, des plus recentes aux plus anciennes
@@ -175,11 +177,17 @@ async function syncChurch(connection: { church_id: string; refresh_token: string
     }
 
     const refreshFrom = Date.now() - REFRESH_DAYS * 86_400_000;
-    const toCompute = videos.filter((v) => !knownIds.has(v.id) || Date.parse(v.liveStreamingDetails.actualStartTime) >= refreshFrom);
+    const toCompute = videos.filter(
+      (v) => !knownIds.has(v.id) || incomplete.has(v.id) || Date.parse(v.liveStreamingDetails.actualStartTime) >= refreshFrom,
+    );
 
+    let analyticsFailures = 0;
+    let analyticsError = '';
     const records = await inBatches(toCompute, 4, async (v) => {
       const analytics = await analyticsFor(accessToken, v).catch((e) => {
         console.warn('analytics', v.id, e.message);
+        analyticsFailures++;
+        analyticsError ||= e.message;
         return {} as Record<string, number | null>;
       });
       const start = v.liveStreamingDetails.actualStartTime;
@@ -213,11 +221,16 @@ async function syncChurch(connection: { church_id: string; refresh_token: string
       const { error } = await db.from('youtube_live_stats').upsert(records, { onConflict: 'church_id,video_id' });
       if (error) throw error;
     }
+    // Toutes les demandes YouTube Analytics en échec : on le signale (API non activée, accès non coché, etc.)
+    const warning =
+      toCompute.length && analyticsFailures === toCompute.length
+        ? `Statistiques détaillées (YouTube Analytics) indisponibles : ${analyticsError}`
+        : null;
     await db
       .from('youtube_connection')
-      .update({ last_sync_at: new Date().toISOString(), last_error: null, channel_title: channel.title })
+      .update({ last_sync_at: new Date().toISOString(), last_error: warning, channel_title: channel.title })
       .eq('church_id', churchId);
-    return { ok: true, lives: videos.length, updated: records.length };
+    return { ok: true, lives: videos.length, updated: records.length, analyticsFailures, warning };
   } catch (e) {
     const message = (e as Error).message || String(e);
     console.error('sync', churchId, message);
