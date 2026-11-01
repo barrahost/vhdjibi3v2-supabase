@@ -23,6 +23,7 @@ import ServantManagement from './pages/ServantManagement';
 const FamilyLeaderDashboard = lazy(() => import('./components/dashboard/FamilyLeaderDashboard'));
 const FamilyShepherdsPage = lazy(() => import('./pages/FamilyShepherdsPage'));
 const InteractionStatsPage = lazy(() => import('./pages/InteractionStatsPage'));
+const YoutubeCallback = lazy(() => import('./pages/YoutubeCallback'));
 const FamilyProgressionPage = lazy(() => import('./pages/FamilyProgressionPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -335,6 +336,11 @@ function AppContent() {
             </PrivateRoute>
           } />
 
+          <Route path="youtube-callback" element={
+            <PrivateRoute requiredPermissions={[PERMISSIONS.VIEW_STATS]}>
+              <YoutubeCallback />
+            </PrivateRoute>
+          } />
           <Route path="statistiques" element={
             <PrivateRoute requiredPermissions={[PERMISSIONS.VIEW_STATS]}>
               <StatistiquesAdmin />
