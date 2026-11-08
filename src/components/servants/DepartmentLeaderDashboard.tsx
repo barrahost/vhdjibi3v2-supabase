@@ -8,7 +8,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Users, UserCheck, UserPlus, Crown, Download, Plus, TrendingUp, CalendarDays, FileText, ChevronRight } from 'lucide-react';
+import { Users, UserCheck, UserPlus, Crown, Download, Plus, TrendingUp, CalendarDays, FileText, ChevronRight, ClipboardCheck } from 'lucide-react';
 import { ImportServantsModal } from './ImportServantsModal';
 import { DepartmentActivityModal } from '../departments/DepartmentActivityModal';
 import { DepartmentActivityService } from '../../services/departmentActivity.service';
@@ -269,6 +269,25 @@ export default function DepartmentLeaderDashboard() {
             <span className="block text-xs text-gray-500">Remplir la fiche de débrief du culte pour votre département</span>
           </span>
           <ChevronRight className="h-5 w-5 text-[#00665C] flex-shrink-0" />
+        </button>
+      )}
+
+      {/* Le module Brief & Débrief : à côté du rapport habituel, jamais à sa place */}
+      {culteModule && hasPermission('MANAGE_CULTE_REPORTS') && (
+        <button
+          type="button"
+          data-testid="leader-brief-debrief"
+          onClick={() => navigate('/cultes')}
+          className="w-full flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-gray-50"
+        >
+          <span className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <ClipboardCheck className="h-5 w-5 text-amber-700" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-semibold text-gray-900">Brief &amp; Débrief des cultes</span>
+            <span className="block text-xs text-gray-500">Consignes du brief, contrôle de préparation et débrief de chaque culte</span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-gray-400 flex-shrink-0" />
         </button>
       )}
 

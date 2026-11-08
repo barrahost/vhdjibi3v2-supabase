@@ -293,7 +293,8 @@ export function useNavigationItems(): NavItem[] {
         children.push({ id: 'my-debrief', label: 'Mon débrief', href: '/mon-debrief', icon: <ClipboardList className="w-5 h-5" /> });
       }
     }
-    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(cultesNavItem);
+    // Puis le module Brief & Débrief (brief, contrôle, débrief de tous les cultes), sous un nom explicite
+    if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push({ ...cultesNavItem, id: 'leader-brief-debrief', label: 'Brief & Débrief' });
     if (culteModule && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) children.push(needsNavItem('leader-plan-actions'));
     if (hasPermission(PERMISSIONS.MANAGE_SERVANTS) || hasPermission(PERMISSIONS.MANAGE_DEPARTMENT_SERVANTS)) {
       children.push({ id: 'servants', label: 'B.O.S.S', href: '/serviteurs', icon: <UsersRound className="w-5 h-5" /> });

@@ -4,6 +4,12 @@ import { supabase } from './supabase';
 // par supabase_culte_brief_debrief.sql. Tant que ce script n'a pas été exécuté, l'appli se
 // comporte exactement comme avant : on sonde donc l'existence d'une de ces tables, une seule
 // fois par session, et tout le reste de l'interface en dépend.
+/**
+ * Démarrage du module Brief & Débrief : premier brief pour les cultes du dimanche 15 novembre 2026.
+ * Les cultes antérieurs (essais) n'apparaissent ni dans « Cultes », ni dans « Mon débrief », ni sur les tableaux de bord.
+ */
+export const CULTE_MODULE_START_DATE = '2026-11-15';
+
 let cached: boolean | null = null;
 let inflight: Promise<boolean> | null = null;
 

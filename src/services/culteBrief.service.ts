@@ -12,6 +12,9 @@ import type {
   RunSheetItem,
 } from '../types/culteBrief.types';
 import { RecurringScheduleService } from './culteEvent.service';
+import { CULTE_MODULE_START_DATE } from '../lib/culteModule';
+
+const maxISO = (a: string, b: string) => (a > b ? a : b);
 import { normalizeMoments, pickFicheDefaults, sanitizeBriefContent, type FicheDefaults } from '../lib/timingSheet';
 import {
   addDaysISO,
@@ -136,7 +139,8 @@ export const CulteCockpitService = {
       .from('culte_events')
       .select('*')
       .eq('church_id', getChurchId())
-      .gte('service_date', addDaysISO(today, -pastDays))
+      // Rien avant le démarrage du module (les essais ne doivent pas réclamer de brief ni de débrief)
+      .gte('service_date', maxISO(addDaysISO(today, -pastDays), CULTE_MODULE_START_DATE))
       .lte('service_date', addDaysISO(today, futureDays))
       .order('service_date', { ascending: true });
     if (error) throw error;
