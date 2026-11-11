@@ -4,7 +4,7 @@ import { GenderRadioGroup } from '../ui/GenderRadioGroup';
 import { PhoneInput } from '../ui/PhoneInput';
 import {
   EvangelizedSoul,
-  PLANNED_SERVICE_OPTIONS,
+  plannedServiceChoices,
   GAVE_LIFE_OPTIONS,
   WILL_JOIN_VH_OPTIONS,
   type GaveLifeToJesus,
@@ -221,7 +221,7 @@ export default function EditEvangelizedSoulModal({ soul, isOpen, onClose, onUpda
             onChange={(e) => setData({ ...data, plannedService: e.target.value as PlannedService | '' })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#00665C] focus:border-[#00665C]">
             <option value="">— Sélectionner —</option>
-            {PLANNED_SERVICE_OPTIONS.map((o) => (
+            {plannedServiceChoices(data.plannedService).map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>

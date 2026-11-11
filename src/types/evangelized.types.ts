@@ -27,6 +27,16 @@ export const GAVE_LIFE_OPTIONS: { value: GaveLifeToJesus; label: string }[] = [
   { value: 'not_yet', label: 'Pas encore' },
 ];
 
+/**
+ * Réception des nouveaux : uniquement aux cultes du dimanche (pas de réception en semaine).
+ * « Culte du Mercredi Soir » reste lisible sur les anciennes fiches, mais n'est plus proposé.
+ */
+export const NEWCOMER_RECEPTION_DAYS = [0];
+export const isNewcomerReceptionDay = (dayOfWeek: number) => NEWCOMER_RECEPTION_DAYS.includes(dayOfWeek);
+/** Cultes proposés aux nouveaux ; garde la valeur déjà enregistrée sur une ancienne fiche (ex. mercredi). */
+export const plannedServiceChoices = (current?: PlannedService | '' | null) =>
+  PLANNED_SERVICE_OPTIONS.filter((o) => o.value !== 'wednesday_evening' || current === 'wednesday_evening');
+
 export const plannedServiceLabel = (v?: PlannedService | null): string =>
   PLANNED_SERVICE_OPTIONS.find((o) => o.value === v)?.label || '';
 

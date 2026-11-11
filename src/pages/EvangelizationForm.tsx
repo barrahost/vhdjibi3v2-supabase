@@ -9,7 +9,7 @@ import { GenderRadioGroup } from '../components/ui/GenderRadioGroup';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { useServiceFamilies } from '../hooks/useServiceFamilies';
 import {
-  GAVE_LIFE_OPTIONS, WILL_JOIN_VH_OPTIONS, PLANNED_SERVICE_OPTIONS,
+  GAVE_LIFE_OPTIONS, WILL_JOIN_VH_OPTIONS, plannedServiceChoices,
   type GaveLifeToJesus, type WillJoinVH, type PlannedService,
 } from '../types/evangelized.types';
 
@@ -455,7 +455,7 @@ export default function EvangelizationForm() {
                   className="w-full h-12 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00665C]/30 focus:border-[#00665C] bg-white"
                 >
                   <option value="">-- Sélectionner --</option>
-                  {PLANNED_SERVICE_OPTIONS.map(o => (
+                  {plannedServiceChoices(data.plannedService).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
