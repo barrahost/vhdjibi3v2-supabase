@@ -18,6 +18,7 @@ import { CulteReportFormValues, blankFormValues, buildCulteReportData } from '..
 import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { ReportDebriefSection, useReportDebrief } from '../culteBrief/ReportDebrief';
+import { isNewcomerReceptionDay } from '../../types/evangelized.types';
 
 interface CulteReportSubmitFormProps {
   reportType: CulteReportType;
@@ -146,7 +147,12 @@ export default function CulteReportSubmitForm({ reportType, departmentId, depart
   }, [reportType, selectedEventId]);
 
   // Types de rencontre réservés à d'autres départements : masqués pour ce rapport
-  const eligibleEvents = events.filter((ev) => isMeetingTypeEligible(meetingTypes, ev.meetingTypeName, reportType));
+  // ADN (réception des nouveaux) : pas de réception en semaine, seulement les cultes du dimanche
+  const eligibleEvents = events.filter(
+    (ev) =>
+      isMeetingTypeEligible(meetingTypes, ev.meetingTypeName, reportType) &&
+      (reportType !== 'adn' || isNewcomerReceptionDay(new Date(`${ev.serviceDate}T00:00:00`).getDay())),
+  );
   const eligibleMeetingTypes = meetingTypes.filter((mt) => !mt.eligibleReportTypes?.length || mt.eligibleReportTypes.includes(reportType));
 
   // Corrige une erreur de saisie (date ou nom) sur un culte déjà créé -- accessible à tout

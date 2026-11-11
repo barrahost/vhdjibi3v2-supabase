@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Lock, CheckCircle2, Link2 } from 'lucide-react';
 import { CulteEventService, RecurringScheduleService } from '../../services/culteEvent.service';
+import { isNewcomerReceptionDay } from '../../types/evangelized.types';
 import { CulteReportService } from '../../services/culteReport.service';
 
 interface CulteLink {
@@ -31,6 +32,11 @@ export default function AdnCulteLinksBar({ onSelect }: Props) {
         const today = todayISO();
         const dayOfWeek = new Date(`${today}T00:00:00`).getDay();
 
+        // Réception des nouveaux : seulement le dimanche
+        if (!isNewcomerReceptionDay(dayOfWeek)) {
+          if (!cancelled) { setLinks([]); setLoading(false); }
+          return;
+        }
         const schedules = await RecurringScheduleService.list();
         const todaySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek && s.isActive && s.startTime);
         if (todaySchedules.length === 0) {

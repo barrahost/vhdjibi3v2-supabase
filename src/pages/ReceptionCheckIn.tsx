@@ -8,12 +8,12 @@ import { ReceptionService, CheckinSearchResult } from '../services/reception.ser
 import { RecurringScheduleService } from '../services/culteEvent.service';
 import { GenderRadioGroup } from '../components/ui/GenderRadioGroup';
 import { PhoneInput } from '../components/ui/PhoneInput';
-import { PlannedService, PLANNED_SERVICE_TO_MEETING_TYPE, GaveLifeToJesus, WillJoinVH, GAVE_LIFE_OPTIONS, WILL_JOIN_VH_OPTIONS } from '../types/evangelized.types';
+import { PlannedService, PLANNED_SERVICE_TO_MEETING_TYPE, isNewcomerReceptionDay, GaveLifeToJesus, WillJoinVH, GAVE_LIFE_OPTIONS, WILL_JOIN_VH_OPTIONS } from '../types/evangelized.types';
 
 type PageState = 'loading' | 'ready' | 'submitting' | 'done';
 type DoneKind = 'confirmed' | 'new';
 
-// Devine le culte en cours aujourd'hui (1er/2e culte dimanche, RDV mercredi...) à partir du
+// Devine le culte du dimanche en cours (1er ou 2e culte) à partir du
 // programme récurrent : le dernier culte déjà commencé, sinon le prochain à venir. Silencieux
 // si aucun culte n'est programmé aujourd'hui (ex: page ouverte un jour quelconque).
 async function detectCurrentPlannedService(): Promise<PlannedService | ''> {
@@ -21,6 +21,8 @@ async function detectCurrentPlannedService(): Promise<PlannedService | ''> {
     const schedules = await RecurringScheduleService.list();
     const now = new Date();
     const dow = now.getDay();
+    // Pas de réception des nouveaux en semaine : aucun culte n'est rattaché à l'accueil ces jours-là
+    if (!isNewcomerReceptionDay(dow)) return '';
     const reverse = Object.entries(PLANNED_SERVICE_TO_MEETING_TYPE) as [PlannedService, string][];
 
     const todays = schedules
