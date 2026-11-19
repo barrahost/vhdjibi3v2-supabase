@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Copy, Plus, Video, X } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Copy, Plus, Video, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BRIEF_FIELDS } from '../../data/culteGuide';
 import { useChurch } from '../../contexts/ChurchContext';
@@ -18,7 +18,7 @@ import { useConfirmModal } from '../../hooks/useConfirmModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { RunSheetEditor, type RunSheetRow } from './RunSheetEditor';
 import type { CockpitTabProps } from './tabTypes';
-import { TimingSheetCard } from './TimingSheetCard';
+import { FicheFields, FichePdfButtons, TimingSheetCard } from './TimingSheetCard';
 import { Card, CardHeader, EmptyState, Pill, Spinner, inputCls, labelCls, primaryBtn, secondaryBtn } from './ui';
 
 const toRows = (items: RunSheetItem[]): RunSheetRow[] =>
@@ -62,6 +62,8 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
   const [ficheDefaults, setFicheDefaults] = useState<FicheDefaults>({});
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Volet « Compléter le brief » : null = automatique (ouvert seulement s'il contient déjà quelque chose)
+  const [showExtras, setShowExtras] = useState<boolean | null>(null);
   const { confirm, confirmModalProps } = useConfirmModal();
   const { church } = useChurch();
   const branding = useMemo(() => ficheBranding(church), [church]);
@@ -259,9 +261,12 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
         ))}
 
         <Card>
-          <CardHeader title="Cadre du culte" action={<Pill tone="green"><CheckCircle2 className="w-3 h-3" /> Brief prêt</Pill>} />
+          <CardHeader title="Planning du culte" action={<Pill tone="green"><CheckCircle2 className="w-3 h-3" /> Brief prêt</Pill>} />
           <div className="px-4 pb-4 space-y-3">
             <ReadBlock label={BRIEF_FIELDS.theme.label} text={content.theme} />
+            <ReadBlock label="Prédicateur" text={content.preacher} />
+            <ReadBlock label="Dirigeant du culte" text={content.leader} />
+            <ReadBlock label="Annonces du pasteur" text={content.pastorAnnouncements} />
             <ReadBlock label={BRIEF_FIELDS.vision.label} text={content.vision} />
             <ReadBlock label={BRIEF_FIELDS.vigilance.label} text={content.vigilance} />
             <ReadBlock label={BRIEF_FIELDS.keyActors.label} text={content.keyActors} />
@@ -272,7 +277,7 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
 
         {rows.length > 0 && (
           <Card>
-            <CardHeader title="Conducteur" subtitle={formatRangeFr(event.startTime, event.endTime)} />
+            <CardHeader title="Programme" subtitle={formatRangeFr(event.startTime, event.endTime)} />
             <ol className="px-4 pb-4 divide-y divide-gray-100">
               {rows.map((row) => (
                 <li key={row.key} className="py-2 flex gap-3">
@@ -322,7 +327,15 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
   }
 
   // ── Édition (responsables du culte, pasteurs, administrateurs) ────────────────────────────
+  // L'essentiel, comme le planning habituel des cultes : thème, prédicateur, dirigeant, programme, annonces.
+  // Tout le reste est facultatif et replié (ouvert d'office s'il contient déjà quelque chose).
   const addableDepartments = departments.filter((d) => !openInstructionDepts.includes(d.name));
+  const extraFilled = [
+    content.vision, content.vigilance, content.keyActors, content.exceptional, content.toRemember,
+    content.communionLeads, content.leaderAnnouncements, content.verse, content.ficheTitle,
+  ].filter((v) => hasContent(v)).length + (content.moments?.length ? 1 : 0) + openInstructionDepts.length;
+  const extrasOpen = showExtras ?? extraFilled > 0;
+  const ficheProps = { content, defaults: ficheDefaults, rows, churchName: church?.name ?? 'Bergerie', onField: setField, onMoments: setMoments };
 
   return (
     <div className="space-y-4 pb-24">
@@ -331,7 +344,7 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
       {previous && isEmpty && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[#00665C]/30 bg-[#00665C]/5 p-4">
           <p className="text-sm text-gray-700">
-            Le brief du <strong>{shortServiceLabel(previous.meetingTypeName)}</strong> existe peut-être déjà : reprenez-le (les horaires du conducteur sont décalés automatiquement).
+            Le brief du <strong>{shortServiceLabel(previous.meetingTypeName)}</strong> existe peut-être déjà : reprenez-le (les horaires du programme sont décalés automatiquement).
           </p>
           <button type="button" onClick={handleCopyFromPrevious} disabled={saving} className={secondaryBtn}>
             <Copy className="w-4 h-4" /> Reprendre le brief du 1er culte
@@ -341,118 +354,138 @@ export function BriefTab({ event, dayEvents, access, onChanged, active = true, o
 
       <Card>
         <CardHeader
-          title="Cadre du culte"
-          subtitle="Ce que le Saint-Esprit attend, et le thème qui harmonise tous les départements"
+          title="Planning du culte"
+          subtitle="L'essentiel du brief : qui prêche, qui dirige, le programme et les annonces."
           action={isReady ? <Pill tone="green"><CheckCircle2 className="w-3 h-3" /> Brief prêt</Pill> : <Pill tone="amber">Brouillon</Pill>}
         />
-        <div className="px-4 pb-4 space-y-3">
+        <div className="px-4 pb-4 space-y-4" data-testid="brief-essentiel">
           <div>
-            <label htmlFor="brief-vision" className={labelCls}>{BRIEF_FIELDS.vision.question}</label>
-            <textarea id="brief-vision" rows={2} value={content.vision ?? ''} onChange={(e) => setField('vision', e.target.value)} className={inputCls} />
-            <p className="mt-1 text-xs text-gray-400">{BRIEF_FIELDS.vision.hint}</p>
-          </div>
-          <div>
-            <label htmlFor="brief-theme" className={labelCls}>{BRIEF_FIELDS.theme.question}</label>
+            <label htmlFor="brief-theme" className={labelCls}>Thème du culte</label>
             <input id="brief-theme" type="text" value={content.theme ?? ''} onChange={(e) => setField('theme', e.target.value)} className={inputCls} />
-            <p className="mt-1 text-xs text-gray-400">{BRIEF_FIELDS.theme.hint}</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FicheFields {...ficheProps} include={['preacher', 'leader']} />
+          </div>
+          <div>
+            <p className={labelCls}>Programme{event.startTime ? ` — culte ${formatRangeFr(event.startTime, event.endTime)}` : ''}</p>
+            <RunSheetEditor
+              rows={rows}
+              onChange={(next) => {
+                setRows(next);
+                rowsDirty.current = true;
+                markDirty();
+              }}
+              departmentNames={departments.map((d) => d.name)}
+              eventStart={event.startTime}
+            />
+          </div>
+          <FicheFields {...ficheProps} include={['pastorAnnouncements']} />
+          <div className="pt-1 border-t border-gray-100">
+            <p className="text-xs text-gray-500 mb-2">La fiche de timing à imprimer se fait toute seule à partir de ce planning.</p>
+            <FichePdfButtons {...ficheProps} event={event} branding={branding} canEdit dirty={dirty} />
           </div>
         </div>
       </Card>
 
-      <Card>
-        <CardHeader title="Conducteur" subtitle={`Ce qui est prévu, dans l'ordre${event.startTime ? ` — culte ${formatRangeFr(event.startTime, event.endTime)}` : ''}`} />
-        <div className="px-4 pb-4">
-          <RunSheetEditor
-            rows={rows}
-            onChange={(next) => {
-              setRows(next);
-              rowsDirty.current = true;
-              markDirty();
-            }}
-            departmentNames={departments.map((d) => d.name)}
-            eventStart={event.startTime}
-          />
-        </div>
-      </Card>
+      <button
+        type="button"
+        onClick={() => setShowExtras(!extrasOpen)}
+        aria-expanded={extrasOpen}
+        data-testid="brief-complements"
+        className="w-full flex items-center justify-between gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50"
+      >
+        <span>
+          <span className="font-medium">Compléter le brief</span>
+          <span className="text-gray-500"> — facultatif{extraFilled > 0 ? ` · ${extraFilled} élément(s) renseigné(s)` : ''}</span>
+          <span className="block text-xs text-gray-400">Atmosphère, consignes par département, vigilance, Sainte Cène, verset, moments du culte…</span>
+        </span>
+        {extrasOpen ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+      </button>
 
-      <Card>
-        <CardHeader title="Qui fait quoi ?" subtitle="Consignes par département : accueil, parking, communication, chantres, décoration, délais à respecter…" />
-        <div className="px-4 pb-4 space-y-3">
-          {openInstructionDepts.map((name) => (
-            <div key={name}>
-              <div className="flex items-center justify-between">
-                <label htmlFor={`instruction-${name}`} className={labelCls}>{name}</label>
-                <button
-                  type="button"
-                  aria-label={`Retirer ${name}`}
-                  onClick={() => {
-                    setOpenInstructionDepts((prev) => prev.filter((n) => n !== name));
-                    setInstructions((prev) => ({ ...prev, [name]: '' }));
-                    markDirty();
-                  }}
-                  className="p-1 text-gray-400 hover:text-red-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <textarea
-                id={`instruction-${name}`}
-                rows={2}
-                value={instructions[name] ?? ''}
-                onChange={(e) => {
-                  setInstructions((prev) => ({ ...prev, [name]: e.target.value }));
-                  markDirty();
-                }}
-                className={inputCls}
-              />
+      {extrasOpen && (
+        <>
+          <Card>
+            <CardHeader title="Atmosphère" subtitle="Ce que le Saint-Esprit attend pour ce culte" />
+            <div className="px-4 pb-4">
+              <label htmlFor="brief-vision" className="sr-only">{BRIEF_FIELDS.vision.question}</label>
+              <textarea id="brief-vision" rows={2} value={content.vision ?? ''} placeholder={BRIEF_FIELDS.vision.question} onChange={(e) => setField('vision', e.target.value)} className={inputCls} />
             </div>
-          ))}
-          {addableDepartments.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <select
-                aria-label="Ajouter une consigne pour un département"
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) setOpenInstructionDepts((prev) => [...prev, e.target.value]);
-                }}
-                className={inputCls}
-              >
-                <option value="">Ajouter une consigne pour un département…</option>
-                {addableDepartments.map((d) => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-      </Card>
+          </Card>
 
-      <Card>
-        <CardHeader title="Vigilance et acteurs" />
-        <div className="px-4 pb-4 space-y-3">
-          {(['vigilance', 'keyActors', 'exceptional', 'toRemember'] as const).map((key) => (
-            <div key={key}>
-              <label htmlFor={`brief-${key}`} className={labelCls}>{BRIEF_FIELDS[key].question}</label>
-              <textarea id={`brief-${key}`} rows={2} value={content[key] ?? ''} onChange={(e) => setField(key, e.target.value)} className={inputCls} />
-              <p className="mt-1 text-xs text-gray-400">{BRIEF_FIELDS[key].hint}</p>
+          <Card>
+            <CardHeader title="Consignes par département" subtitle="Seulement si un département a une consigne particulière pour ce culte" />
+            <div className="px-4 pb-4 space-y-3">
+              {openInstructionDepts.map((name) => (
+                <div key={name}>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor={`instruction-${name}`} className={labelCls}>{name}</label>
+                    <button
+                      type="button"
+                      aria-label={`Retirer ${name}`}
+                      onClick={() => {
+                        setOpenInstructionDepts((prev) => prev.filter((n) => n !== name));
+                        setInstructions((prev) => ({ ...prev, [name]: '' }));
+                        markDirty();
+                      }}
+                      className="p-1 text-gray-400 hover:text-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    id={`instruction-${name}`}
+                    rows={2}
+                    value={instructions[name] ?? ''}
+                    onChange={(e) => {
+                      setInstructions((prev) => ({ ...prev, [name]: e.target.value }));
+                      markDirty();
+                    }}
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+              {addableDepartments.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <select
+                    aria-label="Ajouter une consigne pour un département"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) setOpenInstructionDepts((prev) => [...prev, e.target.value]);
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">Ajouter une consigne pour un département…</option>
+                    {addableDepartments.map((d) => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      </Card>
+          </Card>
 
-      <TimingSheetCard
-        content={content}
-        defaults={ficheDefaults}
-        rows={rows}
-        event={event}
-        churchName={church?.name ?? 'Bergerie'}
-        branding={branding}
-        canEdit
-        dirty={dirty}
-        onField={setField}
-        onMoments={setMoments}
-      />
+          <Card>
+            <CardHeader title="Points d'attention" subtitle="Remplissez seulement ce qui sert pour ce culte" />
+            <div className="px-4 pb-4 space-y-3">
+              {(['vigilance', 'keyActors', 'exceptional', 'toRemember'] as const).map((key) => (
+                <div key={key}>
+                  <label htmlFor={`brief-${key}`} className={labelCls}>{BRIEF_FIELDS[key].question}</label>
+                  <textarea id={`brief-${key}`} rows={2} value={content[key] ?? ''} onChange={(e) => setField(key, e.target.value)} className={inputCls} />
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Fiche de timing : détails" subtitle="Ce qui apparaît en plus sur la fiche imprimée" />
+            <div className="px-4 pb-4 space-y-4">
+              <FicheFields {...ficheProps} include={['communionLeads', 'leaderAnnouncements', 'verse', 'moments', 'ficheTitle', 'footerNote']} />
+              <p className="text-xs text-gray-400">Les émojis et symboles spéciaux ne s’impriment pas.</p>
+            </div>
+          </Card>
+        </>
+      )}
 
       {/* Barre d'actions, toujours accessible au pouce */}
       <div className="fixed inset-x-0 bottom-[53px] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-3">

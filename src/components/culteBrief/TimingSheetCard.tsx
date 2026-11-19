@@ -129,7 +129,95 @@ function MomentsEditor({ moments, rows, onChange }: { moments: TimingMoment[]; r
   );
 }
 
-export function TimingSheetCard({ content, defaults, rows, event, churchName, branding, canEdit, dirty, onField, onMoments }: TimingSheetCardProps) {
+type FicheFieldKey = FicheTextKey | 'moments';
+
+interface FicheFieldsProps {
+  content: BriefContent;
+  defaults: FicheDefaults;
+  rows: RunSheetRow[];
+  churchName: string;
+  /** Champs à afficher, dans cet ordre (le brief en montre une partie dans « l'essentiel », le reste en facultatif). */
+  include: FicheFieldKey[];
+  onField: (key: FicheTextKey, value: string) => void;
+  onMoments: (moments: TimingMoment[]) => void;
+}
+
+/** Champs de la fiche de timing, à la demande. */
+export function FicheFields({ content, defaults, rows, churchName, include, onField, onMoments }: FicheFieldsProps) {
+  const textField = (key: FicheTextKey, label: string, options: { placeholder?: string; hint?: string; rows?: number; value?: string; long?: LongText } = {}) => {
+    const id = `fiche-${key}`;
+    const value = options.value ?? content[key] ?? '';
+    const tooLong = !!options.long && value.length > options.long.after;
+    return (
+      <div key={key}>
+        <label htmlFor={id} className={labelCls}>{label}</label>
+        {options.rows ? (
+          <textarea id={id} rows={options.rows} value={value} placeholder={options.placeholder} onChange={(e) => onField(key, e.target.value)} className={inputCls} />
+        ) : (
+          <input id={id} type="text" value={value} placeholder={options.placeholder} onChange={(e) => onField(key, e.target.value)} className={inputCls} />
+        )}
+        {options.hint && <p className="mt-1 text-xs text-gray-400">{options.hint}</p>}
+        {tooLong && <p className="mt-1 text-xs text-amber-700">{options.long?.message}</p>}
+      </div>
+    );
+  };
+
+  const render: Record<FicheFieldKey, () => JSX.Element> = {
+    ficheTitle: () =>
+      textField('ficheTitle', 'Titre de la fiche', {
+        value: content.ficheTitle ?? defaults.ficheTitle ?? churchName,
+        hint: 'En haut de la page, à côté du logo. Laissez vide pour reprendre le titre habituel.',
+        long: LONG.title,
+      }),
+    preacher: () => textField('preacher', 'Prédicateur', { placeholder: 'Pasteur Prénom NOM', long: LONG.preacher }),
+    leader: () => textField('leader', 'Dirigeant du culte', { placeholder: 'Prénom NOM', long: LONG.leader }),
+    communionLeads: () =>
+      textField('communionLeads', 'Responsables de la Sainte Cène', {
+        placeholder: 'Respo. Prénom NOM – Respo. Prénom NOM',
+        hint: 'Laissez vide s’il n’y a pas de Sainte Cène.',
+        long: LONG.communion,
+      }),
+    moments: () => (
+      <div key="moments">
+        <p className={labelCls}>Moments du culte</p>
+        <MomentsEditor moments={content.moments ?? []} rows={rows} onChange={onMoments} />
+        <p className="mt-1 text-xs text-gray-400">Ex. « Moment 1 : Contemplation », « Moment 2 : Célébration ». Chaque moment regroupe les séquences du programme à partir de son heure.</p>
+      </div>
+    ),
+    pastorAnnouncements: () => textField('pastorAnnouncements', 'Annonces du pasteur', { rows: 4, hint: ANNOUNCEMENT_HINT }),
+    leaderAnnouncements: () => textField('leaderAnnouncements', 'Annonces du dirigeant', { rows: 3, hint: ANNOUNCEMENT_HINT }),
+    verse: () =>
+      textField('verse', 'Verset du culte', {
+        rows: 2,
+        placeholder: 'Texte du verset. Philippiens 3 : 3',
+        hint: 'En bas de la page ; la référence en fin de texte s’affiche en vert.',
+        long: LONG.verse,
+      }),
+    footerNote: () =>
+      textField('footerNote', 'Note en bas de page (NB)', {
+        value: content.footerNote ?? defaults.footerNote ?? '',
+        placeholder: 'Merci de ne pas laisser traîner les fiches de timing après les cultes',
+        hint: '« NB : » est ajouté devant. Effacez le texte pour ne rien afficher.',
+        long: LONG.note,
+      }),
+  };
+
+  return <>{include.map((key) => render[key]())}</>;
+}
+
+interface FichePdfButtonsProps {
+  content: BriefContent;
+  defaults: FicheDefaults;
+  rows: RunSheetRow[];
+  event: CulteEventInfo;
+  churchName: string;
+  branding: FicheBranding;
+  canEdit: boolean;
+  dirty: boolean;
+}
+
+/** Télécharger / imprimer la fiche de timing (PDF). */
+export function FichePdfButtons({ content, defaults, rows, event, churchName, branding, canEdit, dirty }: FichePdfButtonsProps) {
   const [busy, setBusy] = useState<'download' | 'open' | null>(null);
 
   const generate = async (requested: 'download' | 'open') => {
@@ -166,82 +254,38 @@ export function TimingSheetCard({ content, defaults, rows, event, churchName, br
     }
   };
 
-  const moments = content.moments ?? [];
-  const textField = (key: FicheTextKey, label: string, options: { placeholder?: string; hint?: string; rows?: number; value?: string; long?: LongText } = {}) => {
-    const id = `fiche-${key}`;
-    const value = options.value ?? content[key] ?? '';
-    const tooLong = !!options.long && value.length > options.long.after;
-    return (
-      <div key={key}>
-        <label htmlFor={id} className={labelCls}>{label}</label>
-        {options.rows ? (
-          <textarea id={id} rows={options.rows} value={value} placeholder={options.placeholder} onChange={(e) => onField(key, e.target.value)} className={inputCls} />
-        ) : (
-          <input id={id} type="text" value={value} placeholder={options.placeholder} onChange={(e) => onField(key, e.target.value)} className={inputCls} />
-        )}
-        {options.hint && <p className="mt-1 text-xs text-gray-400">{options.hint}</p>}
-        {tooLong && <p className="mt-1 text-xs text-amber-700">{options.long?.message}</p>}
-      </div>
-    );
-  };
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <button type="button" onClick={() => generate('download')} disabled={busy !== null} className={primaryBtn}>
+        <Download className="w-4 h-4" /> {busy === 'download' ? 'Préparation…' : 'Télécharger le PDF'}
+      </button>
+      <button type="button" onClick={() => generate('open')} disabled={busy !== null} className={secondaryBtn}>
+        <Printer className="w-4 h-4" /> {busy === 'open' ? 'Préparation…' : 'Aperçu et impression'}
+      </button>
+      {dirty && canEdit && <p className="text-xs text-gray-500">Le PDF inclut les modifications non enregistrées.</p>}
+    </div>
+  );
+}
 
+export const ALL_FICHE_FIELDS: FicheFieldKey[] = [
+  'ficheTitle', 'preacher', 'leader', 'communionLeads', 'moments', 'pastorAnnouncements', 'leaderAnnouncements', 'verse', 'footerNote',
+];
+
+export function TimingSheetCard({ content, defaults, rows, event, churchName, branding, canEdit, dirty, onField, onMoments }: TimingSheetCardProps) {
   return (
     <Card>
       <CardHeader
         title="Fiche de timing imprimable"
-        subtitle={canEdit ? 'Le déroulé du culte au format papier (PDF) : moments, annonces, verset… Le conducteur ci-dessus en fait le cœur.' : 'Le déroulé du culte au format papier (PDF).'}
+        subtitle={canEdit ? 'Le déroulé du culte au format papier (PDF) : moments, annonces, verset… Le programme en fait le cœur.' : 'Le déroulé du culte au format papier (PDF).'}
       />
       <div className="px-4 pb-4 space-y-4">
         {canEdit && (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {textField('ficheTitle', 'Titre de la fiche', {
-                value: content.ficheTitle ?? defaults.ficheTitle ?? churchName,
-                hint: 'En haut de la page, à côté du logo. Laissez vide pour reprendre le titre habituel.',
-                long: LONG.title,
-              })}
-              {textField('preacher', 'Prédicateur', { placeholder: 'Pasteur Prénom NOM', hint: 'Sous la bannière du culte.', long: LONG.preacher })}
-              {textField('leader', 'Dirigeant du culte', { placeholder: 'Prénom NOM', long: LONG.leader })}
-              {textField('communionLeads', 'Responsables de la Sainte Cène', {
-                placeholder: 'Respo. Prénom NOM – Respo. Prénom NOM',
-                hint: 'Laissez vide s’il n’y a pas de Sainte Cène.',
-                long: LONG.communion,
-              })}
-            </div>
-
-            <div>
-              <p className={labelCls}>Moments du culte</p>
-              <MomentsEditor moments={moments} rows={rows} onChange={onMoments} />
-              <p className="mt-1 text-xs text-gray-400">Ex. « Moment 1 : Contemplation », « Moment 2 : Célébration ». Chaque moment regroupe les séquences du conducteur à partir de son heure.</p>
-            </div>
-
-            {textField('pastorAnnouncements', 'Annonces du pasteur', { rows: 6, hint: ANNOUNCEMENT_HINT })}
-            {textField('leaderAnnouncements', 'Annonces du dirigeant', { rows: 3, hint: ANNOUNCEMENT_HINT })}
-            {textField('verse', 'Verset du culte', {
-              rows: 2,
-              placeholder: 'Texte du verset. Philippiens 3 : 3',
-              hint: 'En bas de la page ; la référence en fin de texte s’affiche en vert.',
-              long: LONG.verse,
-            })}
-            {textField('footerNote', 'Note en bas de page (NB)', {
-              value: content.footerNote ?? defaults.footerNote ?? '',
-              placeholder: 'Merci de ne pas laisser traîner les fiches de timing après les cultes',
-              hint: '« NB : » est ajouté devant. Effacez le texte pour ne rien afficher.',
-              long: LONG.note,
-            })}
+            <FicheFields content={content} defaults={defaults} rows={rows} churchName={churchName} include={ALL_FICHE_FIELDS} onField={onField} onMoments={onMoments} />
             <p className="text-xs text-gray-400">Les émojis et symboles spéciaux ne s’impriment pas.</p>
           </>
         )}
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <button type="button" onClick={() => generate('download')} disabled={busy !== null} className={primaryBtn}>
-            <Download className="w-4 h-4" /> {busy === 'download' ? 'Préparation…' : 'Télécharger le PDF'}
-          </button>
-          <button type="button" onClick={() => generate('open')} disabled={busy !== null} className={secondaryBtn}>
-            <Printer className="w-4 h-4" /> {busy === 'open' ? 'Préparation…' : 'Aperçu et impression'}
-          </button>
-          {dirty && canEdit && <p className="text-xs text-gray-500">Le PDF inclut les modifications non enregistrées.</p>}
-        </div>
+        <FichePdfButtons content={content} defaults={defaults} rows={rows} event={event} churchName={churchName} branding={branding} canEdit={canEdit} dirty={dirty} />
       </div>
     </Card>
   );
