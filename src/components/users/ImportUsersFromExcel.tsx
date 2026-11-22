@@ -221,20 +221,27 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
         const profileType = row.profileType!;
         const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-        const { data: insertedUser, error: _insertErr } = await supabase.from('users').insert({
-        church_id: getChurchId(),
+        // Colonnes de la table users (snake_case) ; l'identifiant n'a pas de valeur par défaut en base
+        const { data: insertedUser, error: insertErr } = await supabase.from('users').insert({
+          church_id: getChurchId(),
+          id: uid,
           uid,
-          fullName: row.fullName,
+          full_name: row.fullName,
           nickname: row.nickname || null,
           email: row.email || null,
           phone: row.phone,
           role: profileType,
-          businessProfiles: [{ type: profileType, isActive: true, isPrimary: true }],
+          business_profiles: [{ type: profileType, isActive: true, isPrimary: true }],
           password: DEFAULT_PWD[profileType],
           status: 'active',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         }).select('id').single();
+        if (insertErr) {
+          console.error(`Import de ${row.fullName} impossible :`, insertErr);
+          skipped++;
+          continue;
+        }
         const docRef = { id: insertedUser?.id ?? '' };
 
         if (profileType === 'shepherd' || profileType === 'department_leader') {

@@ -25,6 +25,17 @@ function getCurrentChurchId(): string {
   return ''; // root domain = super admin
 }
 
+/**
+ * Stagiaire (rôle historique « intern ») sans profil métier : mêmes accès qu'un berger (suivi des âmes).
+ * Sans cela, aucun droit ni menu ne lui était donné. Le rôle « intern » reste affiché (Stagiaire).
+ */
+function withInternAccess<T extends { role?: string; businessProfiles?: any[] }>(userData: T): T {
+  if (userData?.role === 'intern' && !(Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0)) {
+    return { ...userData, businessProfiles: [{ type: 'shepherd', isActive: true, isPrimary: true }] };
+  }
+  return userData;
+}
+
 // ---------------------------------------------------------------------------
 // Mappers Supabase (snake_case) → camelCase
 // ---------------------------------------------------------------------------
@@ -121,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const userData = JSON.parse(savedUser);
+    const userData = withInternAccess(JSON.parse(savedUser));
 
     const loadPermissions = async () => {
       // Load additional menus for shepherds / interns from Supabase
@@ -278,7 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (candidateData.role) {
-          if (['shepherd', 'adn', 'department_leader', 'family_leader', 'evangelist'].includes(candidateData.role)) {
+          if (['shepherd', 'intern', 'adn', 'department_leader', 'family_leader', 'evangelist'].includes(candidateData.role)) {
             const defaultPassword = candidateData.role === 'adn' ? DEFAULT_PASSWORDS.ADN : DEFAULT_PASSWORDS.SHEPHERD;
             if (password === defaultPassword) {
               return { isValid: true, matchType: `legacy_role:${candidateData.role}` };
@@ -314,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid password');
       }
 
-      const userData = matchedCandidate.data;
+      const userData = withInternAccess(matchedCandidate.data);
       console.log('Password validated:', {
         role: userData.role,
         docId: userData.id,
