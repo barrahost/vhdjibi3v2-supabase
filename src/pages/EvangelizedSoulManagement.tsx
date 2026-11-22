@@ -10,7 +10,7 @@ import { CollapsibleFilters } from '../components/ui/CollapsibleFilters';
 import { DateRangePicker } from '../components/ui/DateRangePicker';
 import { formatDate, formatDateForExcel } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminUser, isADNUser, isEvangelistUser } from '../utils/roleHelpers';
+import { hasAnyRole, isAdminUser, isADNUser, isEvangelistUser } from '../utils/roleHelpers';
 import EvangelizedSoulForm from '../components/evangelizedSouls/EvangelizedSoulForm';
 import EditEvangelizedSoulModal from '../components/evangelizedSouls/EditEvangelizedSoulModal';
 import ImportToSoulModal from '../components/evangelizedSouls/ImportToSoulModal';
@@ -67,7 +67,8 @@ export default function EvangelizedSoulManagement({ embedded = false }: Evangeli
   const roleForCheck = { role: userRole as string, businessProfiles: (user as any)?.businessProfiles };
   const isAdmin = isAdminUser(roleForCheck);
   const isADN = isADNUser(roleForCheck);
-  const isEvangelist = isEvangelistUser(roleForCheck);
+  // Un stagiaire enregistre et suit ses âmes évangélisées comme un évangéliste
+  const isEvangelist = isEvangelistUser(roleForCheck) || hasAnyRole(roleForCheck, ['intern']);
 
   const canImportToSouls = isAdmin || isADN;
   const canCreateEvangelized = isAdmin || isADN || isEvangelist;

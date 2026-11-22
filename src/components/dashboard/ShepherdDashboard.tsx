@@ -7,6 +7,7 @@ import { Users, MessageSquare, AlertTriangle, Phone, Sparkles, MessageCircle, Se
 import { useDepartments } from '../../hooks/useDepartments';
 import PendingActionsWidget from './PendingActionsWidget';
 import InteractionStatsCard from '../stats/InteractionStatsCard';
+import InternShortcuts from './InternShortcuts';
 import InteractionModal from '../interactions/InteractionModal';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -341,6 +342,8 @@ export function ShepherdDashboard() {
           iconClassName="text-green-600"
         />
       </div>
+
+      <InternShortcuts />
 
       <InteractionStatsCard />
 
