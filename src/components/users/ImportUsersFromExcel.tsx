@@ -222,7 +222,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
         const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
         // Colonnes de la table users (snake_case) ; l'identifiant n'a pas de valeur par défaut en base
-        const { data: insertedUser, error: insertErr } = await supabase.from('users').insert({
+        const { error: insertErr } = await supabase.from('users').insert({
           church_id: getChurchId(),
           id: uid,
           uid,
@@ -242,7 +242,6 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
           skipped++;
           continue;
         }
-        const docRef = { id: insertedUser?.id ?? '' };
 
         if (profileType === 'shepherd' || profileType === 'department_leader') {
           try {
@@ -255,7 +254,7 @@ export default function ImportUsersFromExcel({ onSuccess }: ImportUsersFromExcel
               departmentIds: [],
               isHead: false,
               isShepherd: true,
-              shepherdId: docRef.id,
+              // shepherdId = le berger qui suit cette personne, pas elle-même (sinon elle apparaît dans ses propres B.O.S.S)
             });
           } catch { /* non bloquant */ }
         }

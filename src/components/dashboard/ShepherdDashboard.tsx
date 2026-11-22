@@ -16,6 +16,9 @@ import { isShepherdUser } from '../../utils/roleHelpers';
 
 export function ShepherdDashboard() {
   const { user } = useAuth();
+  // Sa propre fiche B.O.S.S (même numéro) n'a rien à faire dans « Mes B.O.S.S »
+  const ownPhone = String(user?.phone || '').replace(/\D/g, '').slice(-10);
+  const isSelf = (phone?: string | null) => !!ownPhone && String(phone || '').replace(/\D/g, '').slice(-10) === ownPhone;
   const [recentInteractions, setRecentInteractions] = useState<Interaction[]>([]);
   const [souls, setSouls] = useState<Soul[]>([]);
   const [servants, setServants] = useState<Servant[]>([]);
@@ -122,7 +125,7 @@ export function ShepherdDashboard() {
           } as unknown as Interaction));
           setRecentInteractions(mapped);
 
-          setServants((servantsResult.data ?? []).map((r: any) => ({
+          setServants((servantsResult.data ?? []).filter((r: any) => !isSelf(r.phone)).map((r: any) => ({
             id: r.id,
             fullName: r.full_name || '',
             nickname: r.nickname || '',
@@ -175,7 +178,7 @@ export function ShepherdDashboard() {
       .channel('shepherd-servants-' + shepherdId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'servants', filter: 'shepherd_id=eq.' + shepherdId }, async () => {
         const { data } = await supabase.from('servants').select('*').eq('church_id', getChurchId()).eq('shepherd_id', shepherdId).eq('status', 'active');
-        if (!cancelled) setServants((data ?? []).map((r: any) => ({
+        if (!cancelled) setServants((data ?? []).filter((r: any) => !isSelf(r.phone)).map((r: any) => ({
           id: r.id, fullName: r.full_name || '', nickname: r.nickname || '', gender: r.gender,
           phone: r.phone || '', email: r.email || '', departmentIds: r.department_ids || [],
           familyId: r.family_id || undefined, isHead: r.is_head || false, isShepherd: r.is_shepherd || false,
