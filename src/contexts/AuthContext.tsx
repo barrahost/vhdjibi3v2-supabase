@@ -30,10 +30,13 @@ function getCurrentChurchId(): string {
  * Sans cela, aucun droit ni menu ne lui était donné. Le rôle « intern » reste affiché (Stagiaire).
  */
 function withInternAccess<T extends { role?: string; businessProfiles?: any[] }>(userData: T): T {
-  if (userData?.role === 'intern' && !(Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0)) {
-    return { ...userData, businessProfiles: [{ type: 'shepherd', isActive: true, isPrimary: true }] };
-  }
-  return userData;
+  if (userData?.role !== 'intern') return userData;
+  // Profil berger (accueil, suivi des âmes) + profil stagiaire (évangélisation, rapport de son département)
+  const profiles: any[] = Array.isArray(userData.businessProfiles) && userData.businessProfiles.length > 0
+    ? [...userData.businessProfiles]
+    : [{ type: 'shepherd', isActive: true, isPrimary: true }];
+  if (!profiles.some((p) => p?.type === 'intern')) profiles.push({ type: 'intern', isActive: true, isPrimary: false });
+  return { ...userData, businessProfiles: profiles };
 }
 
 // ---------------------------------------------------------------------------

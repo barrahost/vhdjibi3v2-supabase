@@ -59,6 +59,7 @@ import { getChurchId } from '../lib/churchId';
 import { getProfileDepartmentIds } from '../types/businessProfile.types';
 import { CulteReportType, DEPARTMENT_TO_REPORT_TYPE, normalizeDeptName } from '../types/culteReport.types';
 import { isBaptismDepartmentName } from '../lib/baptism';
+import { loadInternReportTypes } from '../services/internReports.service';
 
 const CULTE_REPORT_NAV_LABEL: Record<CulteReportType, string> = {
   worship: 'Gestion de Culte',
@@ -157,6 +158,23 @@ export function useNavigationItems(): NavItem[] {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Stagiaire : rapports de culte des départements où il sert (quand ils en ont un)
+  const [internReports, setInternReports] = useState<CulteReportType[]>([]);
+  const isIntern = hasRole('intern');
+  useEffect(() => {
+    if (!isIntern || !user?.phone) {
+      setInternReports([]);
+      return;
+    }
+    let cancelled = false;
+    loadInternReportTypes(user.phone)
+      .then((types) => !cancelled && setInternReports(types))
+      .catch((error) => console.error('Rapports du stagiaire :', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [isIntern, user?.phone]);
 
   // Pasteur Assistant : departements supervises ayant une page de rapports,
   // hors ceux qu'il dirige deja lui-meme (deja listes dans son groupe Rapport).
@@ -441,7 +459,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Evangelist menu — groupé sous "Évangélisation" pour rester lisible en multi-casquettes
-  if (hasRole(ROLES.EVANGELIST) && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
+  if ((hasRole(ROLES.EVANGELIST) || isIntern) && hasPermission(PERMISSIONS.MANAGE_EVANGELIZED_SOULS) && hasModule('evangelization')) {
     const children: NavItem[] = [];
 
     // Les admins/ADN ont déjà l'entrée "Âmes évangélisées" dans "Gestion des Âmes" : pas de doublon
@@ -457,6 +475,20 @@ export function useNavigationItems(): NavItem[] {
     }
 
     items.push({ id: 'evangelization', label: 'Évangélisation', icon: <Megaphone className="w-5 h-5" />, children });
+  }
+
+  // Stagiaire : le rapport de culte de son (ses) département(s), quand il en existe un ; pas s'il le fait déjà comme responsable
+  if (isIntern && !isAdmin && hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)) {
+    const already = new Set(ledCulteReports.map((r) => r.reportType));
+    const children: NavItem[] = internReports
+      .filter((reportType) => !already.has(reportType))
+      .map((reportType) => ({
+        id: `intern-report-${reportType}`,
+        label: CULTE_REPORT_NAV_LABEL[reportType],
+        href: `/rapports/${reportType}`,
+        icon: CULTE_REPORT_NAV_ICON[reportType],
+      }));
+    if (children.length > 0) items.push({ id: 'intern-reports', label: 'Rapport de mon département', icon: <FileText className="w-5 h-5" />, children });
   }
 
   // Organigramme de l'eglise : visible par tous
@@ -551,7 +583,7 @@ export function useNavigationItems(): NavItem[] {
   }
 
   // Rapports de culte (admin / super_admin) : tableau de bord + une page par département + besoins
-  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT)))) {
+  if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT) && !isIntern))) {
     items.push({
       id: 'culte-reports',
       label: 'Rapports de culte',
@@ -576,7 +608,7 @@ export function useNavigationItems(): NavItem[] {
     hasPermission(PERMISSIONS.MANAGE_SETTINGS) ||
     hasPermission(PERMISSIONS.MANAGE_FAMILIES) ||
     hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS) ||
-    hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS)
+    (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && !isIntern)
   ) {
     const children: NavItem[] = [];
 
@@ -589,7 +621,7 @@ export function useNavigationItems(): NavItem[] {
     if (hasPermission(PERMISSIONS.MANAGE_SETTINGS) || hasPermission(PERMISSIONS.MANAGE_ROLES_PERMISSIONS)) {
       children.push({ id: 'settings', label: 'Paramètres', href: '/parametres', icon: <Settings className="w-5 h-5" /> });
     }
-    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT)))) {
+    if (hasPermission(PERMISSIONS.MANAGE_CULTE_REPORTS) && (isAdmin || (!hasRole(ROLES.DEPARTMENT_LEADER) && !hasRole(ROLES.PASTEUR_ASSISTANT) && !isIntern))) {
       children.push({ id: 'meeting-types', label: 'Types de rencontre', href: '/parametres-types-rencontre', icon: <CalendarDays className="w-5 h-5" /> });
       children.push({ id: 'speakers', label: 'Orateurs', href: '/parametres-orateurs', icon: <Mic className="w-5 h-5" /> });
       children.push({ id: 'recurring-schedule', label: 'Programme récurrent', href: '/parametres-programme-recurrent', icon: <CalendarRange className="w-5 h-5" /> });

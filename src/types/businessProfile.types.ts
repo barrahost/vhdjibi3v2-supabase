@@ -7,7 +7,8 @@ export type BusinessProfileType =
   | 'evangelist'
   | 'pasteur'
   | 'pasteur_assistant'
-  | 'academie_moderator';
+  | 'academie_moderator'
+  | 'intern';
 
 export interface BusinessProfile {
   type: BusinessProfileType;
@@ -47,7 +48,8 @@ export const BUSINESS_PROFILE_LABELS: Record<BusinessProfileType, string> = {
   evangelist: 'Évangéliste',
   pasteur: 'Pasteur',
   pasteur_assistant: 'Pasteur Assistant',
-  academie_moderator: 'Modérateur Académie'
+  academie_moderator: 'Modérateur Académie',
+  intern: 'Stagiaire'
 };
 
 export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> = {
@@ -59,7 +61,8 @@ export const BUSINESS_PROFILE_DESCRIPTIONS: Record<BusinessProfileType, string> 
   evangelist: 'Peut enregistrer et suivre ses âmes évangélisées',
   pasteur: 'Supervision et décision : stats, congés, besoins signalés, consultation des âmes',
   pasteur_assistant: 'Supervise un portefeuille de départements : rapports, B.O.S.S et besoins signalés',
-  academie_moderator: 'Gère le contenu (séances, ressources, devoirs) de sa/ses classe(s) de l\'Académie'
+  academie_moderator: 'Gère le contenu (séances, ressources, devoirs) de sa/ses classe(s) de l\'Académie',
+  intern: 'Suit des âmes comme un berger, enregistre ses âmes évangélisées et fait le rapport de culte de son département'
 };
 
 // Map business profiles to permissions
@@ -126,6 +129,17 @@ export const PROFILE_PERMISSIONS: Record<BusinessProfileType, string[]> = {
   academie_moderator: [
     'MANAGE_ACADEMIE_CONTENT',
     'MANAGE_PROFILE'
+  ],
+  // Stagiaire : suivi des âmes (comme un berger), évangélisation, et rapport de culte de ses départements
+  // (seulement ceux qui ont un rapport ; voir useNavigationItems)
+  intern: [
+    'MANAGE_INTERACTIONS',
+    'MANAGE_ATTENDANCES',
+    'PROMOTE_SOUL_TO_SERVANT',
+    'MANAGE_EVANGELIZED_SOULS',
+    'MANAGE_CULTE_REPORTS',
+    'MANAGE_PROFILE',
+    'VIEW_REPLAY_TEACHINGS'
   ]
 };
 
